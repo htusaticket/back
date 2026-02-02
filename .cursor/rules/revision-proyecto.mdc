@@ -1,0 +1,58 @@
+---
+description: Siempre revisar la estructura del proyecto y código existente antes de implementar nuevas funcionalidades
+globs:
+  - "**/*.ts"
+  - "**/*.js"
+  - "**/*.prisma"
+alwaysApply: true
+---
+
+## Revisión del Proyecto - Regla de Análisis Previo
+
+**SIEMPRE** revisar la estructura del proyecto y código existente antes de implementar nuevas funcionalidades.
+
+### Checklist obligatorio antes de codificar:
+
+1. **Explorar la estructura existente:**
+   - Revisar `src/` para entender la arquitectura
+   - Verificar si ya existe funcionalidad similar
+   - Revisar patrones de naming y organización
+
+2. **Revisar configuración:**
+   - `eslint.config.mjs` - Reglas de linting
+   - `package.json` - Dependencias disponibles
+   - `prisma/schema.prisma` - Modelos de base de datos
+   - `tsconfig.json` - Configuración TypeScript
+
+3. **Verificar patrones existentes:**
+   - Cómo se implementan los repositorios
+   - Patrones de DTOs y validaciones
+   - Estructura de controladores y servicios
+   - Manejo de errores y excepciones
+
+4. **Revisar reglas de Cursor:**
+   - Verificar reglas existentes en `.cursor/rules/`
+   - Asegurar consistencia con reglas establecidas
+
+### Comandos útiles para explorar:
+```bash
+# Buscar funcionalidad similar
+grep -r "palabra_clave" src/
+# Revisar estructura de archivos
+find src/ -name "*.ts" | head -20
+# Verificar dependencias
+npm list --depth=0
+```
+
+### Antes de crear nuevos archivos:
+- ¿Ya existe algo similar?
+- ¿Sigue los patrones establecidos?
+- ¿Está en la ubicación correcta según la arquitectura?
+- ¿Usa las mismas convenciones de naming?
+
+### Preguntas clave:
+1. ¿Dónde debería ubicarse esta funcionalidad según la arquitectura?
+2. ¿Qué patrones similares ya existen que pueda reutilizar?
+3. ¿Qué reglas de linting debo seguir?
+4. ¿Necesito modificar el schema de Prisma?
+5. ¿Hay tests existentes que deba seguir como patrón?

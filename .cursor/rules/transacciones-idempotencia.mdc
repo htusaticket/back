@@ -1,0 +1,30 @@
+---
+description: Usar transacciones e idempotencia en operaciones críticas para consistencia de datos
+globs:
+  - "**/use-cases/**/*.ts"
+  - "**/services/**/*.ts"
+  - "**/repositories/**/*.ts"
+alwaysApply: true
+---
+
+## Transacciones e Idempotencia
+
+### Transacciones
+
+- **AGRUPAR** operaciones de escritura relacionadas en una transacción
+- **RETRY** ante conflictos transitorios si aplica
+
+### Idempotencia
+
+- **USAR** claves de idempotencia (Idempotency-Key) para endpoints críticos
+- **GUARDAR** resultado de la operación por un TTL y devolverlo si se repite
+
+```typescript
+const key = `idem:${idempotencyKey}`;
+const existing = await cache.get(key);
+if (existing) return existing;
+const result = await this.service.process(payload);
+await cache.set(key, result, 300);
+return result;
+```
+

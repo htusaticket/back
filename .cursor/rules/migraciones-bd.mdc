@@ -1,0 +1,219 @@
+---
+description: Mantener consistencia en migraciones de base de datos y cambios de schema
+globs:
+  - "**/*.prisma"
+  - "prisma/migrations/**/*.sql"
+  - "**/migrations/**/*.ts"
+alwaysApply: true
+---
+
+## Migraciones de Base de Datos - Regla de Consistencia
+
+Mantener **consistencia** en migraciones de base de datos y cambios de schema usando Prisma.
+
+### Convenciones de migraciones:
+
+1. **Naming de migraciones:**
+```bash
+# ✅ CORRECTO - Nombres descriptivos
+npx prisma migrate dev --name add_user_verification_fields
+npx prisma migrate dev --name create_credit_applications_table
+npx prisma migrate dev --name add_soft_delete_to_users
+
+# ❌ INCORRECTO - Nombres genéricos
+npx prisma migrate dev --name migration
+npx prisma migrate dev --name update
+npx prisma migrate dev --name fix
+```
+
+2. **Estructura de migraciones:**
+```sql
+-- ✅ CORRECTO - Migración bien estructurada
+-- CreateEnum
+CREATE TYPE "public"."ApplicationStatus" AS ENUM ('PENDIENTE', 'EN_REVISION', 'APROBADA', 'RECHAZADA');
+
+-- CreateTable
+CREATE TABLE "public"."CreditApplication" (
+    "id" TEXT NOT NULL,
+    "amount" DOUBLE PRECISION NOT NULL,
+    "term" INTEGER NOT NULL,
+    "status" "public"."ApplicationStatus" NOT NULL DEFAULT 'PENDIENTE',
+    "userId" TEXT NOT NULL,
+    "submittedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "reviewedAt" TIMESTAMP(3),
+    "reviewerId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "CreditApplication_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "CreditApplication_userId_idx" ON "public"."CreditApplication"("userId");
+CREATE INDEX "CreditApplication_status_idx" ON "public"."CreditApplication"("status");
+
+-- AddForeignKey
+ALTER TABLE "public"."CreditApplication" ADD CONSTRAINT "CreditApplication_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+```
+
+### Campos obligatorios en todos los modelos:
+
+```prisma
+// ✅ CORRECTO - Campos estándar para borrado lógico
+model User {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Campos para borrado lógico
+  isActive  Boolean  @default(true)
+  isDeleted Boolean  @default(false)
+  deletedAt DateTime?
+  deletedBy String?
+  
+  // ... otros campos específicos
+}
+
+// ✅ CORRECTO - Para modelos de relación
+model CreditApplication {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Campos para borrado lógico
+  isActive  Boolean  @default(true)
+  isDeleted Boolean  @default(false)
+  deletedAt DateTime?
+  deletedBy String?
+  
+  // ... otros campos específicos
+}
+```
+
+### Migraciones seguras:
+
+1. **Agregar campos opcionales primero:**
+```sql
+-- ✅ CORRECTO - Agregar campo opcional
+ALTER TABLE "public"."User" ADD COLUMN "isEmailVerified" BOOLEAN NOT NULL DEFAULT false;
+
+-- ❌ INCORRECTO - Agregar campo requerido sin default
+ALTER TABLE "public"."User" ADD COLUMN "isEmailVerified" BOOLEAN NOT NULL;
+```
+
+2. **Modificar campos en pasos:**
+```sql
+-- ✅ CORRECTO - Modificación en pasos
+-- Paso 1: Agregar nuevo campo
+ALTER TABLE "public"."User" ADD COLUMN "newField" TEXT;
+
+-- Paso 2: Migrar datos
+UPDATE "public"."User" SET "newField" = "oldField";
+
+-- Paso 3: Hacer requerido (en migración separada)
+ALTER TABLE "public"."User" ALTER COLUMN "newField" SET NOT NULL;
+
+-- Paso 4: Eliminar campo viejo (en migración separada)
+ALTER TABLE "public"."User" DROP COLUMN "oldField";
+```
+
+3. **Índices para performance:**
+```sql
+-- ✅ CORRECTO - Índices necesarios
+CREATE INDEX "User_email_idx" ON "public"."User"("email");
+CREATE INDEX "User_dni_idx" ON "public"."User"("dni");
+CREATE INDEX "User_isActive_idx" ON "public"."User"("isActive");
+CREATE INDEX "User_createdAt_idx" ON "public"."User"("createdAt");
+
+-- Índices compuestos para consultas frecuentes
+CREATE INDEX "User_active_created_idx" ON "public"."User"("isActive", "createdAt");
+```
+
+### Rollback de migraciones:
+
+```typescript
+// ✅ CORRECTO - Script de rollback
+// rollback-migration.ts
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+async function rollbackMigration() {
+  try {
+    // Rollback específico
+    await prisma.$executeRaw`
+      ALTER TABLE "public"."User" DROP COLUMN IF EXISTS "newField";
+    `;
+    
+    console.log('Rollback completado exitosamente');
+  } catch (error) {
+    console.error('Error en rollback:', error);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+rollbackMigration();
+```
+
+### Validación de migraciones:
+
+```typescript
+// ✅ CORRECTO - Validar migración antes de aplicar
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+async function validateMigration() {
+  try {
+    // Verificar que la migración no rompa datos existentes
+    const userCount = await prisma.user.count();
+    console.log(`Usuarios existentes: ${userCount}`);
+    
+    // Verificar integridad referencial
+    const orphanedRecords = await prisma.$queryRaw`
+      SELECT COUNT(*) as count 
+      FROM "CreditApplication" 
+      WHERE "userId" NOT IN (SELECT id FROM "User")
+    `;
+    
+    console.log('Validación completada');
+  } catch (error) {
+    console.error('Error en validación:', error);
+    throw error;
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+```
+
+### Comandos de migración:
+
+```bash
+# ✅ CORRECTO - Flujo de migración
+# 1. Crear migración
+npx prisma migrate dev --name descriptive_name
+
+# 2. Aplicar en staging
+npx prisma migrate deploy
+
+# 3. Verificar en producción
+npx prisma migrate status
+
+# 4. Aplicar en producción
+npx prisma migrate deploy
+
+# 5. Generar cliente actualizado
+npx prisma generate
+```
+
+### Reglas obligatorias:
+
+- **SIEMPRE** usar nombres descriptivos para migraciones
+- **INCLUIR** campos de borrado lógico en todos los modelos
+- **CREAR** índices para campos de consulta frecuente
+- **VALIDAR** migraciones en entorno de desarrollo primero
+- **DOCUMENTAR** cambios breaking en migraciones
+- **USAR** transacciones para migraciones complejas
+- **RESPALDAR** base de datos antes de migraciones en producción
+- **PROBAR** rollback antes de aplicar en producción

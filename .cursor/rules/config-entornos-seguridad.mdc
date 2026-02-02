@@ -1,0 +1,47 @@
+---
+description: Gestionar configuración por entorno y secretos de forma segura
+globs:
+  - "**/*.ts"
+  - "**/*.js"
+  - "**/*.yml"
+alwaysApply: true
+---
+
+## Configuración de Entornos y Seguridad de Secretos
+
+Manejar variables de entorno y secretos de forma segura y consistente.
+
+### Variables de entorno
+
+- **USAR** `@nestjs/config` con validación de schema (Zod/Joi)
+- **NO** hardcodear secretos ni URLs en el código
+- **SEPARAR** `.env.development`, `.env.test`, `.env.production`
+- **NUNCA** commitear `.env*` (incluir en `.gitignore`)
+
+```typescript
+import { ConfigModule } from '@nestjs/config';
+import * as Joi from 'joi';
+
+ConfigModule.forRoot({
+  isGlobal: true,
+  validationSchema: Joi.object({
+    NODE_ENV: Joi.string().valid('development', 'test', 'production').required(),
+    DATABASE_URL: Joi.string().uri().required(),
+    JWT_SECRET: Joi.string().min(32).required(),
+    REDIS_HOST: Joi.string().default('localhost'),
+    REDIS_PORT: Joi.number().default(6379),
+  }),
+});
+```
+
+### Secretos
+
+- **USAR** gestor de secretos (Vault, AWS Secrets Manager) en prod
+- **ROTAR** claves periódicamente y al sospechar filtración
+- **ENCRIPTAR** en reposo y en tránsito
+
+### Seguridad HTTP
+
+- **HABILITAR** Helmet y CORS configurado por orígenes permitidos
+- **FORZAR** HTTPS en producción y HSTS
+

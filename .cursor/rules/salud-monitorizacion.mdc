@@ -1,0 +1,34 @@
+---
+description: Exponer endpoints de salud y métricas para monitorización
+globs:
+  - "**/*.ts"
+  - "**/controllers/**/*.ts"
+alwaysApply: true
+---
+
+## Salud y Monitorización
+
+### Endpoints de salud
+
+```typescript
+import { HealthCheckService, HttpHealthIndicator, HealthCheck } from '@nestjs/terminus';
+
+@Controller('health')
+export class HealthController {
+  constructor(private health: HealthCheckService, private http: HttpHealthIndicator) {}
+
+  @Get()
+  @HealthCheck()
+  check() {
+    return this.health.check([
+      () => this.http.pingCheck('docs', 'http://localhost:3000/docs'),
+    ]);
+  }
+}
+```
+
+### Métricas
+
+- Integrar métricas básicas (latencia, errores) vía interceptores
+- Considerar `@willsoto/nestjs-prometheus` para Prometheus/Grafana
+

@@ -1,0 +1,230 @@
+---
+description: Validación obligatoria de DTOs usando class-validator y class-transformer para mantener la integridad de los datos
+globs:
+  - "**/dto/**/*.ts"
+  - "**/controllers/**/*.ts"
+alwaysApply: true
+---
+
+## Validación de DTOs - Regla de Integridad
+
+**VALIDACIÓN OBLIGATORIA** de DTOs usando `class-validator` y `class-transformer` para mantener la integridad de los datos.
+
+### Decoradores de validación obligatorios:
+
+```typescript
+import {
+  IsString,
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsEnum,
+  IsNumber,
+  Min,
+  Max,
+  Length,
+  Matches,
+  IsBoolean,
+  IsDateString,
+  IsArray,
+  ValidateNested,
+  ArrayMinSize,
+  ArrayMaxSize,
+} from 'class-validator';
+import { Type, Transform } from 'class-transformer';
+
+// ✅ CORRECTO - DTO con validaciones completas
+export class CreateUserDto {
+  @IsEmail({}, { message: 'Debe proporcionar un email válido' })
+  @IsNotEmpty({ message: 'El email es obligatorio' })
+  email: string;
+
+  @IsString({ message: 'La contraseña debe ser una cadena de texto' })
+  @IsNotEmpty({ message: 'La contraseña es obligatoria' })
+  @Length(8, 50, { message: 'La contraseña debe tener entre 8 y 50 caracteres' })
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, {
+    message: 'La contraseña debe contener al menos una minúscula, una mayúscula y un número'
+  })
+  password: string;
+
+  @IsString({ message: 'El nombre debe ser una cadena de texto' })
+  @IsNotEmpty({ message: 'El nombre es obligatorio' })
+  @Length(2, 50, { message: 'El nombre debe tener entre 2 y 50 caracteres' })
+  firstName: string;
+
+  @IsString({ message: 'El apellido debe ser una cadena de texto' })
+  @IsNotEmpty({ message: 'El apellido es obligatorio' })
+  @Length(2, 50, { message: 'El apellido debe tener entre 2 y 50 caracteres' })
+  lastName: string;
+
+  @IsString({ message: 'El DNI debe ser una cadena de texto' })
+  @IsNotEmpty({ message: 'El DNI es obligatorio' })
+  @Matches(/^\d{7,8}$/, { message: 'El DNI debe tener 7 u 8 dígitos numéricos' })
+  dni: string;
+
+  @IsString({ message: 'El teléfono debe ser una cadena de texto' })
+  @IsNotEmpty({ message: 'El teléfono es obligatorio' })
+  @Matches(/^\+?\d{10,15}$/, { message: 'Formato de teléfono inválido' })
+  phone: string;
+
+  @IsOptional()
+  @IsString({ message: 'La dirección debe ser una cadena de texto' })
+  @Length(5, 200, { message: 'La dirección debe tener entre 5 y 200 caracteres' })
+  address?: string;
+}
+
+export class UpdateUserDto {
+  @IsOptional()
+  @IsEmail({}, { message: 'Debe proporcionar un email válido' })
+  email?: string;
+
+  @IsOptional()
+  @IsString({ message: 'El nombre debe ser una cadena de texto' })
+  @Length(2, 50, { message: 'El nombre debe tener entre 2 y 50 caracteres' })
+  firstName?: string;
+
+  @IsOptional()
+  @IsString({ message: 'El apellido debe ser una cadena de texto' })
+  @Length(2, 50, { message: 'El apellido debe tener entre 2 y 50 caracteres' })
+  lastName?: string;
+
+  @IsOptional()
+  @IsString({ message: 'La dirección debe ser una cadena de texto' })
+  @Length(5, 200, { message: 'La dirección debe tener entre 5 y 200 caracteres' })
+  address?: string;
+}
+
+export class PaginationDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: 'La página debe ser un número' })
+  @Min(1, { message: 'La página debe ser mayor a 0' })
+  page?: number = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: 'El límite debe ser un número' })
+  @Min(1, { message: 'El límite debe ser mayor a 0' })
+  @Max(100, { message: 'El límite no puede ser mayor a 100' })
+  limit?: number = 10;
+
+  @IsOptional()
+  @IsString({ message: 'El campo de ordenamiento debe ser una cadena de texto' })
+  sortBy?: string = 'createdAt';
+
+  @IsOptional()
+  @IsEnum(['asc', 'desc'], { message: 'El orden debe ser asc o desc' })
+  sortOrder?: 'asc' | 'desc' = 'desc';
+}
+```
+
+### Transformaciones automáticas:
+
+```typescript
+// ✅ CORRECTO - Con transformaciones
+export class CreateCreditApplicationDto {
+  @Type(() => Number)
+  @IsNumber({}, { message: 'El monto debe ser un número' })
+  @Min(1000, { message: 'El monto mínimo es $1,000' })
+  @Max(1000000, { message: 'El monto máximo es $1,000,000' })
+  amount: number;
+
+  @Type(() => Number)
+  @IsNumber({}, { message: 'El plazo debe ser un número' })
+  @Min(1, { message: 'El plazo mínimo es 1 mes' })
+  @Max(60, { message: 'El plazo máximo es 60 meses' })
+  term: number;
+
+  @Transform(({ value }) => value?.toLowerCase().trim())
+  @IsOptional()
+  @IsString()
+  @Length(2, 50)
+  notes?: string;
+}
+```
+
+### Validación anidada:
+
+```typescript
+// ✅ CORRECTO - DTOs anidados
+export class DocumentDto {
+  @IsString({ message: 'El tipo de documento es obligatorio' })
+  @IsNotEmpty({ message: 'El tipo de documento no puede estar vacío' })
+  type: string;
+
+  @IsString({ message: 'La URL es obligatoria' })
+  @IsNotEmpty({ message: 'La URL no puede estar vacía' })
+  url: string;
+}
+
+export class CreateCreditApplicationDto {
+  // ... otros campos
+
+  @IsArray({ message: 'Los documentos deben ser un array' })
+  @ArrayMinSize(1, { message: 'Debe proporcionar al menos un documento' })
+  @ArrayMaxSize(10, { message: 'No puede proporcionar más de 10 documentos' })
+  @ValidateNested({ each: true })
+  @Type(() => DocumentDto)
+  documents: DocumentDto[];
+}
+```
+
+### Uso en controladores:
+
+```typescript
+// ✅ CORRECTO - Con validación automática
+@Controller('users')
+export class UsersController {
+  @Post()
+  async create(@Body() createUserDto: CreateUserDto): Promise<UserResponse> {
+    return this.userService.create(createUserDto);
+  }
+
+  @Put(':id')
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateUserDto: UpdateUserDto
+  ): Promise<UserResponse> {
+    return this.userService.update(id, updateUserDto);
+  }
+
+  @Get()
+  async findAll(@Query() pagination: PaginationDto): Promise<PaginatedResponseDto<User>> {
+    return this.userService.findAll(pagination);
+  }
+}
+```
+
+### Configuración global de validación:
+
+```typescript
+// ✅ CORRECTO - En main.ts
+app.useGlobalPipes(
+  new ValidationPipe({
+    whitelist: true, // Eliminar propiedades no definidas en el DTO
+    forbidNonWhitelisted: true, // Lanzar error si hay propiedades no permitidas
+    transform: true, // Transformar automáticamente los tipos
+    transformOptions: {
+      enableImplicitConversion: true, // Conversión implícita de tipos
+    },
+    exceptionFactory: (errors) => {
+      const result = errors.map((error) => ({
+        property: error.property,
+        value: error.value,
+        constraints: error.constraints,
+      }));
+      throw new BadRequestException({
+        message: 'Error de validación',
+        errors: result,
+      });
+    },
+  })
+);
+```
+
+### Reglas específicas:
+- **TODOS** los DTOs deben tener validaciones
+- **NUNCA** usar `any` en DTOs
+- **SIEMPRE** incluir mensajes de error personalizados en español
+- **OBLIGATORIO** usar `@Type()` para transformaciones de tipos
+- **PROHIBIDO** DTOs sin decoradores de validación

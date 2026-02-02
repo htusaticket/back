@@ -1,0 +1,117 @@
+---
+description: Mantener arquitectura limpia y consistente siguiendo los patrones establecidos en el proyecto
+globs:
+  - "**/*.ts"
+  - "**/*.js"
+alwaysApply: true
+---
+
+## Arquitectura Limpia - Regla de Consistencia
+
+Mantener **arquitectura limpia** y **consistente** siguiendo los patrones establecidos en el proyecto.
+
+### Estructura de directorios obligatoria:
+
+```
+src/
+├── application/          # Casos de uso y lógica de aplicación
+│   ├── auth/            # Módulo de autenticación
+│   ├── users/           # Módulo de usuarios
+│   └── common/          # Elementos comunes
+├── core/                # Entidades y reglas de negocio
+│   ├── entities/        # Entidades de dominio
+│   ├── interfaces/      # Contratos/interfaces
+│   ├── value-objects/   # Objetos de valor
+│   └── constants/       # Constantes del dominio
+└── infrastructure/      # Implementaciones técnicas
+    ├── http/            # Controladores HTTP
+    ├── persistence/     # Repositorios y base de datos
+    └── repositories/    # Implementaciones de repositorios
+```
+
+### Reglas de organización:
+
+1. **Separación de responsabilidades:**
+```typescript
+// ✅ CORRECTO - Controller solo maneja HTTP
+@Controller('users')
+export class UsersController {
+  constructor(private readonly userService: UserService) {}
+
+  @Post()
+  async create(@Body() createUserDto: CreateUserDto): Promise<UserResponse> {
+    return this.userService.create(createUserDto);
+  }
+}
+
+// ✅ CORRECTO - Service maneja lógica de negocio
+@Injectable()
+export class UserService {
+  constructor(
+    @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository
+  ) {}
+
+  async create(createUserDto: CreateUserDto): Promise<User> {
+    // Lógica de negocio aquí
+    return this.userRepository.create(createUserDto);
+  }
+}
+```
+
+2. **Inyección de dependencias:**
+```typescript
+// ✅ CORRECTO - Usar tokens de inyección
+@Injectable()
+export class UserService {
+  constructor(
+    @Inject(USER_REPOSITORY) 
+    private readonly userRepository: UserRepository
+  ) {}
+}
+
+// ❌ INCORRECTO - Inyección directa
+@Injectable()
+export class UserService {
+  constructor(
+    private readonly userRepository: UserRepository
+  ) {}
+}
+```
+
+3. **Naming consistente:**
+- Controllers: `[Entity]Controller`
+- Services: `[Entity]Service`
+- Repositories: `[Entity]Repository`
+- DTOs: `[Action][Entity]Dto`
+- Entities: `[Entity]`
+
+4. **Módulos organizados:**
+```typescript
+// ✅ CORRECTO - Módulo bien estructurado
+@Module({
+  imports: [RepositoriesModule],
+  controllers: [UsersController],
+  providers: [
+    {
+      provide: USER_SERVICE,
+      useClass: UserService,
+    },
+  ],
+  exports: [USER_SERVICE],
+})
+export class UsersModule {}
+```
+
+### Patrones prohibidos:
+- Lógica de negocio en controladores
+- Acceso directo a Prisma en controladores
+- DTOs sin validación
+- Servicios sin interfaces
+- Dependencias hardcodeadas
+
+### Patrones obligatorios:
+- Usar BaseRepository para repositorios
+- Implementar interfaces para servicios
+- Validar todos los DTOs con class-validator
+- Manejar errores con excepciones específicas de NestJS
+- Usar transformadores para respuestas consistentes

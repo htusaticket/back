@@ -1,0 +1,162 @@
+---
+description: Manejo consistente de errores usando excepciones específicas de NestJS y logging apropiado
+globs:
+  - "**/*.ts"
+  - "**/*.js"
+alwaysApply: true
+---
+
+## Manejo de Errores - Regla de Consistencia
+
+Manejo **consistente** de errores usando excepciones específicas de NestJS y logging apropiado.
+
+### Excepciones de NestJS obligatorias:
+
+```typescript
+import {
+  BadRequestException,
+  NotFoundException,
+  UnauthorizedException,
+  ForbiddenException,
+  ConflictException,
+  UnprocessableEntityException,
+  InternalServerErrorException,
+} from '@nestjs/common';
+```
+
+### Mapeo de errores por contexto:
+
+1. **Validación de datos:**
+```typescript
+// ✅ CORRECTO
+if (!isValidEmail(email)) {
+  throw new BadRequestException('Formato de email inválido');
+}
+
+if (!isValidDni(dni)) {
+  throw new BadRequestException('Formato de DNI inválido');
+}
+```
+
+2. **Recursos no encontrados:**
+```typescript
+// ✅ CORRECTO
+const user = await this.userRepository.findById(id);
+if (!user) {
+  throw new NotFoundException(`Usuario con ID '${id}' no encontrado`);
+}
+
+const activeUser = await this.userRepository.findActiveById(id);
+if (!activeUser) {
+  throw new NotFoundException(`Usuario activo con ID '${id}' no encontrado`);
+}
+```
+
+3. **Conflictos de datos únicos:**
+```typescript
+// ✅ CORRECTO
+const existingUser = await this.userRepository.findByEmail(email);
+if (existingUser) {
+  throw new ConflictException('Ya existe un usuario con este email');
+}
+```
+
+4. **Autorización:**
+```typescript
+// ✅ CORRECTO
+if (user.role !== 'ADMIN') {
+  throw new ForbiddenException('No tienes permisos para realizar esta acción');
+}
+```
+
+5. **Errores de base de datos:**
+```typescript
+// ✅ CORRECTO
+try {
+  return await this.userRepository.create(userData);
+} catch (error) {
+  if (error.code === 'P2002') { // Unique constraint violation
+    throw new ConflictException('Ya existe un usuario con estos datos');
+  }
+  throw new InternalServerErrorException('Error interno del servidor');
+}
+```
+
+### Logging de errores:
+
+```typescript
+// ✅ CORRECTO - Con logging
+@Injectable()
+export class UserService {
+  private readonly logger = new Logger(UserService.name);
+
+  async createUser(createUserDto: CreateUserDto): Promise<User> {
+    try {
+      this.logger.log(`Creando usuario con email: ${createUserDto.email}`);
+      const user = await this.userRepository.create(createUserDto);
+      this.logger.log(`Usuario creado exitosamente con ID: ${user.id}`);
+      return user;
+    } catch (error) {
+      this.logger.error(`Error al crear usuario: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+}
+```
+
+### Filtros globales de errores:
+
+```typescript
+// ✅ CORRECTO - Manejo global
+@Catch()
+export class GlobalExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(GlobalExceptionFilter.name);
+
+  catch(exception: unknown, host: ArgumentsHost): void {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
+
+    const status = exception instanceof HttpException 
+      ? exception.getStatus() 
+      : HttpStatus.INTERNAL_SERVER_ERROR;
+
+    const message = exception instanceof HttpException 
+      ? exception.message 
+      : 'Error interno del servidor';
+
+    this.logger.error(
+      `${request.method} ${request.url} - ${status} - ${message}`,
+      exception instanceof Error ? exception.stack : undefined
+    );
+
+    response.status(status).json({
+      success: false,
+      statusCode: status,
+      message,
+      timestamp: new Date().toISOString(),
+      path: request.url,
+    });
+  }
+}
+```
+
+### Códigos de error específicos:
+
+```typescript
+// ✅ CORRECTO - Códigos específicos
+export enum ErrorCodes {
+  USER_NOT_FOUND = 'USER_NOT_FOUND',
+  USER_ALREADY_EXISTS = 'USER_ALREADY_EXISTS',
+  INVALID_CREDENTIALS = 'INVALID_CREDENTIALS',
+  INSUFFICIENT_PERMISSIONS = 'INSUFFICIENT_PERMISSIONS',
+  INVALID_TOKEN = 'INVALID_TOKEN',
+  EXPIRED_TOKEN = 'EXPIRED_TOKEN',
+}
+
+// Uso
+throw new NotFoundException({
+  message: 'Usuario no encontrado',
+  code: ErrorCodes.USER_NOT_FOUND,
+});
+```

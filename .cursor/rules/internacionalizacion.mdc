@@ -1,0 +1,326 @@
+---
+description: Implementar internacionalización para mensajes de error y respuestas en múltiples idiomas
+globs:
+  - "**/*.ts"
+  - "**/dto/**/*.ts"
+alwaysApply: true
+---
+
+## Internacionalización - Regla de Localización
+
+Implementar **internacionalización** para mensajes de error y respuestas en múltiples idiomas.
+
+### Configuración de i18n:
+
+```typescript
+// ✅ CORRECTO - Configuración de i18n
+import { I18nModule, QueryResolver, AcceptLanguageResolver } from 'nestjs-i18n';
+import { join } from 'path';
+
+@Module({
+  imports: [
+    I18nModule.forRoot({
+      fallbackLanguage: 'es',
+      loaderOptions: {
+        path: join(__dirname, '/i18n/'),
+        watch: true,
+      },
+      resolvers: [
+        { use: QueryResolver, options: ['lang'] },
+        AcceptLanguageResolver,
+      ],
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+### Estructura de archivos de traducción:
+
+```
+src/
+├── i18n/
+│   ├── es/
+│   │   ├── common.json
+│   │   ├── auth.json
+│   │   ├── users.json
+│   │   └── errors.json
+│   ├── en/
+│   │   ├── common.json
+│   │   ├── auth.json
+│   │   ├── users.json
+│   │   └── errors.json
+│   └── pt/
+│       ├── common.json
+│       ├── auth.json
+│       ├── users.json
+│       └── errors.json
+```
+
+### Archivos de traducción:
+
+```json
+// es/errors.json
+{
+  "validation": {
+    "required": "El campo {{field}} es obligatorio",
+    "email": "Debe proporcionar un email válido",
+    "minLength": "El campo {{field}} debe tener al menos {{min}} caracteres",
+    "maxLength": "El campo {{field}} no puede exceder {{max}} caracteres",
+    "pattern": "El formato del campo {{field}} es inválido"
+  },
+  "user": {
+    "notFound": "Usuario con ID '{{id}}' no encontrado",
+    "alreadyExists": "Ya existe un usuario con este {{field}}",
+    "invalidCredentials": "Credenciales inválidas",
+    "accountLocked": "Cuenta bloqueada temporalmente"
+  },
+  "auth": {
+    "unauthorized": "No autorizado para realizar esta acción",
+    "forbidden": "No tienes permisos para acceder a este recurso",
+    "tokenExpired": "Token de autenticación expirado",
+    "invalidToken": "Token de autenticación inválido"
+  }
+}
+
+// en/errors.json
+{
+  "validation": {
+    "required": "Field {{field}} is required",
+    "email": "Must provide a valid email",
+    "minLength": "Field {{field}} must have at least {{min}} characters",
+    "maxLength": "Field {{field}} cannot exceed {{max}} characters",
+    "pattern": "Field {{field}} format is invalid"
+  },
+  "user": {
+    "notFound": "User with ID '{{id}}' not found",
+    "alreadyExists": "User with this {{field}} already exists",
+    "invalidCredentials": "Invalid credentials",
+    "accountLocked": "Account temporarily locked"
+  },
+  "auth": {
+    "unauthorized": "Unauthorized to perform this action",
+    "forbidden": "You don't have permissions to access this resource",
+    "tokenExpired": "Authentication token expired",
+    "invalidToken": "Invalid authentication token"
+  }
+}
+```
+
+### Uso en servicios:
+
+```typescript
+// ✅ CORRECTO - Servicios con i18n
+@Injectable()
+export class UserService {
+  constructor(
+    @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
+    private readonly i18n: I18nService,
+  ) {}
+
+  async findById(id: string, lang: string = 'es'): Promise<User> {
+    const user = await this.userRepository.findById(id);
+    
+    if (!user) {
+      throw new NotFoundException(
+        this.i18n.t('errors.user.notFound', { 
+          lang, 
+          args: { id } 
+        })
+      );
+    }
+
+    return user;
+  }
+
+  async create(createUserDto: CreateUserDto, lang: string = 'es'): Promise<User> {
+    // Validar email único
+    const existingUser = await this.userRepository.findByEmail(createUserDto.email);
+    if (existingUser) {
+      throw new ConflictException(
+        this.i18n.t('errors.user.alreadyExists', { 
+          lang, 
+          args: { field: 'email' } 
+        })
+      );
+    }
+
+    return this.userRepository.create(createUserDto);
+  }
+}
+```
+
+### DTOs con mensajes internacionalizados:
+
+```typescript
+// ✅ CORRECTO - DTOs con i18n
+export class CreateUserDto {
+  @IsEmail({}, { 
+    message: 'errors.validation.email' // Clave de traducción
+  })
+  @IsNotEmpty({ 
+    message: 'errors.validation.required' 
+  })
+  email: string;
+
+  @IsString({ 
+    message: 'errors.validation.required' 
+  })
+  @IsNotEmpty({ 
+    message: 'errors.validation.required' 
+  })
+  @Length(8, 50, { 
+    message: 'errors.validation.minLength' 
+  })
+  password: string;
+
+  @IsString({ 
+    message: 'errors.validation.required' 
+  })
+  @IsNotEmpty({ 
+    message: 'errors.validation.required' 
+  })
+  @Length(2, 50, { 
+    message: 'errors.validation.minLength' 
+  })
+  firstName: string;
+
+  @IsString({ 
+    message: 'errors.validation.required' 
+  })
+  @IsNotEmpty({ 
+    message: 'errors.validation.required' 
+  })
+  @Length(2, 50, { 
+    message: 'errors.validation.minLength' 
+  })
+  lastName: string;
+}
+```
+
+### Interceptor de i18n:
+
+```typescript
+// ✅ CORRECTO - Interceptor para i18n automático
+@Injectable()
+export class I18nInterceptor implements NestInterceptor {
+  constructor(private readonly i18n: I18nService) {}
+
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    const request = context.switchToHttp().getRequest();
+    const lang = request.headers['accept-language'] || 'es';
+
+    // Establecer idioma en el contexto
+    request.lang = lang;
+
+    return next.handle().pipe(
+      catchError((error) => {
+        if (error instanceof HttpException) {
+          const message = error.message;
+          
+          // Si el mensaje es una clave de traducción, traducirla
+          if (typeof message === 'string' && message.includes('.')) {
+            const translatedMessage = this.i18n.t(message, { lang });
+            
+            // Crear nueva excepción con mensaje traducido
+            const newError = new (error.constructor as any)(
+              translatedMessage,
+              error.getStatus()
+            );
+            
+            throw newError;
+          }
+        }
+        
+        throw error;
+      })
+    );
+  }
+}
+```
+
+### Controladores con i18n:
+
+```typescript
+// ✅ CORRECTO - Controladores con soporte de idioma
+@Controller('users')
+export class UsersController {
+  constructor(
+    private readonly userService: UserService,
+    private readonly i18n: I18nService,
+  ) {}
+
+  @Get(':id')
+  async findById(
+    @Param('id') id: string,
+    @Req() request: Request,
+  ): Promise<UserResponse> {
+    const lang = request.headers['accept-language'] || 'es';
+    return this.userService.findById(id, lang);
+  }
+
+  @Post()
+  async create(
+    @Body() createUserDto: CreateUserDto,
+    @Req() request: Request,
+  ): Promise<UserResponse> {
+    const lang = request.headers['accept-language'] || 'es';
+    return this.userService.create(createUserDto, lang);
+  }
+}
+```
+
+### Filtro de excepciones con i18n:
+
+```typescript
+// ✅ CORRECTO - Filtro global con i18n
+@Catch()
+export class I18nExceptionFilter implements ExceptionFilter {
+  constructor(private readonly i18n: I18nService) {}
+
+  catch(exception: unknown, host: ArgumentsHost): void {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
+
+    const lang = request.headers['accept-language'] || 'es';
+    const status = exception instanceof HttpException 
+      ? exception.getStatus() 
+      : HttpStatus.INTERNAL_SERVER_ERROR;
+
+    let message = exception instanceof HttpException 
+      ? exception.message 
+      : 'errors.internal.server';
+
+    // Traducir mensaje si es una clave
+    if (typeof message === 'string' && message.includes('.')) {
+      try {
+        message = this.i18n.t(message, { lang });
+      } catch (error) {
+        // Si no se puede traducir, usar mensaje por defecto
+        message = this.i18n.t('errors.internal.server', { lang });
+      }
+    }
+
+    response.status(status).json({
+      success: false,
+      statusCode: status,
+      message,
+      timestamp: new Date().toISOString(),
+      path: request.url,
+      language: lang,
+    });
+  }
+}
+```
+
+### Reglas de i18n:
+
+- **SOPORTAR** al menos español (es) e inglés (en)
+- **USAR** claves de traducción en lugar de texto hardcodeado
+- **IMPLEMENTAR** fallback a idioma por defecto
+- **ESTRUCTURAR** archivos de traducción por módulos
+- **INCLUIR** parámetros dinámicos en mensajes
+- **DETECTAR** idioma desde headers HTTP
+- **VALIDAR** que todas las claves tengan traducción
+- **MANTENER** consistencia en estructura de mensajes

@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # Base de datos PostgreSQL
+  db:
+    image: postgres:16-alpine
+    container_name: zazcreditos-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: zazcreditos
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d zazcreditos']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - zazcreditos-network
+
+  # Redis para cache y sesiones
+  redis:
+    image: redis:7-alpine
+    container_name: zazcreditos-redis-dev
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - zazcreditos-network
+
+  # Aplicación en modo desarrollo
+  app:
+    build:
+      context: .
+      dockerfile: DockerFile
+      target: development
+    container_name: zazcreditos-app-dev
+    restart: unless-stopped
+    ports:
+      - '5000:5000'
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/zazcreditos
+      DIRECT_URL: postgresql://postgres:postgres@db:5432/zazcreditos
+      NODE_ENV: development
+      PORT: 5000
+      JWT_SECRET: zazcreditos_super_secret_jwt_key_development_only
+      JWT_EXPIRES_IN: 1d
+      BCRYPT_SALT_ROUNDS: 12
+      HOSTS_WHITE_LIST: http://localhost:3000,http://localhost:3001
+      LOG_LEVEL: debug
+      RATE_LIMIT_TTL: 60
+      RATE_LIMIT_MAX: 100
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./logs:/app/logs
+    networks:
+      - zazcreditos-network
+
+  # Adminer para gestión de BD (solo desarrollo)
+  adminer:
+    image: adminer:4-standalone
+    container_name: zazcreditos-adminer
+    restart: unless-stopped
+    ports:
+      - '8080:8080'
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    depends_on:
+      - db
+    networks:
+      - zazcreditos-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  zazcreditos-network:
+    driver: bridge

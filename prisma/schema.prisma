@@ -1,0 +1,220 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  USER
+  GUEST
+  MODERATOR
+}
+
+enum ClassType {
+  REGULAR
+  WORKSHOP
+}
+
+// Modelo base de Usuario
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  firstName String?  @map("first_name")
+  lastName  String?  @map("last_name")
+  avatar    String?
+  role      UserRole @default(USER)
+  isActive  Boolean  @default(true) @map("is_active")
+
+  // Relaciones Base
+  sessions UserSession[]
+
+  // Relaciones Academy
+  lessonProgress UserLessonProgress[]
+  moduleProgress UserModuleProgress[]
+
+  // Relaciones Classes
+  classEnrollments ClassEnrollment[]
+
+  // Relaciones Jobs
+  jobApplications JobApplication[]
+
+  // Auditoría
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([email])
+  @@index([role])
+  @@index([isActive])
+  @@map("users")
+}
+
+// Tabla para tracking de sesiones/tokens
+model UserSession {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  refreshToken String   @unique @map("refresh_token")
+  userAgent    String?  @map("user_agent")
+  ipAddress    String?  @map("ip_address")
+  isValid      Boolean  @default(true) @map("is_valid")
+  expiresAt    DateTime @map("expires_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([refreshToken])
+  @@map("user_sessions")
+}
+
+// ====================================================
+// ACADEMY / LEARNING
+// ====================================================
+
+model Module {
+  id          Int    @id @default(autoincrement())
+  title       String
+  description String
+  image       String // URL
+
+  lessons      Lesson[]
+  userProgress UserModuleProgress[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("modules")
+}
+
+model Lesson {
+  id         Int     @id @default(autoincrement())
+  title      String
+  duration   String // e.g. "10 min"
+  contentUrl String? @map("content_url") // Video url or content
+  order      Int     @default(0)
+
+  moduleId Int    @map("module_id")
+  module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  userProgress UserLessonProgress[]
+
+  @@index([moduleId])
+  @@map("lessons")
+}
+
+model UserLessonProgress {
+  id        String  @id @default(cuid())
+  userId    String  @map("user_id")
+  lessonId  Int     @map("lesson_id")
+  completed Boolean @default(false)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, lessonId])
+  @@map("user_lesson_progress")
+}
+
+model UserModuleProgress {
+  id       String @id @default(cuid())
+  userId   String @map("user_id")
+  moduleId Int    @map("module_id")
+  progress Int    @default(0) // 0-100 percentage
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, moduleId])
+  @@map("user_module_progress")
+}
+
+// ====================================================
+// CLASSES / LIVE SESSIONS
+// ====================================================
+
+model ClassSession {
+  id    Int       @id @default(autoincrement())
+  title String
+  type  ClassType @default(REGULAR)
+
+  startTime DateTime @map("start_time")
+  endTime   DateTime @map("end_time")
+
+  capacityMax Int?    @map("capacity_max") // null means unlimited
+  meetLink    String? @map("meet_link")
+  description String?
+
+  enrollments ClassEnrollment[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([startTime])
+  @@map("class_sessions")
+}
+
+model ClassEnrollment {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  classSessionId Int      @map("class_session_id")
+  enrolledAt     DateTime @default(now()) @map("enrolled_at")
+  status         String   @default("CONFIRMED") // CONFIRMED, CANCELLED
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classSession ClassSession @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, classSessionId])
+  @@map("class_enrollments")
+}
+
+// ====================================================
+// JOBS
+// ====================================================
+
+model JobOffer {
+  id           Int      @id @default(autoincrement())
+  title        String
+  company      String
+  location     String
+  salaryRange  String   @map("salary_range")
+  type         String // "Full-time", etc.
+  description  String
+  requirements String[] // Supports arrays in Postgres
+  isActive     Boolean  @default(true) @map("is_active")
+
+  applications JobApplication[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("job_offers")
+}
+
+model JobApplication {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  jobOfferId Int      @map("job_offer_id")
+  status     String   @default("APPLIED")
+  appliedAt  DateTime @default(now()) @map("applied_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobOffer JobOffer @relation(fields: [jobOfferId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobOfferId])
+  @@map("job_applications")
+}

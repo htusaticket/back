@@ -1,0 +1,95 @@
+---
+description: Todos los endpoints que devuelvan listas deben incluir paginación obligatoria para mantener consistencia y performance
+globs:
+  - "**/controllers/**/*.ts"
+  - "**/repositories/**/*.ts"
+  - "**/use-cases/**/*.ts"
+  - "**/dto/**/*.ts"
+alwaysApply: true
+---
+
+## Paginación Obligatoria - Regla de Consistencia
+
+**TODOS** los endpoints que devuelvan listas deben implementar paginación obligatoria.
+
+### DTOs de paginación requeridos:
+```typescript
+// Para requests
+export class PaginationDto {
+  @IsOptional()
+  @Type(() => Number)
+  @Min(1)
+  page?: number = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @Min(1)
+  @Max(100)
+  limit?: number = 10;
+
+  @IsOptional()
+  @IsString()
+  sortBy?: string;
+
+  @IsOptional()
+  @IsEnum(['asc', 'desc'])
+  sortOrder?: 'asc' | 'desc' = 'desc';
+}
+
+// Para responses
+export class PaginatedResponseDto<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+```
+
+### Implementación en repositorios:
+```typescript
+// ✅ CORRECTO - Con paginación
+async findAll(pagination: PaginationDto): Promise<PaginatedResponseDto<T>> {
+  const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = pagination;
+  const skip = (page - 1) * limit;
+
+  const [data, total] = await Promise.all([
+    this.model.findMany({
+      skip,
+      take: limit,
+      orderBy: { [sortBy]: sortOrder },
+      where: { isActive: true }
+    }),
+    this.model.count({ where: { isActive: true } })
+  ]);
+
+  return {
+    data,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+      hasNext: page < Math.ceil(total / limit),
+      hasPrev: page > 1
+    }
+  };
+}
+
+// ❌ INCORRECTO - Sin paginación
+async findAll(): Promise<T[]> {
+  return this.model.findMany();
+}
+```
+
+### Controladores:
+```typescript
+@Get()
+async findAll(@Query() pagination: PaginationDto): Promise<PaginatedResponseDto<User>> {
+  return this.userService.findAll(pagination);
+}
+```

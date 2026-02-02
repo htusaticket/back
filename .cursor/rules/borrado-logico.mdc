@@ -1,0 +1,41 @@
+---
+description: Siempre que se trabaje con deletes a menos que se indique lo contrario hacer borrados lógicos. Usar campos isActive, isDeleted, deletedAt según corresponda.
+globs:
+  - "**/*.ts"
+  - "**/*.js"
+  - "**/*.prisma"
+alwaysApply: true
+---
+
+## Borrado Lógico - Regla Obligatoria
+
+**SIEMPRE** usar borrado lógico en lugar de borrado físico, a menos que se especifique lo contrario explícitamente.
+
+### Campos para borrado lógico:
+- `isActive: Boolean` - Para activar/desactivar registros
+- `isDeleted: Boolean` - Para marcar como eliminado
+- `deletedAt: DateTime` - Para registrar cuándo se eliminó
+- `deletedBy: String` - Para registrar quién eliminó (opcional)
+
+### Implementación en repositorios:
+```typescript
+// ✅ CORRECTO - Borrado lógico
+async delete(id: string): Promise<T> {
+  return this.model.update({
+    where: { id },
+    data: { 
+      isActive: false,
+      deletedAt: new Date() 
+    }
+  });
+}
+
+// ❌ INCORRECTO - Borrado físico (solo si se especifica explícitamente)
+async delete(id: string): Promise<T> {
+  return this.model.delete({ where: { id } });
+}
+```
+
+### Filtros automáticos:
+- Todos los `findMany` deben incluir `where: { isActive: true }` por defecto
+- Para consultas que incluyan eliminados, usar `includeDeleted: true` explícitamente

@@ -1,0 +1,113 @@
+---
+description: Evitar el uso de 'any' y mantener tipado fuerte en todo el código TypeScript
+globs:
+  - "**/*.ts"
+  - "**/*.tsx"
+alwaysApply: true
+---
+
+## Tipado Fuerte - Regla de TypeScript
+
+**EVITAR** el uso de `any` y mantener tipado fuerte en todo el código TypeScript.
+
+### Reglas de tipado:
+
+1. **Prohibir `any`:**
+```typescript
+// ❌ INCORRECTO
+function processData(data: any): any {
+  return data.someProperty;
+}
+
+// ✅ CORRECTO
+interface ProcessDataInput {
+  someProperty: string;
+  anotherProperty: number;
+}
+
+function processData(data: ProcessDataInput): ProcessDataInput {
+  return data;
+}
+```
+
+2. **Usar tipos específicos:**
+```typescript
+// ❌ INCORRECTO
+const user: any = await userRepository.findById(id);
+
+// ✅ CORRECTO
+const user: User | null = await userRepository.findById(id);
+```
+
+3. **Interfaces para objetos complejos:**
+```typescript
+// ✅ CORRECTO
+interface CreateUserDto {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  dni: string;
+  phone: string;
+  address?: string;
+}
+
+interface UpdateUserDto {
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  address?: string;
+}
+```
+
+4. **Tipos para Prisma:**
+```typescript
+// ✅ CORRECTO
+import type { User, Prisma } from '@prisma/client';
+
+// Para operaciones de creación
+const createData: Prisma.UserCreateInput = {
+  email: 'user@example.com',
+  password: 'hashedPassword',
+  firstName: 'John',
+  lastName: 'Doe',
+  dni: '12345678',
+  phone: '+1234567890'
+};
+
+// Para operaciones de actualización
+const updateData: Prisma.UserUpdateInput = {
+  firstName: 'Jane',
+  address: 'New Address'
+};
+```
+
+5. **Tipos para respuestas de API:**
+```typescript
+// ✅ CORRECTO
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+  errors?: string[];
+}
+
+interface UserResponse {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  isActive: boolean;
+  createdAt: Date;
+}
+```
+
+### Excepciones permitidas (con justificación):
+- Configuración de Prisma donde sea inevitable
+- Interceptores de NestJS que manejan datos genéricos
+- Tests donde se requiera flexibilidad
+
+### Herramientas de ayuda:
+- Usar `// @ts-expect-error` con comentario explicativo
+- Preferir `unknown` sobre `any` cuando sea necesario
+- Usar type assertions solo cuando sea seguro: `data as SpecificType`

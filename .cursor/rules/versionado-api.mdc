@@ -1,0 +1,325 @@
+---
+description: Implementar versionado de API para manejar cambios breaking y mantener compatibilidad
+globs:
+  - "**/controllers/**/*.ts"
+  - "**/dto/**/*.ts"
+  - "**/main.ts"
+alwaysApply: true
+---
+
+## Versionado de API - Regla de Compatibilidad
+
+Implementar **versionado de API** para manejar cambios breaking y mantener compatibilidad hacia atrás.
+
+### Estrategias de versionado:
+
+1. **Versionado por URL (Recomendado):**
+```typescript
+// ✅ CORRECTO - Versionado por URL
+@Controller({
+  path: 'users',
+  version: '1'
+})
+export class UsersV1Controller {
+  @Get()
+  async findAll(@Query() pagination: PaginationDto): Promise<PaginatedResponseDto<User>> {
+    return this.userService.findAll(pagination);
+  }
+
+  @Post()
+  async create(@Body() createUserDto: CreateUserDto): Promise<UserResponse> {
+    return this.userService.create(createUserDto);
+  }
+}
+
+@Controller({
+  path: 'users',
+  version: '2'
+})
+export class UsersV2Controller {
+  @Get()
+  async findAll(@Query() pagination: PaginationDtoV2): Promise<PaginatedResponseDtoV2<UserV2>> {
+    return this.userService.findAllV2(pagination);
+  }
+
+  @Post()
+  async create(@Body() createUserDto: CreateUserDtoV2): Promise<UserResponseV2> {
+    return this.userService.createV2(createUserDto);
+  }
+}
+```
+
+2. **Configuración de versionado:**
+```typescript
+// ✅ CORRECTO - En main.ts
+import { VersioningType } from '@nestjs/common';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  
+  // Configurar versionado
+  app.enableVersioning({
+    type: VersioningType.URI,
+    prefix: 'v',
+    defaultVersion: '1',
+  });
+  
+  await app.listen(3000);
+}
+```
+
+### DTOs versionados:
+
+```typescript
+// ✅ CORRECTO - DTOs por versión
+// V1 DTOs
+export class CreateUserDtoV1 {
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
+  @IsString()
+  @IsNotEmpty()
+  password: string;
+
+  @IsString()
+  @IsNotEmpty()
+  firstName: string;
+
+  @IsString()
+  @IsNotEmpty()
+  lastName: string;
+}
+
+export class UserResponseV1 {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  createdAt: Date;
+}
+
+// V2 DTOs (con campos adicionales)
+export class CreateUserDtoV2 {
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
+  @IsString()
+  @IsNotEmpty()
+  password: string;
+
+  @IsString()
+  @IsNotEmpty()
+  firstName: string;
+
+  @IsString()
+  @IsNotEmpty()
+  lastName: string;
+
+  @IsString()
+  @IsNotEmpty()
+  dni: string;
+
+  @IsString()
+  @IsNotEmpty()
+  phone: string;
+
+  @IsOptional()
+  @IsString()
+  address?: string;
+}
+
+export class UserResponseV2 {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  dni: string;
+  phone: string;
+  address?: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### Servicios versionados:
+
+```typescript
+// ✅ CORRECTO - Servicios con versionado
+@Injectable()
+export class UserService {
+  // V1 - Método original
+  async create(createUserDto: CreateUserDtoV1): Promise<User> {
+    const userData = {
+      email: createUserDto.email,
+      password: await this.hashPassword(createUserDto.password),
+      firstName: createUserDto.firstName,
+      lastName: createUserDto.lastName,
+    };
+
+    return this.userRepository.create(userData);
+  }
+
+  // V2 - Método mejorado
+  async createV2(createUserDto: CreateUserDtoV2): Promise<User> {
+    // Validar DNI único
+    const existingUser = await this.userRepository.findByDni(createUserDto.dni);
+    if (existingUser) {
+      throw new ConflictException('Ya existe un usuario con este DNI');
+    }
+
+    const userData = {
+      email: createUserDto.email,
+      password: await this.hashPassword(createUserDto.password),
+      firstName: createUserDto.firstName,
+      lastName: createUserDto.lastName,
+      dni: createUserDto.dni,
+      phone: createUserDto.phone,
+      address: createUserDto.address,
+    };
+
+    return this.userRepository.create(userData);
+  }
+
+  // V1 - Response original
+  async findAll(pagination: PaginationDto): Promise<PaginatedResponseDto<User>> {
+    // Implementación V1
+  }
+
+  // V2 - Response mejorado
+  async findAllV2(pagination: PaginationDtoV2): Promise<PaginatedResponseDtoV2<UserV2>> {
+    // Implementación V2 con mejoras
+  }
+}
+```
+
+### Documentación de versiones:
+
+```typescript
+// ✅ CORRECTO - Documentación por versión
+@ApiTags('Users V1')
+@ApiExtraModels(CreateUserDtoV1, UserResponseV1)
+@Controller({
+  path: 'users',
+  version: '1'
+})
+export class UsersV1Controller {
+  @ApiOperation({ 
+    summary: 'Obtener usuarios (V1)',
+    description: 'Versión 1 de la API de usuarios. Versión legacy mantenida por compatibilidad.'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Lista de usuarios obtenida exitosamente',
+    type: [UserResponseV1]
+  })
+  @Get()
+  async findAll(@Query() pagination: PaginationDto): Promise<PaginatedResponseDto<User>> {
+    return this.userService.findAll(pagination);
+  }
+}
+
+@ApiTags('Users V2')
+@ApiExtraModels(CreateUserDtoV2, UserResponseV2)
+@Controller({
+  path: 'users',
+  version: '2'
+})
+export class UsersV2Controller {
+  @ApiOperation({ 
+    summary: 'Obtener usuarios (V2)',
+    description: 'Versión 2 de la API de usuarios con mejoras en campos y validaciones.'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Lista de usuarios obtenida exitosamente',
+    type: [UserResponseV2]
+  })
+  @Get()
+  async findAll(@Query() pagination: PaginationDtoV2): Promise<PaginatedResponseDtoV2<UserV2>> {
+    return this.userService.findAllV2(pagination);
+  }
+}
+```
+
+### Deprecación de versiones:
+
+```typescript
+// ✅ CORRECTO - Marcar versiones como deprecadas
+@ApiTags('Users V1 (Deprecated)')
+@ApiDeprecated()
+@Controller({
+  path: 'users',
+  version: '1'
+})
+export class UsersV1Controller {
+  @ApiDeprecated()
+  @Get()
+  async findAll(@Query() pagination: PaginationDto): Promise<PaginatedResponseDto<User>> {
+    // Log de advertencia
+    this.logger.warn('API V1 está deprecada. Migrar a V2 antes del 2024-12-31');
+    
+    return this.userService.findAll(pagination);
+  }
+}
+```
+
+### Headers de versión:
+
+```typescript
+// ✅ CORRECTO - Headers informativos
+@Controller({
+  path: 'users',
+  version: '1'
+})
+export class UsersV1Controller {
+  @Get()
+  @Header('X-API-Version', '1.0')
+  @Header('X-API-Deprecated', 'true')
+  @Header('X-API-Sunset', '2024-12-31')
+  async findAll(@Query() pagination: PaginationDto): Promise<PaginatedResponseDto<User>> {
+    return this.userService.findAll(pagination);
+  }
+}
+```
+
+### Migración de versiones:
+
+```typescript
+// ✅ CORRECTO - Helper para migración
+export class ApiMigrationHelper {
+  static migrateUserV1ToV2(userV1: UserResponseV1): Partial<CreateUserDtoV2> {
+    return {
+      email: userV1.email,
+      firstName: userV1.firstName,
+      lastName: userV1.lastName,
+      // Campos requeridos en V2 que no están en V1
+      dni: '', // Requerirá input del usuario
+      phone: '', // Requerirá input del usuario
+    };
+  }
+
+  static createMigrationGuide(): string {
+    return `
+      Migración de API V1 a V2:
+      1. Los campos 'dni' y 'phone' ahora son obligatorios
+      2. Se agregó validación de DNI único
+      3. El campo 'address' es opcional
+      4. Las respuestas incluyen campos adicionales de auditoría
+    `;
+  }
+}
+```
+
+### Reglas de versionado:
+
+- **USAR** versionado por URL (`/v1/`, `/v2/`)
+- **MANTENER** al menos 2 versiones activas simultáneamente
+- **DOCUMENTAR** cambios breaking entre versiones
+- **DEPRECAR** versiones con al menos 6 meses de anticipación
+- **INCLUIR** headers informativos en respuestas
+- **PROPORCIONAR** guías de migración detalladas
+- **MONITOREAR** uso de versiones para planificar deprecaciones
+- **TESTEAR** todas las versiones activas

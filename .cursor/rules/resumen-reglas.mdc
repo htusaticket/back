@@ -1,0 +1,249 @@
+---
+description: Resumen de todas las reglas de Cursor para mantener consistencia y calidad del proyecto
+globs:
+  - "**/*.ts"
+  - "**/*.js"
+  - "**/*.prisma"
+alwaysApply: true
+---
+
+## Resumen de Reglas de Cursor - Proyecto ZAZ Créditos
+
+Este documento resume todas las reglas establecidas para mantener la **consistencia**, **calidad** y **robustez** del proyecto.
+
+### 📋 Checklist Obligatorio Antes de Codificar
+
+1. ✅ **Revisar proyecto existente** - Verificar estructura, patrones y funcionalidades similares
+2. ✅ **Consultar reglas de Cursor** - Revisar todas las reglas en `.cursor/rules/`
+3. ✅ **Verificar configuración** - ESLint, TypeScript, Prisma, dependencias
+4. ✅ **Planificar arquitectura** - Seguir Clean Architecture establecida
+
+### 🔧 Reglas Técnicas Obligatorias
+
+#### 1. **Borrado Lógico** (`borrado-logico.mdc`)
+- **SIEMPRE** usar borrado lógico con campos `isActive`, `isDeleted`, `deletedAt`
+- **PROHIBIDO** borrado físico a menos que se especifique explícitamente
+- **OBLIGATORIO** filtrar registros activos en consultas por defecto
+
+#### 2. **Paginación Obligatoria** (`paginacion-obligatoria.mdc`)
+- **TODOS** los endpoints que devuelvan listas deben tener paginación
+- **USAR** `PaginationDto` y `PaginatedResponseDto` estándar
+- **INCLUIR** metadatos de paginación en respuestas
+
+#### 3. **Tipado Fuerte** (`tipado-fuerte.mdc`)
+- **PROHIBIDO** usar `any` (excepción: configuraciones específicas)
+- **OBLIGATORIO** interfaces y tipos específicos para todos los objetos
+- **USAR** tipos de Prisma (`Prisma.UserCreateInput`, etc.)
+
+#### 4. **Arquitectura Limpia** (`arquitectura-limpia.mdc`)
+- **SEGUIR** estructura de directorios establecida
+- **SEPARAR** responsabilidades (Controller, Service, Repository)
+- **USAR** inyección de dependencias con tokens
+- **MANTENER** naming consistente
+
+#### 5. **Validación de DTOs** (`validacion-dtos.mdc`)
+- **TODOS** los DTOs deben tener validaciones con `class-validator`
+- **INCLUIR** mensajes de error personalizados en español
+- **USAR** `@Type()` para transformaciones automáticas
+- **CONFIGURAR** validación global con `ValidationPipe`
+
+#### 6. **Manejo de Errores** (`manejo-errores.mdc`)
+- **USAR** excepciones específicas de NestJS
+- **IMPLEMENTAR** logging de errores apropiado
+- **MAPEAR** errores de base de datos a excepciones HTTP
+- **INCLUIR** códigos de error específicos
+
+#### 7. **Seguridad y Autenticación** (`seguridad-autenticacion.mdc`)
+- **PROTEGER** todos los endpoints por defecto
+- **USAR** `@Public()` solo para endpoints de autenticación
+- **IMPLEMENTAR** control de roles con `@Roles()`
+- **APLICAR** rate limiting en endpoints sensibles
+
+#### 8. **Testing y Documentación** (`testing-documentacion.mdc`)
+- **ESCRIBIR** tests unitarios para servicios (80% cobertura)
+- **INCLUIR** tests de integración para controladores
+- **DOCUMENTAR** métodos públicos con JSDoc
+- **COMENTAR** lógica compleja
+
+#### 9. **Logging y Monitoreo** (`logging-monitoreo.mdc`)
+- **USAR** Logger de NestJS (no console.log)
+- **IMPLEMENTAR** logging estructurado
+- **INCLUIR** contexto relevante en logs
+- **CONFIGURAR** niveles apropiados (error, warn, log, debug)
+
+#### 10. **Migraciones de Base de Datos** (`migraciones-bd.mdc`)
+- **USAR** nombres descriptivos para migraciones
+- **INCLUIR** campos de borrado lógico en todos los modelos
+- **CREAR** índices para campos de consulta frecuente
+- **VALIDAR** migraciones en desarrollo antes de producción
+
+#### 11. **Versionado de API** (`versionado-api.mdc`)
+- **USAR** versionado por URL (`/v1/`, `/v2/`)
+- **MANTENER** al menos 2 versiones activas simultáneamente
+- **DOCUMENTAR** cambios breaking entre versiones
+- **DEPRECAR** versiones con al menos 6 meses de anticipación
+
+#### 12. **Estrategias de Cache** (`estrategias-cache.mdc`)
+- **CACHEAR** datos que se consultan frecuentemente
+- **INVALIDAR** cache al modificar datos relacionados
+- **USAR** TTL apropiados según la frecuencia de cambio
+- **IMPLEMENTAR** fallback a base de datos si cache falla
+
+#### 13. **Internacionalización** (`internacionalizacion.mdc`)
+- **SOPORTAR** al menos español (es) e inglés (en)
+- **USAR** claves de traducción en lugar de texto hardcodeado
+- **IMPLEMENTAR** fallback a idioma por defecto
+- **ESTRUCTURAR** archivos de traducción por módulos
+
+#### 14. **Rate Limiting** (`rate-limiting.mdc`)
+- **APLICAR** rate limiting a todos los endpoints públicos
+- **CONFIGURAR** límites más estrictos para endpoints sensibles
+- **IMPLEMENTAR** bloqueo temporal de IPs abusivas
+- **USAR** límites diferentes según el rol del usuario
+ - **MONITOREAR** métricas de rate limiting
+ - **IMPLEMENTAR** fallback en caso de fallo de Redis
+ - **DOCUMENTAR** límites en la documentación de API
+ - **CONFIGURAR** rate limiting en múltiples capas (nginx, app, redis)
+
+#### 15. **Documentación de API** (`api-documentacion.mdc`)
+- **EXHIBIR** Swagger en `/docs` con JWT Bearer
+- **ANOTAR** controladores con `@ApiTags`, `@ApiOperation`, `@ApiResponse`
+- **DECORAR** DTOs con `@ApiProperty`
+
+#### 16. **Estilo de Código** (`estilo-codigo.mdc`)
+- **CUMPLIR** ESLint/Prettier y reglas del repo
+- **EVITAR** `any`, `no-console`, imports sin usar
+
+#### 17. **Config/Entornos y Secretos** (`config-entornos-seguridad.mdc`)
+- **VALIDAR** variables con schema
+- **NO** commitear `.env*`; usar gestores de secretos en prod
+
+#### 18. **Prisma Buenas Prácticas** (`prisma-buenas-practicas.mdc`)
+- **INDICES** adecuados, filtros por `isActive`, `select` mínimo
+- **MAPEAR** errores Prisma a HTTP
+
+#### 19. **Transacciones e Idempotencia** (`transacciones-idempotencia.mdc`)
+- **AGRUPAR** escrituras en transacciones
+- **IMPLEMENTAR** claves de idempotencia en endpoints críticos
+
+#### 20. **Salud y Monitorización** (`salud-monitorizacion.mdc`)
+- **EXPOSICIÓN** de health checks y métricas
+
+#### 21. **Respuestas Consistentes** (`respuestas-consistentes.mdc`)
+- **UNIFICAR** formato de respuesta via interceptor
+
+#### 22. **Uploads de Archivos** (`uploads-archivos.mdc`)
+- **VALIDAR** tipos/tamaños, almacenar externo, usar URLs firmadas
+
+### 🎯 Patrones de Código Obligatorios
+
+#### Repositorios:
+```typescript
+// ✅ CORRECTO
+async findAll(pagination: PaginationDto): Promise<PaginatedResponseDto<User>> {
+  const { page = 1, limit = 10 } = pagination;
+  const skip = (page - 1) * limit;
+
+  const [data, total] = await Promise.all([
+    this.model.findMany({
+      skip,
+      take: limit,
+      where: { isActive: true }
+    }),
+    this.model.count({ where: { isActive: true } })
+  ]);
+
+  return { data, pagination: { /* metadatos */ } };
+}
+
+async delete(id: string): Promise<User> {
+  return this.model.update({
+    where: { id },
+    data: { 
+      isActive: false,
+      deletedAt: new Date() 
+    }
+  });
+}
+```
+
+#### Servicios:
+```typescript
+// ✅ CORRECTO
+@Injectable()
+export class UserService {
+  private readonly logger = new Logger(UserService.name);
+
+  constructor(
+    @Inject(USER_REPOSITORY) 
+    private readonly userRepository: UserRepository
+  ) {}
+
+  async create(createUserDto: CreateUserDto): Promise<User> {
+    this.logger.log(`Creando usuario: ${createUserDto.email}`);
+    
+    try {
+      const user = await this.userRepository.create(createUserDto);
+      this.logger.log(`Usuario creado: ${user.id}`);
+      return user;
+    } catch (error) {
+      this.logger.error(`Error al crear usuario: ${error.message}`);
+      throw error;
+    }
+  }
+}
+```
+
+#### Controladores:
+```typescript
+// ✅ CORRECTO
+@Controller('users')
+@UseGuards(JwtAuthGuard, RolesGuard)
+export class UsersController {
+  constructor(private readonly userService: UserService) {}
+
+  @Get()
+  async findAll(@Query() pagination: PaginationDto): Promise<PaginatedResponseDto<User>> {
+    return this.userService.findAll(pagination);
+  }
+
+  @Post()
+  @Roles(Role.ADMIN)
+  async create(@Body() createUserDto: CreateUserDto): Promise<UserResponse> {
+    return this.userService.create(createUserDto);
+  }
+}
+```
+
+### 🚫 Prohibiciones Absolutas
+
+- ❌ **NUNCA** usar `any` (excepto configuraciones específicas)
+- ❌ **NUNCA** hacer borrado físico sin especificar explícitamente
+- ❌ **NUNCA** crear endpoints sin paginación para listas
+- ❌ **NUNCA** omitir validaciones en DTOs
+- ❌ **NUNCA** usar `console.log` en lugar de Logger
+- ❌ **NUNCA** crear endpoints sin autenticación (excepto auth)
+- ❌ **NUNCA** omitir manejo de errores
+- ❌ **NUNCA** crear código sin tests
+
+### ✅ Mejores Prácticas Adicionales
+
+- 🔄 **Reutilizar** código existente cuando sea posible
+- 📝 **Documentar** decisiones arquitectónicas importantes
+- 🧪 **Escribir** tests antes o junto con el código
+- 🔍 **Revisar** código existente antes de implementar
+- 📊 **Monitorear** performance y errores en producción
+- 🔒 **Validar** todas las entradas de usuario
+- 📱 **Mantener** APIs RESTful y consistentes
+
+### 📚 Recursos de Referencia
+
+- [Documentación NestJS](https://docs.nestjs.com/)
+- [Documentación Prisma](https://www.prisma.io/docs/)
+- [Class Validator](https://github.com/typestack/class-validator)
+- [ESLint Config](https://eslint.org/docs/latest/use/configure/)
+- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
+
+---
+
+**Recuerda**: Estas reglas están diseñadas para mantener la calidad, consistencia y mantenibilidad del proyecto. Siempre consulta las reglas específicas antes de implementar nuevas funcionalidades.

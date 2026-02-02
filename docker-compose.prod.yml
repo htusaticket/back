@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # Base de datos PostgreSQL
+  db:
+    image: postgres:16-alpine
+    container_name: zazcreditos-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: zazcreditos
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d zazcreditos']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - zazcreditos-network
+
+  # Redis para cache y sesiones
+  redis:
+    image: redis:7-alpine
+    container_name: zazcreditos-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - zazcreditos-network
+
+  # Aplicación principal
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: zazcreditos-app
+    restart: unless-stopped
+    ports:
+      - '5000:5000'
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/zazcreditos
+      DIRECT_URL: postgresql://postgres:postgres@db:5432/zazcreditos
+      NODE_ENV: production
+      PORT: 5000
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: 1d
+      BCRYPT_SALT_ROUNDS: 12
+      HOSTS_WHITE_LIST: ${HOSTS_WHITE_LIST}
+      LOG_LEVEL: warn
+      RATE_LIMIT_TTL: 60
+      RATE_LIMIT_MAX: 10
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - zazcreditos-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  zazcreditos-network:
+    driver: bridge

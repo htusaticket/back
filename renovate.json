@@ -1,0 +1,107 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":separateMajorReleases",
+    ":combinePatchMinorReleases",
+    ":ignoreUnstable",
+    ":prImmediately",
+    ":updateNotScheduled",
+    ":automergeDisabled",
+    ":ignoreModulesAndTests",
+    ":autodetectPinVersions",
+    ":prHourlyLimit2",
+    ":prConcurrentLimit10"
+  ],
+  "description": "Configuración de Renovate para actualizaciones automáticas de dependencias",
+  "timezone": "America/Argentina/Buenos_Aires",
+  "labels": ["dependencies", "renovate"],
+  "commitMessagePrefix": "chore(deps):",
+  "commitMessageAction": "update",
+  "commitMessageTopic": "{{depName}}",
+  "commitMessageExtra": "to v{{newVersion}}",
+  "prTitle": "chore(deps): update {{depName}} to v{{newVersion}}",
+  "prBodyTemplate": "Este PR actualiza {{depName}} de v{{currentVersion}} a v{{newVersion}}.\n\n### Cambios\n{{{changelog}}}\n\n### Configuración\n- [x] Actualización automática de dependencias\n- [x] Commits semánticos\n- [x] Tests automáticos en CI\n\n---\n*Este PR fue creado automáticamente por Renovate*",
+  "packageRules": [
+    {
+      "description": "Agrupar actualizaciones de ESLint",
+      "matchPackageNames": ["eslint"],
+      "matchPackagePatterns": ["^eslint-", "^@typescript-eslint/"],
+      "groupName": "eslint packages",
+      "schedule": ["before 10am on monday"]
+    },
+    {
+      "description": "Agrupar actualizaciones de Prisma",
+      "matchPackageNames": ["prisma", "@prisma/client"],
+      "groupName": "prisma packages",
+      "schedule": ["before 10am on monday"]
+    },
+    {
+      "description": "Agrupar actualizaciones de NestJS",
+      "matchPackagePatterns": ["^@nestjs/"],
+      "groupName": "nestjs packages",
+      "schedule": ["before 10am on monday"]
+    },
+    {
+      "description": "Agrupar actualizaciones de testing",
+      "matchPackageNames": ["jest", "supertest"],
+      "matchPackagePatterns": ["^@types/jest", "^ts-jest"],
+      "groupName": "testing packages",
+      "schedule": ["before 10am on monday"]
+    },
+    {
+      "description": "Auto-merge patch y minor para dependencias de desarrollo",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    },
+    {
+      "description": "Auto-merge patch para dependencias de producción",
+      "matchDepTypes": ["dependencies"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    },
+    {
+      "description": "Requiere revisión manual para major updates",
+      "matchUpdateTypes": ["major"],
+      "labels": ["dependencies", "major-update", "needs-review"],
+      "prPriority": 10,
+      "schedule": ["before 10am on monday"]
+    },
+    {
+      "description": "Configuración especial para TypeScript",
+      "matchPackageNames": ["typescript"],
+      "labels": ["dependencies", "typescript", "needs-review"],
+      "prPriority": 5
+    },
+    {
+      "description": "Configuración especial para Node.js",
+      "matchPackageNames": ["node"],
+      "labels": ["dependencies", "node", "needs-review"],
+      "prPriority": 5
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "labels": ["security", "dependencies"],
+    "prPriority": 20,
+    "schedule": ["at any time"]
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 10am on monday"],
+    "commitMessageAction": "update",
+    "commitMessageTopic": "lock file maintenance",
+    "prTitle": "chore(deps): lock file maintenance"
+  },
+  "separateMinorPatch": true,
+  "rangeStrategy": "bump",
+  "bumpVersion": "patch",
+  "schedule": ["before 10am on monday"],
+  "timezone": "America/Argentina/Buenos_Aires"
+}

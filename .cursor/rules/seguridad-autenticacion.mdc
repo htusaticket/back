@@ -1,0 +1,244 @@
+---
+description: Implementar medidas de seguridad y autenticación consistentes en todos los endpoints
+globs:
+  - "**/guards/**/*.ts"
+  - "**/strategies/**/*.ts"
+  - "**/controllers/**/*.ts"
+  - "**/decorators/**/*.ts"
+alwaysApply: true
+---
+
+## Seguridad y Autenticación - Regla de Protección
+
+Implementar **medidas de seguridad** y **autenticación consistentes** en todos los endpoints.
+
+### Autenticación obligatoria:
+
+```typescript
+// ✅ CORRECTO - Endpoints protegidos por defecto
+@Controller('users')
+@UseGuards(JwtAuthGuard) // Protección global
+export class UsersController {
+  @Get()
+  async findAll(@Query() pagination: PaginationDto): Promise<PaginatedResponseDto<User>> {
+    return this.userService.findAll(pagination);
+  }
+
+  @Post()
+  @Roles(Role.ADMIN) // Control de roles específico
+  async create(@Body() createUserDto: CreateUserDto): Promise<UserResponse> {
+    return this.userService.create(createUserDto);
+  }
+}
+
+// ✅ CORRECTO - Endpoints públicos explícitos
+@Controller('auth')
+export class AuthController {
+  @Post('login')
+  @Public() // Decorador para endpoints públicos
+  async login(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
+    return this.authService.login(loginDto);
+  }
+
+  @Post('register')
+  @Public()
+  async register(@Body() registerDto: RegisterDto): Promise<AuthResponseDto> {
+    return this.authService.register(registerDto);
+  }
+}
+```
+
+### Control de roles y permisos:
+
+```typescript
+// ✅ CORRECTO - Decorador de roles
+@Roles(Role.ADMIN)
+@Get('admin-only')
+async adminOnlyEndpoint(): Promise<any> {
+  return { message: 'Solo administradores' };
+}
+
+// ✅ CORRECTO - Múltiples roles
+@Roles(Role.ADMIN, Role.USER)
+@Get('admin-or-user')
+async adminOrUserEndpoint(): Promise<any> {
+  return { message: 'Administradores o usuarios' };
+}
+
+// ✅ CORRECTO - Acceso al usuario actual
+@Get('profile')
+async getProfile(@CurrentUser() user: User): Promise<UserResponse> {
+  return this.userService.findById(user.id);
+}
+
+@Put('profile')
+async updateProfile(
+  @CurrentUser() user: User,
+  @Body() updateUserDto: UpdateUserDto
+): Promise<UserResponse> {
+  return this.userService.update(user.id, updateUserDto);
+}
+```
+
+### Guards de seguridad:
+
+```typescript
+// ✅ CORRECTO - Guard JWT
+@Injectable()
+export class JwtAuthGuard extends AuthGuard('jwt') {
+  constructor(private reflector: Reflector) {
+    super();
+  }
+
+  canActivate(context: ExecutionContext): boolean | Promise<boolean> {
+    const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (isPublic) {
+      return true;
+    }
+
+    return super.canActivate(context);
+  }
+}
+
+// ✅ CORRECTO - Guard de roles
+@Injectable()
+export class RolesGuard implements CanActivate {
+  constructor(private reflector: Reflector) {}
+
+  canActivate(context: ExecutionContext): boolean {
+    const requiredRoles = this.reflector.getAllAndOverride<Role[]>('roles', [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (!requiredRoles) {
+      return true;
+    }
+
+    const { user } = context.switchToHttp().getRequest();
+    
+    if (!user) {
+      throw new UnauthorizedException('Usuario no autenticado');
+    }
+
+    const hasRole = requiredRoles.some((role) => user.role === role);
+    
+    if (!hasRole) {
+      throw new ForbiddenException('No tienes permisos para acceder a este recurso');
+    }
+
+    return true;
+  }
+}
+```
+
+### Rate limiting:
+
+```typescript
+// ✅ CORRECTO - Rate limiting en endpoints sensibles
+@Controller('auth')
+export class AuthController {
+  @Post('login')
+  @Public()
+  @Throttle(5, 60) // 5 intentos por minuto
+  async login(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
+    return this.authService.login(loginDto);
+  }
+
+  @Post('register')
+  @Public()
+  @Throttle(3, 300) // 3 registros por 5 minutos
+  async register(@Body() registerDto: RegisterDto): Promise<AuthResponseDto> {
+    return this.authService.register(registerDto);
+  }
+
+  @Post('forgot-password')
+  @Public()
+  @Throttle(3, 300) // 3 solicitudes por 5 minutos
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto): Promise<void> {
+    return this.authService.forgotPassword(forgotPasswordDto);
+  }
+}
+```
+
+### Validación de entrada:
+
+```typescript
+// ✅ CORRECTO - Sanitización de entrada
+@Post()
+@Roles(Role.ADMIN)
+async create(@Body() createUserDto: CreateUserDto): Promise<UserResponse> {
+  // Sanitizar entrada
+  createUserDto.email = createUserDto.email.toLowerCase().trim();
+  createUserDto.firstName = createUserDto.firstName.trim();
+  createUserDto.lastName = createUserDto.lastName.trim();
+  
+  return this.userService.create(createUserDto);
+}
+```
+
+### Headers de seguridad:
+
+```typescript
+// ✅ CORRECTO - En main.ts
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
+  },
+}));
+```
+
+### Logging de seguridad:
+
+```typescript
+// ✅ CORRECTO - Log de intentos de acceso
+@Injectable()
+export class SecurityLoggerInterceptor implements NestInterceptor {
+  private readonly logger = new Logger('SecurityLogger');
+
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    const request = context.switchToHttp().getRequest();
+    const { method, url, ip, headers } = request;
+    const userAgent = headers['user-agent'] || 'Unknown';
+
+    this.logger.log(
+      `Request: ${method} ${url} - IP: ${ip} - User-Agent: ${userAgent}`
+    );
+
+    return next.handle().pipe(
+      tap(() => {
+        this.logger.log(`Response: ${method} ${url} - Status: Success`);
+      }),
+      catchError((error) => {
+        this.logger.error(`Response: ${method} ${url} - Status: Error - ${error.message}`);
+        throw error;
+      })
+    );
+  }
+}
+```
+
+### Reglas de seguridad obligatorias:
+- **TODOS** los endpoints deben estar protegidos por defecto
+- **USAR** decorador `@Public()` solo para endpoints de autenticación
+- **IMPLEMENTAR** control de roles con `@Roles()`
+- **APLICAR** rate limiting en endpoints sensibles
+- **VALIDAR** y sanitizar todas las entradas
+- **LOGEAR** intentos de acceso y errores de seguridad
+- **USAR** HTTPS en producción
+- **IMPLEMENTAR** CORS apropiadamente
+- **CONFIGURAR** headers de seguridad con Helmet

@@ -1,0 +1,38 @@
+---
+description: Buenas prácticas de Prisma para schemas, consultas e índices
+globs:
+  - "**/*.prisma"
+  - "**/repositories/**/*.ts"
+  - "**/persistence/**/*.ts"
+alwaysApply: true
+---
+
+## Prisma - Buenas Prácticas
+
+### Schema
+
+- **INCLUIR** campos de auditoría y borrado lógico en todos los modelos
+- **AGREGAR** índices para filtros y ordenamientos frecuentes
+- **USAR** enums para estados de negocio
+
+### Consultas
+
+- **FILTRAR** por `isActive: true` por defecto
+- **INCLUIR** `select` o `include` mínimo necesario
+- **PAGINAR** con `skip`/`take` y orden estable
+
+### Transacciones
+
+```typescript
+await this.prisma.$transaction(async (tx) => {
+  const a = await tx.user.update({ /* ... */ });
+  const b = await tx.creditApplication.create({ /* ... */ });
+  return { a, b };
+});
+```
+
+### Manejo de errores
+
+- Mapear códigos `P2002` (únicos), `P2025` (no encontrado) a excepciones HTTP
+- Loguear detalles no sensibles, nunca exponer mensajes crudos de DB
+

@@ -1,0 +1,334 @@
+---
+description: Implementar rate limiting para proteger endpoints contra abuso y garantizar disponibilidad del servicio
+globs:
+  - "**/controllers/**/*.ts"
+  - "**/guards/**/*.ts"
+  - "**/main.ts"
+alwaysApply: true
+---
+
+## Rate Limiting - Regla de Protección
+
+Implementar **rate limiting** para proteger endpoints contra abuso y garantizar disponibilidad del servicio.
+
+### Configuración global:
+
+```typescript
+// ✅ CORRECTO - Configuración de rate limiting
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+
+@Module({
+  imports: [
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 1 minuto
+        limit: 100, // 100 requests por minuto
+      },
+    ]),
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
+})
+export class AppModule {}
+```
+
+### Rate limiting por endpoint:
+
+```typescript
+// ✅ CORRECTO - Rate limiting específico por endpoint
+@Controller('auth')
+export class AuthController {
+  @Post('login')
+  @Public()
+  @Throttle(5, 60) // 5 intentos por minuto
+  async login(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
+    return this.authService.login(loginDto);
+  }
+
+  @Post('register')
+  @Public()
+  @Throttle(3, 300) // 3 registros por 5 minutos
+  async register(@Body() registerDto: RegisterDto): Promise<AuthResponseDto> {
+    return this.authService.register(registerDto);
+  }
+
+  @Post('forgot-password')
+  @Public()
+  @Throttle(3, 300) // 3 solicitudes por 5 minutos
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto): Promise<void> {
+    return this.authService.forgotPassword(forgotPasswordDto);
+  }
+
+  @Post('reset-password')
+  @Public()
+  @Throttle(5, 60) // 5 intentos por minuto
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto): Promise<void> {
+    return this.authService.resetPassword(resetPasswordDto);
+  }
+}
+
+@Controller('users')
+export class UsersController {
+  @Post()
+  @Roles(Role.ADMIN)
+  @Throttle(10, 60) // 10 creaciones por minuto para admins
+  async create(@Body() createUserDto: CreateUserDto): Promise<UserResponse> {
+    return this.userService.create(createUserDto);
+  }
+
+  @Get()
+  @Throttle(50, 60) // 50 consultas por minuto
+  async findAll(@Query() pagination: PaginationDto): Promise<PaginatedResponseDto<User>> {
+    return this.userService.findAll(pagination);
+  }
+
+  @Get(':id')
+  @Throttle(100, 60) // 100 consultas por minuto
+  async findById(@Param('id') id: string): Promise<UserResponse> {
+    return this.userService.findById(id);
+  }
+}
+```
+
+### Rate limiting dinámico por usuario:
+
+```typescript
+// ✅ CORRECTO - Rate limiting basado en usuario
+@Injectable()
+export class UserBasedThrottlerGuard extends ThrottlerGuard {
+  protected async getTracker(req: Record<string, any>): Promise<string> {
+    // Usar ID de usuario si está autenticado, sino IP
+    const userId = req.user?.id;
+    const ip = req.ip || req.connection.remoteAddress;
+    
+    return userId ? `user:${userId}` : `ip:${ip}`;
+  }
+
+  protected async getLimit(context: ExecutionContext): Promise<number> {
+    const request = context.switchToHttp().getRequest();
+    const user = request.user;
+
+    // Límites diferentes según el rol del usuario
+    if (user?.role === Role.ADMIN) {
+      return 1000; // Admins tienen límites más altos
+    } else if (user?.role === Role.USER) {
+      return 100; // Usuarios normales
+    } else {
+      return 10; // Usuarios no autenticados
+    }
+  }
+
+  protected async getTtl(context: ExecutionContext): Promise<number> {
+    const request = context.switchToHttp().getRequest();
+    const user = request.user;
+
+    // TTL diferentes según el usuario
+    if (user?.role === Role.ADMIN) {
+      return 60; // 1 minuto para admins
+    } else {
+      return 60; // 1 minuto por defecto
+    }
+  }
+}
+```
+
+### Rate limiting por IP con Redis:
+
+```typescript
+// ✅ CORRECTO - Rate limiting con Redis
+@Injectable()
+export class RedisThrottlerService {
+  constructor(
+    @Inject('REDIS_CLIENT') private readonly redis: Redis,
+    private readonly logger: Logger,
+  ) {}
+
+  async checkRateLimit(
+    key: string, 
+    limit: number, 
+    window: number
+  ): Promise<{ allowed: boolean; remaining: number; resetTime: number }> {
+    const now = Date.now();
+    const windowStart = now - window * 1000;
+
+    try {
+      // Usar Redis pipeline para operaciones atómicas
+      const pipeline = this.redis.pipeline();
+      
+      // Remover entradas expiradas
+      pipeline.zremrangebyscore(key, 0, windowStart);
+      
+      // Contar requests en la ventana actual
+      pipeline.zcard(key);
+      
+      // Agregar request actual
+      pipeline.zadd(key, now, `${now}-${Math.random()}`);
+      
+      // Establecer expiración
+      pipeline.expire(key, Math.ceil(window));
+      
+      const results = await pipeline.exec();
+      const currentCount = results[1][1] as number;
+
+      const remaining = Math.max(0, limit - currentCount);
+      const allowed = currentCount < limit;
+      const resetTime = now + window * 1000;
+
+      this.logger.debug(`Rate limit check: ${key} - ${currentCount}/${limit} - Allowed: ${allowed}`);
+
+      return { allowed, remaining, resetTime };
+    } catch (error) {
+      this.logger.error(`Error checking rate limit for ${key}:`, error);
+      
+      // En caso de error, permitir la request
+      return { allowed: true, remaining: limit, resetTime: now + window * 1000 };
+    }
+  }
+
+  async isBlocked(ip: string): Promise<boolean> {
+    const blockKey = `blocked:${ip}`;
+    const blocked = await this.redis.get(blockKey);
+    return !!blocked;
+  }
+
+  async blockIP(ip: string, duration: number = 3600): Promise<void> {
+    const blockKey = `blocked:${ip}`;
+    await this.redis.setex(blockKey, duration, '1');
+    this.logger.warn(`IP ${ip} blocked for ${duration} seconds`);
+  }
+}
+```
+
+### Guard personalizado con Redis:
+
+```typescript
+// ✅ CORRECTO - Guard con Redis y bloqueo de IP
+@Injectable()
+export class AdvancedThrottlerGuard implements CanActivate {
+  constructor(
+    private readonly redisThrottler: RedisThrottlerService,
+    private readonly reflector: Reflector,
+    private readonly logger: Logger,
+  ) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest();
+    const ip = request.ip || request.connection.remoteAddress;
+    
+    // Verificar si la IP está bloqueada
+    if (await this.redisThrottler.isBlocked(ip)) {
+      throw new TooManyRequestsException('IP bloqueada temporalmente');
+    }
+
+    // Obtener configuración del endpoint
+    const throttlerConfig = this.reflector.getAllAndOverride<ThrottlerConfig>('throttler', [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (!throttlerConfig) {
+      return true; // Sin rate limiting configurado
+    }
+
+    const { limit, ttl } = throttlerConfig;
+    const key = `throttle:${ip}:${context.getHandler().name}`;
+
+    const result = await this.redisThrottler.checkRateLimit(key, limit, ttl);
+
+    if (!result.allowed) {
+      // Bloquear IP si excede límites severamente
+      if (result.remaining === 0) {
+        await this.redisThrottler.blockIP(ip, 300); // 5 minutos
+      }
+
+      throw new TooManyRequestsException({
+        message: 'Demasiadas solicitudes',
+        retryAfter: Math.ceil((result.resetTime - Date.now()) / 1000),
+        remaining: result.remaining,
+      });
+    }
+
+    return true;
+  }
+}
+```
+
+### Métricas de rate limiting:
+
+```typescript
+// ✅ CORRECTO - Métricas de rate limiting
+@Injectable()
+export class RateLimitMetricsService {
+  private readonly metrics = new Map<string, {
+    requests: number;
+    blocked: number;
+    lastReset: number;
+  }>();
+
+  recordRequest(endpoint: string, ip: string): void {
+    const key = `${endpoint}:${ip}`;
+    const current = this.metrics.get(key) || { requests: 0, blocked: 0, lastReset: Date.now() };
+    
+    current.requests++;
+    this.metrics.set(key, current);
+  }
+
+  recordBlock(endpoint: string, ip: string): void {
+    const key = `${endpoint}:${ip}`;
+    const current = this.metrics.get(key) || { requests: 0, blocked: 0, lastReset: Date.now() };
+    
+    current.blocked++;
+    this.metrics.set(key, current);
+  }
+
+  getMetrics(): Record<string, any> {
+    const now = Date.now();
+    const summary = {
+      totalRequests: 0,
+      totalBlocked: 0,
+      topEndpoints: {} as Record<string, number>,
+      topIPs: {} as Record<string, number>,
+    };
+
+    for (const [key, metrics] of this.metrics.entries()) {
+      summary.totalRequests += metrics.requests;
+      summary.totalBlocked += metrics.blocked;
+
+      const [endpoint, ip] = key.split(':');
+      
+      summary.topEndpoints[endpoint] = (summary.topEndpoints[endpoint] || 0) + metrics.requests;
+      summary.topIPs[ip] = (summary.topIPs[ip] || 0) + metrics.requests;
+    }
+
+    return summary;
+  }
+
+  // Limpiar métricas antiguas
+  @Cron('0 0 * * *') // Diario a medianoche
+  cleanupMetrics(): void {
+    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+    
+    for (const [key, metrics] of this.metrics.entries()) {
+      if (metrics.lastReset < oneDayAgo) {
+        this.metrics.delete(key);
+      }
+    }
+  }
+}
+```
+
+### Reglas de rate limiting:
+
+- **APLICAR** rate limiting a todos los endpoints públicos
+- **CONFIGURAR** límites más estrictos para endpoints sensibles
+- **IMPLEMENTAR** bloqueo temporal de IPs abusivas
+- **USAR** límites diferentes según el rol del usuario
+- **MONITOREAR** métricas de rate limiting
+- **IMPLEMENTAR** fallback en caso de fallo de Redis
+- **DOCUMENTAR** límites en la documentación de API
+- **CONFIGURAR** rate limiting en múltiples capas (nginx, app, redis)

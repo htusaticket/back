@@ -1,0 +1,211 @@
+---
+description: Escribir tests y documentación para mantener la calidad y mantenibilidad del código
+globs:
+  - "**/*.ts"
+  - "**/*.js"
+alwaysApply: true
+---
+
+## Testing y Documentación - Regla de Calidad
+
+Escribir **tests** y **documentación** para mantener la calidad y mantenibilidad del código.
+
+### Testing obligatorio:
+
+1. **Tests unitarios para servicios:**
+```typescript
+// ✅ CORRECTO - Test completo
+describe('UserService', () => {
+  let service: UserService;
+  let userRepository: UserRepository;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UserService,
+        {
+          provide: USER_REPOSITORY,
+          useValue: {
+            create: jest.fn(),
+            findById: jest.fn(),
+            update: jest.fn(),
+            delete: jest.fn(),
+          },
+        },
+      ],
+    }).compile();
+
+    service = module.get<UserService>(UserService);
+    userRepository = module.get<UserRepository>(USER_REPOSITORY);
+  });
+
+  describe('create', () => {
+    it('should create a user successfully', async () => {
+      const createUserDto: CreateUserDto = {
+        email: 'test@example.com',
+        password: 'password123',
+        firstName: 'John',
+        lastName: 'Doe',
+        dni: '12345678',
+        phone: '+1234567890',
+      };
+
+      const expectedUser: User = {
+        id: '1',
+        ...createUserDto,
+        role: Role.USER,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      jest.spyOn(userRepository, 'create').mockResolvedValue(expectedUser);
+
+      const result = await service.create(createUserDto);
+
+      expect(userRepository.create).toHaveBeenCalledWith(createUserDto);
+      expect(result).toEqual(expectedUser);
+    });
+
+    it('should throw ConflictException when user already exists', async () => {
+      const createUserDto: CreateUserDto = {
+        email: 'existing@example.com',
+        password: 'password123',
+        firstName: 'John',
+        lastName: 'Doe',
+        dni: '12345678',
+        phone: '+1234567890',
+      };
+
+      jest.spyOn(userRepository, 'findByEmail').mockResolvedValue({
+        id: '1',
+        email: 'existing@example.com',
+        // ... other fields
+      } as User);
+
+      await expect(service.create(createUserDto)).rejects.toThrow(
+        ConflictException
+      );
+    });
+  });
+});
+```
+
+2. **Tests de integración para controladores:**
+```typescript
+// ✅ CORRECTO - Test de integración
+describe('UsersController (e2e)', () => {
+  let app: INestApplication;
+  let userRepository: UserRepository;
+
+  beforeEach(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    userRepository = moduleFixture.get<UserRepository>(USER_REPOSITORY);
+    
+    await app.init();
+  });
+
+  describe('/users (POST)', () => {
+    it('should create a new user', () => {
+      const createUserDto = {
+        email: 'test@example.com',
+        password: 'password123',
+        firstName: 'John',
+        lastName: 'Doe',
+        dni: '12345678',
+        phone: '+1234567890',
+      };
+
+      return request(app.getHttpServer())
+        .post('/users')
+        .send(createUserDto)
+        .expect(201)
+        .expect((res) => {
+          expect(res.body.data.email).toBe(createUserDto.email);
+          expect(res.body.data.firstName).toBe(createUserDto.firstName);
+        });
+    });
+  });
+});
+```
+
+### Documentación obligatoria:
+
+1. **JSDoc para métodos públicos:**
+```typescript
+/**
+ * Crea un nuevo usuario en el sistema
+ * @param createUserDto - Datos del usuario a crear
+ * @returns Promise con el usuario creado
+ * @throws ConflictException si ya existe un usuario con el mismo email
+ * @throws BadRequestException si los datos son inválidos
+ */
+async create(createUserDto: CreateUserDto): Promise<User> {
+  // implementation
+}
+
+/**
+ * Busca un usuario por su ID
+ * @param id - ID único del usuario
+ * @returns Promise con el usuario encontrado o null
+ */
+async findById(id: string): Promise<User | null> {
+  // implementation
+}
+```
+
+2. **Comentarios para lógica compleja:**
+```typescript
+// Validar que el DNI no esté en uso por otro usuario activo
+const existingUserWithDni = await this.userRepository.findByDniAndActive(dni);
+if (existingUserWithDni && existingUserWithDni.id !== id) {
+  throw new ConflictException('Ya existe un usuario activo con este DNI');
+}
+
+// Generar token de verificación con expiración de 24 horas
+const verificationToken = crypto.randomUUID();
+const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+```
+
+3. **README para módulos complejos:**
+```markdown
+# Módulo de Usuarios
+
+## Descripción
+Maneja la gestión de usuarios del sistema, incluyendo creación, actualización y autenticación.
+
+## Endpoints
+- `POST /users` - Crear usuario
+- `GET /users/:id` - Obtener usuario por ID
+- `PUT /users/:id` - Actualizar usuario
+- `DELETE /users/:id` - Eliminar usuario (borrado lógico)
+
+## Dependencias
+- UserRepository para persistencia
+- EmailService para notificaciones
+- AuthService para autenticación
+```
+
+### Cobertura mínima:
+- **Servicios**: 80% de cobertura
+- **Controladores**: 70% de cobertura
+- **Repositorios**: 90% de cobertura
+
+### Comandos de testing:
+```bash
+# Ejecutar todos los tests
+npm run test
+
+# Tests con cobertura
+npm run test:cov
+
+# Tests en modo watch
+npm run test:watch
+
+# Tests e2e
+npm run test:e2e
+```

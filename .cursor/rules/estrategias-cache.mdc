@@ -1,0 +1,352 @@
+---
+description: Implementar estrategias de cache consistentes para mejorar performance y reducir carga en la base de datos
+globs:
+  - "**/services/**/*.ts"
+  - "**/controllers/**/*.ts"
+  - "**/interceptors/**/*.ts"
+alwaysApply: true
+---
+
+## Estrategias de Cache - Regla de Performance
+
+Implementar **estrategias de cache** consistentes para mejorar performance y reducir carga en la base de datos.
+
+### Configuración de cache:
+
+```typescript
+// ✅ CORRECTO - Configuración de Redis cache
+import { CacheModule } from '@nestjs/cache-manager';
+import { redisStore } from 'cache-manager-redis-store';
+
+@Module({
+  imports: [
+    CacheModule.register({
+      store: redisStore,
+      host: process.env.REDIS_HOST || 'localhost',
+      port: process.env.REDIS_PORT || 6379,
+      password: process.env.REDIS_PASSWORD,
+      ttl: 300, // 5 minutos por defecto
+      max: 1000, // Máximo 1000 elementos en cache
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+### Cache en servicios:
+
+```typescript
+// ✅ CORRECTO - Cache en servicios
+@Injectable()
+export class UserService {
+  constructor(
+    @Inject(USER_REPOSITORY) private readonly userRepository: UserRepository,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    private readonly logger: Logger,
+  ) {}
+
+  // Cache para usuarios individuales
+  async findById(id: string): Promise<User> {
+    const cacheKey = `user:${id}`;
+    
+    // Intentar obtener del cache
+    let user = await this.cacheManager.get<User>(cacheKey);
+    
+    if (!user) {
+      this.logger.debug(`Cache miss para usuario: ${id}`);
+      
+      // Obtener de base de datos
+      user = await this.userRepository.findById(id);
+      
+      if (user) {
+        // Guardar en cache por 10 minutos
+        await this.cacheManager.set(cacheKey, user, 600);
+        this.logger.debug(`Usuario ${id} guardado en cache`);
+      }
+    } else {
+      this.logger.debug(`Cache hit para usuario: ${id}`);
+    }
+
+    return user;
+  }
+
+  // Cache para listas con paginación
+  async findAll(pagination: PaginationDto): Promise<PaginatedResponseDto<User>> {
+    const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = pagination;
+    const cacheKey = `users:list:${page}:${limit}:${sortBy}:${sortOrder}`;
+    
+    let result = await this.cacheManager.get<PaginatedResponseDto<User>>(cacheKey);
+    
+    if (!result) {
+      this.logger.debug(`Cache miss para lista de usuarios: ${cacheKey}`);
+      
+      result = await this.userRepository.findAll(pagination);
+      
+      // Guardar en cache por 2 minutos (listas cambian más frecuentemente)
+      await this.cacheManager.set(cacheKey, result, 120);
+      this.logger.debug(`Lista de usuarios guardada en cache: ${cacheKey}`);
+    } else {
+      this.logger.debug(`Cache hit para lista de usuarios: ${cacheKey}`);
+    }
+
+    return result;
+  }
+
+  // Invalidar cache al crear/actualizar
+  async create(createUserDto: CreateUserDto): Promise<User> {
+    const user = await this.userRepository.create(createUserDto);
+    
+    // Invalidar caches relacionados
+    await this.invalidateUserCaches();
+    
+    this.logger.log(`Usuario creado y cache invalidado: ${user.id}`);
+    return user;
+  }
+
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+    const user = await this.userRepository.update(id, updateUserDto);
+    
+    // Invalidar cache específico del usuario
+    const userCacheKey = `user:${id}`;
+    await this.cacheManager.del(userCacheKey);
+    
+    // Invalidar listas que podrían incluir este usuario
+    await this.invalidateUserListCaches();
+    
+    this.logger.log(`Usuario actualizado y cache invalidado: ${id}`);
+    return user;
+  }
+
+  private async invalidateUserCaches(): Promise<void> {
+    // Invalidar todas las listas de usuarios
+    const keys = await this.cacheManager.store.keys('users:list:*');
+    if (keys.length > 0) {
+      await Promise.all(keys.map(key => this.cacheManager.del(key)));
+      this.logger.debug(`Invalidados ${keys.length} caches de listas de usuarios`);
+    }
+  }
+
+  private async invalidateUserListCaches(): Promise<void> {
+    const keys = await this.cacheManager.store.keys('users:list:*');
+    await Promise.all(keys.map(key => this.cacheManager.del(key)));
+  }
+}
+```
+
+### Interceptor de cache:
+
+```typescript
+// ✅ CORRECTO - Interceptor para cache automático
+@Injectable()
+export class CacheInterceptor implements NestInterceptor {
+  constructor(@Inject(CACHE_MANAGER) private readonly cacheManager: Cache) {}
+
+  async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<any>> {
+    const request = context.switchToHttp().getRequest();
+    const { method, url, query } = request;
+
+    // Solo cachear GET requests
+    if (method !== 'GET') {
+      return next.handle();
+    }
+
+    // Generar clave de cache basada en URL y query params
+    const cacheKey = this.generateCacheKey(url, query);
+    
+    // Intentar obtener del cache
+    const cachedResponse = await this.cacheManager.get(cacheKey);
+    
+    if (cachedResponse) {
+      return of(cachedResponse);
+    }
+
+    // Si no está en cache, ejecutar y guardar resultado
+    return next.handle().pipe(
+      tap(async (response) => {
+        // TTL dinámico basado en el tipo de endpoint
+        const ttl = this.getTTLForEndpoint(url);
+        await this.cacheManager.set(cacheKey, response, ttl);
+      })
+    );
+  }
+
+  private generateCacheKey(url: string, query: any): string {
+    const queryString = new URLSearchParams(query).toString();
+    return `api:${url}:${queryString}`;
+  }
+
+  private getTTLForEndpoint(url: string): number {
+    // TTL diferentes según el tipo de endpoint
+    if (url.includes('/users/')) return 600; // 10 minutos para usuarios individuales
+    if (url.includes('/users')) return 120; // 2 minutos para listas de usuarios
+    if (url.includes('/stats')) return 300; // 5 minutos para estadísticas
+    return 60; // 1 minuto por defecto
+  }
+}
+```
+
+### Cache para datos frecuentemente consultados:
+
+```typescript
+// ✅ CORRECTO - Cache para configuraciones y datos maestros
+@Injectable()
+export class ConfigurationService {
+  constructor(
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    private readonly logger: Logger,
+  ) {}
+
+  async getApplicationStatuses(): Promise<ApplicationStatus[]> {
+    const cacheKey = 'config:application-statuses';
+    
+    let statuses = await this.cacheManager.get<ApplicationStatus[]>(cacheKey);
+    
+    if (!statuses) {
+      this.logger.debug('Cache miss para estados de aplicación');
+      
+      // Obtener de base de datos o enum
+      statuses = Object.values(ApplicationStatus);
+      
+      // Cache por 1 hora (datos maestros cambian poco)
+      await this.cacheManager.set(cacheKey, statuses, 3600);
+    }
+
+    return statuses;
+  }
+
+  async getDocumentTypes(): Promise<string[]> {
+    const cacheKey = 'config:document-types';
+    
+    let types = await this.cacheManager.get<string[]>(cacheKey);
+    
+    if (!types) {
+      this.logger.debug('Cache miss para tipos de documento');
+      
+      types = [
+        'DNI_FRENTE',
+        'DNI_REVERSO',
+        'RECIBO_SUELDO',
+        'CONSTANCIA_LABORAL',
+        'COMPROBANTE_DOMICILIO',
+      ];
+      
+      await this.cacheManager.set(cacheKey, types, 3600);
+    }
+
+    return types;
+  }
+}
+```
+
+### Cache con tags para invalidación inteligente:
+
+```typescript
+// ✅ CORRECTO - Cache con tags
+@Injectable()
+export class TaggedCacheService {
+  constructor(
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+  ) {}
+
+  async setWithTags<T>(
+    key: string, 
+    value: T, 
+    ttl: number, 
+    tags: string[]
+  ): Promise<void> {
+    // Guardar el valor
+    await this.cacheManager.set(key, value, ttl);
+    
+    // Guardar las tags
+    for (const tag of tags) {
+      const tagKey = `tag:${tag}`;
+      const existingKeys = await this.cacheManager.get<string[]>(tagKey) || [];
+      
+      if (!existingKeys.includes(key)) {
+        existingKeys.push(key);
+        await this.cacheManager.set(tagKey, existingKeys, ttl);
+      }
+    }
+  }
+
+  async invalidateByTag(tag: string): Promise<void> {
+    const tagKey = `tag:${tag}`;
+    const keys = await this.cacheManager.get<string[]>(tagKey) || [];
+    
+    // Eliminar todos los elementos con esta tag
+    await Promise.all(keys.map(key => this.cacheManager.del(key)));
+    
+    // Eliminar la tag
+    await this.cacheManager.del(tagKey);
+  }
+
+  // Uso en servicios
+  async findByIdWithTags(id: string): Promise<User> {
+    const cacheKey = `user:${id}`;
+    
+    let user = await this.cacheManager.get<User>(cacheKey);
+    
+    if (!user) {
+      user = await this.userRepository.findById(id);
+      
+      if (user) {
+        await this.setWithTags(cacheKey, user, 600, [
+          'user',
+          `user:${id}`,
+          'users:list'
+        ]);
+      }
+    }
+
+    return user;
+  }
+}
+```
+
+### Métricas de cache:
+
+```typescript
+// ✅ CORRECTO - Métricas de cache
+@Injectable()
+export class CacheMetricsService {
+  private cacheHits = 0;
+  private cacheMisses = 0;
+
+  recordCacheHit(): void {
+    this.cacheHits++;
+  }
+
+  recordCacheMiss(): void {
+    this.cacheMisses++;
+  }
+
+  getCacheStats(): { hits: number; misses: number; hitRate: number } {
+    const total = this.cacheHits + this.cacheMisses;
+    const hitRate = total > 0 ? (this.cacheHits / total) * 100 : 0;
+
+    return {
+      hits: this.cacheHits,
+      misses: this.cacheMisses,
+      hitRate: Math.round(hitRate * 100) / 100,
+    };
+  }
+
+  // Log métricas cada hora
+  @Cron('0 * * * *') // Cada hora
+  logCacheMetrics(): void {
+    const stats = this.getCacheStats();
+    this.logger.log(`Cache Stats: ${stats.hitRate}% hit rate (${stats.hits}/${stats.hits + stats.misses})`);
+  }
+}
+```
+
+### Reglas de cache:
+
+- **CACHEAR** datos que se consultan frecuentemente
+- **INVALIDAR** cache al modificar datos relacionados
+- **USAR** TTL apropiados según la frecuencia de cambio
+- **IMPLEMENTAR** fallback a base de datos si cache falla
+- **MONITOREAR** hit rate del cache
+- **USAR** tags para invalidación inteligente
+- **CACHEAR** configuraciones y datos maestros por más tiempo
+- **EVITAR** cachear datos sensibles o muy dinámicos

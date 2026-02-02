@@ -1,0 +1,91 @@
+---
+description: Documentar la API con Swagger/OpenAPI de forma consistente y completa
+globs:
+  - "**/controllers/**/*.ts"
+  - "**/dto/**/*.ts"
+  - "**/main.ts"
+alwaysApply: true
+---
+
+## Documentación de API - Regla de Swagger/OpenAPI
+
+Estandarizar la documentación de la API usando Swagger para facilitar consumo y mantenimiento.
+
+### Configuración base en main.ts
+
+```typescript
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+
+const config = new DocumentBuilder()
+  .setTitle('ZAZ Créditos API')
+  .setDescription('Documentación de endpoints de ZAZ Créditos')
+  .setVersion('1.0.0')
+  .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'JWT')
+  .build();
+
+const document = SwaggerModule.createDocument(app, config);
+SwaggerModule.setup('docs', app, document, {
+  swaggerOptions: { persistAuthorization: true },
+});
+```
+
+### Anotaciones obligatorias en controladores
+
+```typescript
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+
+@ApiTags('Users')
+@ApiBearerAuth('JWT')
+@Controller('users')
+export class UsersController {
+  @Get()
+  @ApiOperation({ summary: 'Listar usuarios', description: 'Devuelve usuarios paginados' })
+  @ApiResponse({ status: 200, description: 'OK' })
+  async findAll(@Query() pagination: PaginationDto): Promise<PaginatedResponseDto<User>> {
+    return this.userService.findAll(pagination);
+  }
+}
+```
+
+### Decorar DTOs para schemas
+
+```typescript
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export class CreateUserDto {
+  @ApiProperty({ example: 'test@example.com' })
+  email: string;
+
+  @ApiProperty({ minLength: 8 })
+  password: string;
+
+  @ApiProperty()
+  firstName: string;
+
+  @ApiProperty()
+  lastName: string;
+}
+
+export class UserResponseDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  email: string;
+
+  @ApiProperty()
+  createdAt: Date;
+
+  @ApiPropertyOptional()
+  updatedAt?: Date;
+}
+```
+
+### Reglas de documentación
+
+- **INCLUIR** `@ApiTags`, `@ApiOperation`, `@ApiResponse` en todos los endpoints
+- **USAR** `@ApiBearerAuth` para endpoints protegidos
+- **DECORAR** DTOs con `@ApiProperty`/`@ApiPropertyOptional`
+- **VERSIONAR** documentación por versión de API cuando aplique
+- **NO EXPONER** datos sensibles en ejemplos
+

@@ -1,0 +1,26 @@
+---
+description: Manejar subidas de archivos de forma segura y escalable
+globs:
+  - "**/controllers/**/*.ts"
+  - "**/services/**/*.ts"
+alwaysApply: true
+---
+
+## Uploads de Archivos
+
+### Reglas
+
+- **VALIDAR** tipos y tamaños permitidos
+- **SANITIZAR** nombres de archivo
+- **ALMACENAR** en S3/GCS o almacenamiento externo; evitar filesystem local en prod
+- **NO** guardar archivos en base de datos
+- **FIRMAR** URLs de descarga (signed URLs)
+
+```typescript
+@Post('upload')
+@UseInterceptors(FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }))
+async upload(@UploadedFile() file: Express.Multer.File) {
+  // validar mimetype, subir a S3, devolver URL
+}
+```
+

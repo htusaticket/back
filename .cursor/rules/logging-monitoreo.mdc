@@ -1,0 +1,289 @@
+---
+description: Implementar logging consistente y monitoreo para facilitar el debugging y mantenimiento
+globs:
+  - "**/*.ts"
+  - "**/*.js"
+alwaysApply: true
+---
+
+## Logging y Monitoreo - Regla de Observabilidad
+
+Implementar **logging consistente** y **monitoreo** para facilitar el debugging y mantenimiento.
+
+### Configuración de logging:
+
+```typescript
+// ✅ CORRECTO - Configuración de Pino logger
+import { LoggerModule } from 'nestjs-pino';
+
+@Module({
+  imports: [
+    LoggerModule.forRoot({
+      pinoHttp: {
+        transport: {
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+            singleLine: true,
+            translateTime: 'yyyy-mm-dd HH:MM:ss',
+          },
+        },
+        serializers: {
+          req: (req) => ({
+            method: req.method,
+            url: req.url,
+            headers: {
+              'user-agent': req.headers['user-agent'],
+              'content-type': req.headers['content-type'],
+            },
+          }),
+          res: (res) => ({
+            statusCode: res.statusCode,
+          }),
+        },
+        redact: {
+          paths: ['req.headers.authorization', 'req.headers.cookie'],
+          censor: '[REDACTED]',
+        },
+      },
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+### Logging en servicios:
+
+```typescript
+// ✅ CORRECTO - Logging estructurado
+@Injectable()
+export class UserService {
+  private readonly logger = new Logger(UserService.name);
+
+  async create(createUserDto: CreateUserDto): Promise<User> {
+    this.logger.log(`Iniciando creación de usuario con email: ${createUserDto.email}`);
+    
+    try {
+      // Validar que el email no exista
+      const existingUser = await this.userRepository.findByEmail(createUserDto.email);
+      if (existingUser) {
+        this.logger.warn(`Intento de crear usuario con email existente: ${createUserDto.email}`);
+        throw new ConflictException('Ya existe un usuario con este email');
+      }
+
+      // Crear usuario
+      const user = await this.userRepository.create(createUserDto);
+      
+      this.logger.log(`Usuario creado exitosamente con ID: ${user.id}`);
+      return user;
+      
+    } catch (error) {
+      this.logger.error(
+        `Error al crear usuario: ${error.message}`,
+        error.stack,
+        { email: createUserDto.email }
+      );
+      throw error;
+    }
+  }
+
+  async findById(id: string): Promise<User> {
+    this.logger.debug(`Buscando usuario con ID: ${id}`);
+    
+    const user = await this.userRepository.findById(id);
+    
+    if (!user) {
+      this.logger.warn(`Usuario no encontrado con ID: ${id}`);
+      throw new NotFoundException(`Usuario con ID '${id}' no encontrado`);
+    }
+
+    this.logger.debug(`Usuario encontrado: ${user.email}`);
+    return user;
+  }
+}
+```
+
+### Logging en controladores:
+
+```typescript
+// ✅ CORRECTO - Logging de requests
+@Controller('users')
+export class UsersController {
+  private readonly logger = new Logger(UsersController.name);
+
+  @Post()
+  @Roles(Role.ADMIN)
+  async create(
+    @Body() createUserDto: CreateUserDto,
+    @CurrentUser() currentUser: User
+  ): Promise<UserResponse> {
+    this.logger.log(
+      `Admin ${currentUser.email} intentando crear usuario con email: ${createUserDto.email}`
+    );
+
+    try {
+      const user = await this.userService.create(createUserDto);
+      
+      this.logger.log(
+        `Usuario creado exitosamente por admin ${currentUser.email}: ${user.id}`
+      );
+      
+      return user;
+      
+    } catch (error) {
+      this.logger.error(
+        `Error al crear usuario por admin ${currentUser.email}: ${error.message}`,
+        error.stack
+      );
+      throw error;
+    }
+  }
+}
+```
+
+### Interceptor de logging:
+
+```typescript
+// ✅ CORRECTO - Interceptor para logging automático
+@Injectable()
+export class LoggingInterceptor implements NestInterceptor {
+  private readonly logger = new Logger('HTTP');
+
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    const request = context.switchToHttp().getRequest();
+    const response = context.switchToHttp().getResponse();
+    
+    const { method, url, ip } = request;
+    const userAgent = request.get('User-Agent') || '';
+    const startTime = Date.now();
+
+    this.logger.log(`${method} ${url} - ${ip} - ${userAgent}`);
+
+    return next.handle().pipe(
+      tap(() => {
+        const duration = Date.now() - startTime;
+        const { statusCode } = response;
+        
+        this.logger.log(
+          `${method} ${url} ${statusCode} - ${duration}ms`
+        );
+      }),
+      catchError((error) => {
+        const duration = Date.now() - startTime;
+        
+        this.logger.error(
+          `${method} ${url} ${error.status || 500} - ${duration}ms - ${error.message}`
+        );
+        
+        throw error;
+      })
+    );
+  }
+}
+```
+
+### Métricas y monitoreo:
+
+```typescript
+// ✅ CORRECTO - Interceptor de métricas
+@Injectable()
+export class MetricsInterceptor implements NestInterceptor {
+  private readonly logger = new Logger('Metrics');
+
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    const request = context.switchToHttp().getRequest();
+    const { method, url } = request;
+    const startTime = Date.now();
+
+    return next.handle().pipe(
+      tap(() => {
+        const duration = Date.now() - startTime;
+        
+        // Log métricas para análisis
+        this.logger.log(JSON.stringify({
+          type: 'request_metrics',
+          method,
+          endpoint: url,
+          duration,
+          timestamp: new Date().toISOString(),
+          status: 'success'
+        }));
+      }),
+      catchError((error) => {
+        const duration = Date.now() - startTime;
+        
+        this.logger.log(JSON.stringify({
+          type: 'request_metrics',
+          method,
+          endpoint: url,
+          duration,
+          timestamp: new Date().toISOString(),
+          status: 'error',
+          error: error.message
+        }));
+        
+        throw error;
+      })
+    );
+  }
+}
+```
+
+### Configuración de Sentry (si está disponible):
+
+```typescript
+// ✅ CORRECTO - Integración con Sentry
+@Injectable()
+export class SentryInterceptor implements NestInterceptor {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    return next.handle().pipe(
+      catchError((error) => {
+        // Capturar errores en Sentry
+        Sentry.captureException(error, {
+          tags: {
+            component: context.getClass().name,
+            method: context.getHandler().name,
+          },
+          extra: {
+            request: context.switchToHttp().getRequest(),
+          },
+        });
+        
+        throw error;
+      })
+    );
+  }
+}
+```
+
+### Niveles de logging:
+
+```typescript
+// ✅ CORRECTO - Uso apropiado de niveles
+export class ExampleService {
+  private readonly logger = new Logger(ExampleService.name);
+
+  async processData(data: any): Promise<any> {
+    // ERROR - Solo para errores críticos
+    this.logger.error('Error crítico en procesamiento', error.stack);
+    
+    // WARN - Para situaciones inusuales pero manejables
+    this.logger.warn('Datos incompletos recibidos', { missingFields: ['field1'] });
+    
+    // LOG - Para eventos importantes del negocio
+    this.logger.log('Procesamiento iniciado', { recordId: data.id });
+    
+    // DEBUG - Para información detallada de debugging
+    this.logger.debug('Validando datos', { dataKeys: Object.keys(data) });
+  }
+}
+```
+
+### Reglas de logging:
+- **SIEMPRE** usar Logger de NestJS en lugar de console.log
+- **INCLUIR** contexto relevante en cada log
+- **USAR** niveles apropiados (error, warn, log, debug)
+- **EVITAR** loggear información sensible (passwords, tokens)
+- **IMPLEMENTAR** logging estructurado para facilitar análisis
+- **CONFIGURAR** rotación de logs en producción
+- **INTEGRAR** con herramientas de monitoreo (Sentry, etc.)

@@ -1,0 +1,34 @@
+---
+description: Mantener estilo de código consistente con ESLint y Prettier del proyecto
+globs:
+  - "**/*.ts"
+  - "**/*.js"
+alwaysApply: true
+---
+
+## Estilo de Código - ESLint/Prettier
+
+Seguir las reglas definidas en `eslint.config.mjs` y formateo automático con Prettier.
+
+### Reglas mínimas obligatorias
+
+- **PROHIBIR** `any` salvo justificado (`// @ts-expect-error` con explicación)
+- **EVITAR** variables sin usar y imports no utilizados
+- **USAR** `no-console`; utilizar `Logger` de NestJS
+- **RESPETAR** orden de imports y separaciones por grupos
+- **HABILITAR** `strict` en TypeScript
+
+### Convenciones de código
+
+- Nombres descriptivos y consistentes (CamelCase para variables/métodos)
+- Evitar funciones anónimas en servicios/repositorios; usar métodos de clase
+- Retornos tipados explícitamente en servicios/repositorios/controladores
+- No capturar errores sin volver a lanzarlos o loguearlos
+
+### Comandos útiles
+
+```bash
+npm run lint
+npm run lint:fix
+```
+
