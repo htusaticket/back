@@ -1,11 +1,11 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { JwtModule } from '@nestjs/jwt';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HealthController } from './infrastructure/http/controllers/health.controller';
 import { PrismaModule } from './infrastructure/persistence/prisma/prisma.module';
+import { AuthModule } from './infrastructure/http/controllers/auth/auth.module';
 import { CorrelationIdMiddleware } from './application/common/middleware/correlation-id.middleware';
 import { MetricsService } from './application/common/services/metrics.service';
 import { SentryService } from './application/common/services/sentry.service';
@@ -29,11 +29,8 @@ const env = getEnvConfig();
         limit: env.RATE_LIMIT_MAX,
       },
     ]),
-    JwtModule.register({
-      secret: env.JWT_SECRET,
-      signOptions: { expiresIn: env.JWT_EXPIRES_IN },
-    }),
     PrismaModule,
+    AuthModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService, MetricsService, SentryService],

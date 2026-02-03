@@ -18,6 +18,12 @@ enum UserRole {
   MODERATOR
 }
 
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
 enum ClassType {
   REGULAR
   WORKSHOP
@@ -25,18 +31,22 @@ enum ClassType {
 
 // Modelo base de Usuario
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
+  id        String     @id @default(cuid())
+  email     String     @unique
   password  String
-  name      String?
-  firstName String?  @map("first_name")
-  lastName  String?  @map("last_name")
+  firstName String     @map("first_name")
+  lastName  String     @map("last_name")
+  phone     String?
+  city      String?
+  country   String?
+  reference String?    // ¿Cómo nos conociste?
   avatar    String?
-  role      UserRole @default(USER)
-  isActive  Boolean  @default(true) @map("is_active")
+  role      UserRole   @default(USER)
+  status    UserStatus @default(PENDING)
 
   // Relaciones Base
-  sessions UserSession[]
+  sessions       UserSession[]
+  passwordResets PasswordReset[]
 
   // Relaciones Academy
   lessonProgress UserLessonProgress[]
@@ -54,8 +64,25 @@ model User {
 
   @@index([email])
   @@index([role])
-  @@index([isActive])
+  @@index([status])
   @@map("users")
+}
+
+// Tabla para tokens de recuperación de contraseña
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@map("password_resets")
 }
 
 // Tabla para tracking de sesiones/tokens

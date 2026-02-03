@@ -13,9 +13,10 @@ import { captureError, addBreadcrumb, setUserContext } from '@/config/sentry.con
 
 interface RequestWithUser extends Request {
   user?: {
-    id: string;
-    email?: string;
-    username?: string;
+    userId: string;
+    email: string;
+    role: string;
+    status: string;
   };
 }
 
@@ -47,9 +48,8 @@ export class SentryInterceptor implements NestInterceptor {
     // Configurar contexto de usuario si está disponible
     if (request.user) {
       setUserContext({
-        id: request.user.id,
-        ...(request.user.email && { email: request.user.email }),
-        ...(request.user.username && { username: request.user.username }),
+        id: request.user.userId,
+        email: request.user.email,
       });
     }
 
@@ -82,7 +82,7 @@ export class SentryInterceptor implements NestInterceptor {
               },
               user: request.user
                 ? {
-                    id: request.user.id,
+                    id: request.user.userId,
                     email: request.user.email,
                   }
                 : undefined,

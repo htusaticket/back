@@ -24,7 +24,15 @@ const EnvSchema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
 
   // Sentry para monitoreo de errores
-  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_DSN: z.string().optional(),
+
+  // Resend para emails
+  RESEND_API_KEY: z.string().min(1, 'RESEND_API_KEY es requerida'),
+  RESEND_FROM_EMAIL: z.string().email().default('noreply@jfalcon.com'),
+  RESEND_FROM_NAME: z.string().default('JFalcon'),
+
+  // Frontend URL para links en emails
+  FRONTEND_URL: z.string().url().default('http://localhost:3000'),
 });
 
 export type EnvConfig = z.infer<typeof EnvSchema>;

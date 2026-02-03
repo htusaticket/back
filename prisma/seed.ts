@@ -1,7 +1,13 @@
-import { PrismaClient, UserRole } from '@prisma/client';
+import { PrismaClient, UserRole, UserStatus } from '@prisma/client';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcrypt';
 
-const prisma = new PrismaClient();
+const connectionString = process.env.DATABASE_URL;
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('🌱 Iniciando seeding...');
@@ -11,14 +17,14 @@ async function main() {
 
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@zazcreditos.com' },
-    update: {},
+    update: { status: UserStatus.ACTIVE },
     create: {
       email: 'admin@zazcreditos.com',
       password: hashedPassword,
       firstName: 'Admin',
       lastName: 'ZAZ',
       role: UserRole.ADMIN,
-      isActive: true,
+      status: UserStatus.ACTIVE,
     },
   });
 
@@ -27,14 +33,14 @@ async function main() {
   // Crear usuario de prueba
   const testUser = await prisma.user.upsert({
     where: { email: 'user@test.com' },
-    update: {},
+    update: { status: UserStatus.ACTIVE },
     create: {
       email: 'user@test.com',
       password: await bcrypt.hash('user123', 12),
       firstName: 'Usuario',
       lastName: 'Test',
       role: UserRole.USER,
-      isActive: true,
+      status: UserStatus.ACTIVE,
     },
   });
 
