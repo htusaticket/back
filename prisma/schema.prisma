@@ -29,6 +29,26 @@ enum ClassType {
   WORKSHOP
 }
 
+enum ChallengeType {
+  AUDIO
+  MULTIPLE_CHOICE
+  WRITING
+}
+
+enum EnrollmentStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+enum NotificationType {
+  STRIKE_APPLIED
+  CLASS_REMINDER
+  MATERIAL_AVAILABLE
+  CHALLENGE_FEEDBACK
+  CLASS_CONFIRMED
+  GENERAL
+}
+
 // Modelo base de Usuario
 model User {
   id        String     @id @default(cuid())
@@ -54,9 +74,16 @@ model User {
 
   // Relaciones Classes
   classEnrollments ClassEnrollment[]
+  strikes          Strike[]
 
   // Relaciones Jobs
   jobApplications JobApplication[]
+
+  // Relaciones Challenges
+  challengeProgress UserDailyChallengeProgress[]
+
+  // Relaciones Notifications
+  notifications Notification[]
 
   // Auditoría
   createdAt DateTime @default(now()) @map("created_at")
@@ -141,10 +168,11 @@ model Lesson {
 }
 
 model UserLessonProgress {
-  id        String  @id @default(cuid())
-  userId    String  @map("user_id")
-  lessonId  Int     @map("lesson_id")
-  completed Boolean @default(false)
+  id             String    @id @default(cuid())
+  userId         String    @map("user_id")
+  lessonId       Int       @map("lesson_id")
+  completed      Boolean   @default(false)
+  lastAccessedAt DateTime? @map("last_accessed_at")
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
@@ -182,11 +210,13 @@ model ClassSession {
   startTime DateTime @map("start_time")
   endTime   DateTime @map("end_time")
 
-  capacityMax Int?    @map("capacity_max") // null means unlimited
-  meetLink    String? @map("meet_link")
-  description String?
+  capacityMax    Int?    @map("capacity_max") // null means unlimited
+  meetLink       String? @map("meet_link")
+  materialsLink  String? @map("materials_link")
+  description    String?
 
   enrollments ClassEnrollment[]
+  strikes     Strike[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -196,17 +226,102 @@ model ClassSession {
 }
 
 model ClassEnrollment {
-  id             String   @id @default(cuid())
-  userId         String   @map("user_id")
-  classSessionId Int      @map("class_session_id")
-  enrolledAt     DateTime @default(now()) @map("enrolled_at")
-  status         String   @default("CONFIRMED") // CONFIRMED, CANCELLED
+  id             String           @id @default(cuid())
+  userId         String           @map("user_id")
+  classSessionId Int              @map("class_session_id")
+  enrolledAt     DateTime         @default(now()) @map("enrolled_at")
+  status         EnrollmentStatus @default(CONFIRMED)
+  cancelledAt    DateTime?        @map("cancelled_at")
 
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   classSession ClassSession @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
 
   @@unique([userId, classSessionId])
+  @@index([status])
   @@map("class_enrollments")
+}
+
+model Strike {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  classSessionId Int      @map("class_session_id")
+  reason         String   @default("LATE_CANCELLATION")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classSession ClassSession @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("strikes")
+}
+
+// ====================================================
+// CHALLENGES
+// ====================================================
+
+model DailyChallenge {
+  id           Int           @id @default(autoincrement())
+  title        String
+  type         ChallengeType
+  instructions String        @db.Text
+  date         DateTime      // Fecha para la que es el challenge
+  questions    Json?         // Para quiz questions (array de objetos)
+  audioUrl     String?       @map("audio_url") // Para challenges de audio
+  points       Int           @default(10)
+  isActive     Boolean       @default(true) @map("is_active")
+
+  userProgress UserDailyChallengeProgress[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([date])
+  @@index([isActive])
+  @@map("daily_challenges")
+}
+
+model UserDailyChallengeProgress {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  challengeId Int       @map("challenge_id")
+  completed   Boolean   @default(false)
+  completedAt DateTime? @map("completed_at")
+  answers     Json?     // Respuestas del usuario
+  feedback    String?   @db.Text // Feedback del profesor (solo para audio)
+  score       Int?      // Puntaje obtenido
+
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge DailyChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, challengeId])
+  @@index([userId, completedAt])
+  @@map("user_daily_challenge_progress")
+}
+
+// ====================================================
+// NOTIFICATIONS
+// ====================================================
+
+model Notification {
+  id      String           @id @default(cuid())
+  userId  String           @map("user_id")
+  type    NotificationType
+  title   String
+  message String           @db.Text
+  isRead  Boolean          @default(false) @map("is_read")
+  data    Json?            // Metadata adicional (classId, challengeId, etc.)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
 }
 
 // ====================================================
