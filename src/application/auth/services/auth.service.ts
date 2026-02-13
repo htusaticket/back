@@ -220,7 +220,7 @@ export class AuthService {
     });
 
     // Enviar email
-    const resetLink = `${this.env.FRONTEND_URL}/auth/reset-password?token=${token}`;
+    const resetLink = `${this.env.FRONTEND_URL}/reset-password?token=${token}`;
     await this.emailService.sendPasswordResetEmail(user.email, user.firstName, resetLink);
 
     this.logger.log(`Email de recuperación enviado a: ${email}`);

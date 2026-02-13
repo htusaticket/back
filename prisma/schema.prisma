@@ -40,6 +40,19 @@ enum EnrollmentStatus {
   CANCELLED
 }
 
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  NEEDS_IMPROVEMENT
+}
+
+enum ResourceType {
+  PDF
+  LINK
+  VIDEO
+  DOCUMENT
+}
+
 enum NotificationType {
   STRIKE_APPLIED
   CLASS_REMINDER
@@ -141,6 +154,7 @@ model Module {
   title       String
   description String
   image       String // URL
+  order       Int    @default(0)
 
   lessons      Lesson[]
   userProgress UserModuleProgress[]
@@ -148,23 +162,43 @@ model Module {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([order])
   @@map("modules")
 }
 
 model Lesson {
-  id         Int     @id @default(autoincrement())
-  title      String
-  duration   String // e.g. "10 min"
-  contentUrl String? @map("content_url") // Video url or content
-  order      Int     @default(0)
+  id          Int     @id @default(autoincrement())
+  title       String
+  description String? @db.Text
+  duration    String // e.g. "10 min"
+  contentUrl  String? @map("content_url") // Video url or content
+  order       Int     @default(0)
 
   moduleId Int    @map("module_id")
   module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
 
   userProgress UserLessonProgress[]
+  resources    LessonResource[]
 
   @@index([moduleId])
+  @@index([order])
   @@map("lessons")
+}
+
+model LessonResource {
+  id       Int          @id @default(autoincrement())
+  title    String
+  fileUrl  String       @map("file_url")
+  type     ResourceType @default(PDF)
+  size     String?      // e.g. "245 KB"
+  lessonId Int          @map("lesson_id")
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([lessonId])
+  @@map("lesson_resources")
 }
 
 model UserLessonProgress {
@@ -282,14 +316,16 @@ model DailyChallenge {
 }
 
 model UserDailyChallengeProgress {
-  id          String    @id @default(cuid())
-  userId      String    @map("user_id")
-  challengeId Int       @map("challenge_id")
-  completed   Boolean   @default(false)
-  completedAt DateTime? @map("completed_at")
-  answers     Json?     // Respuestas del usuario
-  feedback    String?   @db.Text // Feedback del profesor (solo para audio)
-  score       Int?      // Puntaje obtenido
+  id          String           @id @default(cuid())
+  userId      String           @map("user_id")
+  challengeId Int              @map("challenge_id")
+  completed   Boolean          @default(false)
+  completedAt DateTime?        @map("completed_at")
+  answers     Json?            // Respuestas del usuario (para quiz)
+  fileUrl     String?          @map("file_url") // URL del archivo subido (para audio)
+  status      SubmissionStatus @default(PENDING)
+  feedback    String?          @db.Text // Feedback del profesor (solo para audio)
+  score       Int?             // Puntaje obtenido
 
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   challenge DailyChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
@@ -299,6 +335,7 @@ model UserDailyChallengeProgress {
 
   @@unique([userId, challengeId])
   @@index([userId, completedAt])
+  @@index([status])
   @@map("user_daily_challenge_progress")
 }
 

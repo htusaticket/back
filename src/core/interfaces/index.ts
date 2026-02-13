@@ -5,6 +5,7 @@ export * from './class-session.repository';
 export * from './strike.repository';
 export * from './notification.repository';
 export * from './daily-challenge.repository';
+export * from './academy.repository';
 
 // Re-export entities for convenience
 export * from '../entities';

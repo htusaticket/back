@@ -11,9 +11,9 @@ import {
 } from '@/core/interfaces';
 import {
   PrismaClassSessionRepository,
-  PrismaDailyChallengeRepository,
   PrismaNotificationRepository,
 } from '@/infrastructure/persistence/prisma/repositories';
+import { ChallengesRepository } from '@/infrastructure/persistence/repositories/challenges.repository';
 
 @Module({
   imports: [PrismaModule, JwtModule],
@@ -26,7 +26,7 @@ import {
     },
     {
       provide: DAILY_CHALLENGE_REPOSITORY,
-      useClass: PrismaDailyChallengeRepository,
+      useClass: ChallengesRepository,
     },
     {
       provide: NOTIFICATION_REPOSITORY,
