@@ -4,11 +4,11 @@ import { ChallengesController } from './challenges.controller';
 import { ChallengesService } from '@/application/challenges/services/challenges.service';
 import { ChallengesRepository } from '@/infrastructure/persistence/repositories/challenges.repository';
 import { PrismaModule } from '@/infrastructure/persistence/prisma/prisma.module';
-import { FirebaseStorageModule } from '@/infrastructure/storage/firebase/firebase-storage.module';
+import { CloudflareStorageModule } from '@/infrastructure/storage/cloudflare/cloudflare-storage.module';
 import { DAILY_CHALLENGE_REPOSITORY } from '@/core/interfaces';
 
 @Module({
-  imports: [PrismaModule, FirebaseStorageModule],
+  imports: [PrismaModule, CloudflareStorageModule],
   controllers: [ChallengesController],
   providers: [
     ChallengesService,

@@ -34,6 +34,7 @@
     "pre-push": "npm run typecheck && npm run test"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.991.0",
     "@nestjs/common": "^11.0.20",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.20",
@@ -52,7 +53,6 @@
     "class-validator": "^0.14.1",
     "cookie-parser": "^1.4.7",
     "dotenv": "^16.5.0",
-    "firebase-admin": "^13.6.1",
     "helmet": "^8.1.0",
     "multer": "^2.0.2",
     "nestjs-pino": "^4.4.0",

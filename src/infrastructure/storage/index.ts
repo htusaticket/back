@@ -1,3 +1,3 @@
 // src/infrastructure/storage/index.ts
-export * from './firebase/firebase-storage.service';
-export * from './firebase/firebase-storage.module';
+export * from './cloudflare/cloudflare-storage.service';
+export * from './cloudflare/cloudflare-storage.module';

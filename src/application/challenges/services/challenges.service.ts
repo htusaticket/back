@@ -2,7 +2,7 @@
 import { Injectable, Inject, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SubmissionStatus, ChallengeType } from '@prisma/client';
 import { IDailyChallengeRepository, DAILY_CHALLENGE_REPOSITORY } from '@/core/interfaces';
-import { FirebaseStorageService } from '@/infrastructure/storage/firebase/firebase-storage.service';
+import { CloudflareStorageService } from '@/infrastructure/storage/cloudflare/cloudflare-storage.service';
 import {
   DailyChallengeDto,
   QuizChallengeDto,
@@ -21,7 +21,7 @@ export class ChallengesService {
   constructor(
     @Inject(DAILY_CHALLENGE_REPOSITORY)
     private readonly challengesRepository: IDailyChallengeRepository,
-    private readonly firebaseStorage: FirebaseStorageService,
+    private readonly cloudflareStorage: CloudflareStorageService,
   ) {}
 
   /**
@@ -192,15 +192,15 @@ export class ChallengesService {
       throw new BadRequestException('This challenge is not an audio challenge');
     }
 
-    // Verificar si Firebase está configurado
-    if (!this.firebaseStorage.isReady()) {
+    // Verificar si Cloudflare R2 está configurado
+    if (!this.cloudflareStorage.isReady()) {
       throw new BadRequestException(
         'File storage is not configured. Please contact the administrator.',
       );
     }
 
-    // Subir archivo a Firebase
-    const fileUrl = await this.firebaseStorage.uploadAudio(
+    // Subir archivo a Cloudflare R2
+    const fileUrl = await this.cloudflareStorage.uploadAudio(
       audioFile.buffer,
       userId,
       challengeId,

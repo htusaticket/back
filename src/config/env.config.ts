@@ -33,6 +33,13 @@ const EnvSchema = z.object({
 
   // Frontend URL para links en emails
   FRONTEND_URL: z.string().url().default('http://localhost:3000'),
+
+  // Cloudflare R2 Storage (opcional - si no está configurado, las subidas de archivos estarán deshabilitadas)
+  CLOUDFLARE_R2_ACCOUNT_ID: z.string().optional(),
+  CLOUDFLARE_R2_ACCESS_KEY_ID: z.string().optional(),
+  CLOUDFLARE_R2_SECRET_ACCESS_KEY: z.string().optional(),
+  CLOUDFLARE_R2_BUCKET_NAME: z.string().optional(),
+  CLOUDFLARE_R2_PUBLIC_URL: z.string().url().optional().or(z.literal('')),
 });
 
 export type EnvConfig = z.infer<typeof EnvSchema>;
