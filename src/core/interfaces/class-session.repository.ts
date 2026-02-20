@@ -11,8 +11,9 @@ export const CLASS_SESSION_REPOSITORY = 'CLASS_SESSION_REPOSITORY';
 export interface IClassSessionRepository {
   /**
    * Obtener clases disponibles (futuras) - con formato para frontend
+   * @param userId - Optional user ID to check enrollment status
    */
-  findAvailableClasses(): Promise<ClassResponseDto[]>;
+  findAvailableClasses(userId?: string): Promise<ClassResponseDto[]>;
 
   /**
    * Obtener clases donde el usuario está inscrito - con formato para frontend

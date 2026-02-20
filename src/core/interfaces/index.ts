@@ -6,6 +6,8 @@ export * from './strike.repository';
 export * from './notification.repository';
 export * from './daily-challenge.repository';
 export * from './academy.repository';
+export * from './job.repository';
+export * from './job-application.repository';
 
 // Re-export entities for convenience
 export * from '../entities';

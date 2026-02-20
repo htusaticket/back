@@ -38,8 +38,8 @@ export class ClassesService {
   /**
    * Obtener todas las clases disponibles (futuras)
    */
-  async getAvailableClasses(): Promise<ClassResponseDto[]> {
-    const classes = await this.classSessionRepository.findAvailableClasses();
+  async getAvailableClasses(userId?: string): Promise<ClassResponseDto[]> {
+    const classes = await this.classSessionRepository.findAvailableClasses(userId);
     return classes;
   }
 
@@ -61,21 +61,21 @@ export class ClassesService {
     // 1. Verificar que el usuario existe y está activo
     const user = await this.userRepository.findById(userId);
     if (!user) {
-      throw new NotFoundException('Usuario no encontrado');
+      throw new NotFoundException('User not found');
     }
 
     if (user.status === UserStatus.SUSPENDED) {
-      throw new ForbiddenException('Tu cuenta está suspendida. No puedes inscribirte en clases.');
+      throw new ForbiddenException('Your account is suspended. You cannot enroll in classes.');
     }
 
     if (user.status === UserStatus.PENDING) {
-      throw new ForbiddenException('Tu cuenta está pendiente de aprobación.');
+      throw new ForbiddenException('Your account is pending approval.');
     }
 
     // 2. Verificar que la clase existe
     const classSession = await this.classSessionRepository.findById(classSessionId);
     if (!classSession) {
-      throw new NotFoundException('Clase no encontrada');
+      throw new NotFoundException('Class not found');
     }
 
     // 3. Verificar que el usuario no está ya inscrito
@@ -84,7 +84,7 @@ export class ClassesService {
       classSessionId,
     );
     if (alreadyEnrolled) {
-      throw new ConflictException('Ya estás inscrito en esta clase');
+      throw new ConflictException('You are already enrolled in this class');
     }
 
     // 4. Verificar cupo disponible (transacción atómica)
@@ -92,7 +92,7 @@ export class ClassesService {
       const currentCount =
         await this.classSessionRepository.getConfirmedEnrollmentCount(classSessionId);
       if (currentCount >= classSession.capacityMax) {
-        throw new ConflictException('Esta clase está llena. No hay cupos disponibles.');
+        throw new ConflictException('This class is full. No spots available.');
       }
     }
 
@@ -103,16 +103,16 @@ export class ClassesService {
     await this.notificationRepository.create({
       userId,
       type: NotificationType.CLASS_CONFIRMED,
-      title: 'Inscripción confirmada',
-      message: `Te has inscrito correctamente en la clase "${classSession.title}"`,
+      title: 'Enrollment Confirmed',
+      message: `You have successfully enrolled in the class "${classSession.title}"`,
       data: { classSessionId },
     });
 
-    this.logger.log(`Usuario ${userId} inscrito en clase ${classSessionId}`);
+    this.logger.log(`User ${userId} enrolled in class ${classSessionId}`);
 
     return {
       success: true,
-      message: 'Te has inscrito correctamente en la clase',
+      message: 'You have successfully enrolled in the class',
     };
   }
 
@@ -123,13 +123,13 @@ export class ClassesService {
     // 1. Verificar que el usuario está inscrito
     const isEnrolled = await this.classSessionRepository.isUserEnrolled(userId, classSessionId);
     if (!isEnrolled) {
-      throw new NotFoundException('No estás inscrito en esta clase');
+      throw new NotFoundException('You are not enrolled in this class');
     }
 
     // 2. Obtener la clase para verificar fecha
     const classSession = await this.classSessionRepository.findById(classSessionId);
     if (!classSession) {
-      throw new NotFoundException('Clase no encontrada');
+      throw new NotFoundException('Class not found');
     }
 
     // 3. Verificar si la cancelación es tardía (< 24 horas)
@@ -148,26 +148,26 @@ export class ClassesService {
       await this.notificationRepository.create({
         userId,
         type: NotificationType.STRIKE_APPLIED,
-        title: 'Strike aplicado',
-        message: `Has recibido un strike por cancelar la clase "${classSession.title}" con menos de 24 horas de anticipación.`,
+        title: 'Strike Applied',
+        message: `You have received a strike for canceling the class "${classSession.title}" with less than 24 hours notice.`,
         data: { classSessionId, reason: 'LATE_CANCELLATION' },
       });
 
       this.logger.warn(
-        `Strike aplicado al usuario ${userId} por cancelación tardía de clase ${classSessionId}`,
+        `Strike applied to user ${userId} for late cancellation of class ${classSessionId}`,
       );
     }
 
     // 5. Cancelar la inscripción
     await this.classSessionRepository.cancelEnrollment(userId, classSessionId);
 
-    this.logger.log(`Usuario ${userId} canceló inscripción en clase ${classSessionId}`);
+    this.logger.log(`User ${userId} cancelled enrollment in class ${classSessionId}`);
 
     return {
       success: true,
       message: strikeApplied
-        ? 'Inscripción cancelada. Se ha aplicado un strike por cancelación tardía.'
-        : 'Inscripción cancelada correctamente',
+        ? 'Enrollment cancelled. A strike has been applied for late cancellation.'
+        : 'Enrollment cancelled successfully',
       strikeApplied,
     };
   }

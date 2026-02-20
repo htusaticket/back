@@ -3,6 +3,12 @@ import type { Strike } from '../entities/strike.entity';
 
 export const STRIKE_REPOSITORY = 'STRIKE_REPOSITORY';
 
+export interface StrikeInfo {
+  strikesCount: number;
+  maxStrikes: number;
+  resetDate: string | null; // Fecha en formato ISO, null si no hay strikes
+}
+
 export interface IStrikeRepository {
   /**
    * Crear un nuevo strike
@@ -18,4 +24,15 @@ export interface IStrikeRepository {
    * Contar strikes de un usuario
    */
   countByUserId(userId: string): Promise<number>;
+
+  /**
+   * Obtener el último strike de un usuario
+   */
+  findLastByUserId(userId: string): Promise<Strike | null>;
+
+  /**
+   * Contar strikes activos (dentro del período de 14 días desde el último)
+   * y calcular fecha de reseteo
+   */
+  getStrikeInfo(userId: string): Promise<StrikeInfo>;
 }

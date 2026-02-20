@@ -365,14 +365,24 @@ model Notification {
 // JOBS
 // ====================================================
 
+enum ApplicationStatus {
+  APPLIED
+  INTERVIEW
+  OFFER
+  REJECTED
+}
+
 model JobOffer {
   id           Int      @id @default(autoincrement())
   title        String
   company      String
   location     String
   salaryRange  String   @map("salary_range")
-  type         String // "Full-time", etc.
-  description  String
+  oteMin       Int      @default(0) @map("ote_min") // OTE minimum in dollars per month
+  oteMax       Int      @default(0) @map("ote_max") // OTE maximum in dollars per month
+  revenue      Int      @default(0) // Monthly revenue requirement in dollars
+  type         String // "Full-time", "Part-time"
+  description  String   @db.Text
   requirements String[] // Supports arrays in Postgres
   isActive     Boolean  @default(true) @map("is_active")
 
@@ -381,19 +391,25 @@ model JobOffer {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([isActive])
+  @@index([type])
+  @@index([oteMax])
+  @@index([revenue])
   @@map("job_offers")
 }
 
 model JobApplication {
-  id         String   @id @default(cuid())
-  userId     String   @map("user_id")
-  jobOfferId Int      @map("job_offer_id")
-  status     String   @default("APPLIED")
-  appliedAt  DateTime @default(now()) @map("applied_at")
+  id         String            @id @default(cuid())
+  userId     String            @map("user_id")
+  jobOfferId Int               @map("job_offer_id")
+  status     ApplicationStatus @default(APPLIED)
+  notes      String?           @db.Text // Notas personales del usuario
+  appliedAt  DateTime          @default(now()) @map("applied_at")
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   jobOffer JobOffer @relation(fields: [jobOfferId], references: [id], onDelete: Cascade)
 
   @@unique([userId, jobOfferId])
+  @@index([userId, status])
   @@map("job_applications")
 }

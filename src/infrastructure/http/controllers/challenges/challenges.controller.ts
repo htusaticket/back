@@ -35,6 +35,7 @@ import {
   QuizResultDto,
   AudioSubmissionResultDto,
   ChallengeHistoryDto,
+  QuizDetailDto,
 } from '@/application/challenges/dto';
 
 @ApiTags('Challenges')
@@ -223,5 +224,32 @@ export class ChallengesController {
   })
   async getHistory(@CurrentUser() user: JwtPayload): Promise<ChallengeHistoryDto> {
     return this.challengesService.getHistory(user.userId);
+  }
+
+  /**
+   * GET /api/challenges/quiz/:progressId
+   * Obtener detalles de un quiz completado
+   */
+  @Get('quiz/:progressId')
+  @ApiOperation({
+    summary: 'Obtener detalles de quiz completado',
+    description:
+      'Retorna los detalles de un quiz completado, incluyendo las preguntas, respuestas correctas y respuestas del usuario.',
+  })
+  @ApiParam({ name: 'progressId', description: 'ID del progreso del quiz', type: String })
+  @ApiResponse({
+    status: 200,
+    description: 'Detalles del quiz',
+    type: QuizDetailDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Quiz no encontrado',
+  })
+  async getQuizDetail(
+    @Param('progressId') progressId: string,
+    @CurrentUser() user: JwtPayload,
+  ): Promise<QuizDetailDto> {
+    return this.challengesService.getQuizDetail(user.userId, progressId);
   }
 }

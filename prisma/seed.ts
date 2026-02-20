@@ -8,6 +8,7 @@ import {
   NotificationType,
   SubmissionStatus,
   ResourceType,
+  ApplicationStatus,
 } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -927,6 +928,180 @@ async function main() {
 
   console.log('🔔 Creating notifications...');
 
+  console.log('💼 Creating job offers and applications...');
+
+  // Create job offers based on real format
+  const job1 = await prisma.jobOffer.create({
+    data: {
+      title: '$15k/Mo Closers for Info Coaching Offer',
+      company: 'Adam Stifel Coaching',
+      location: 'Remote - US Hours',
+      salaryRange: '$5,000 - $15,000/month OTE',
+      oteMin: 5000,
+      oteMax: 15000,
+      revenue: 200000,
+      type: 'Full-time',
+      description:
+        "Join our high-ticket sales team selling SaaS to B2C Info Coaching products. We're looking for hungry closers who want to earn $15k+ per month. Revenue: $60k-$200k/Mo. Must be comfortable with high-pressure sales environment and working US hours.",
+      requirements: [
+        'Fluent English (C1 or higher)',
+        '2+ years of closing experience',
+        'Experience in high-ticket sales',
+        'Comfortable working US hours',
+        'Self-motivated and money-hungry attitude',
+      ],
+      isActive: true,
+    },
+  });
+
+  const job2 = await prisma.jobOffer.create({
+    data: {
+      title: '$8k/Mo Setters for AI SaaS Offer',
+      company: 'Frontegg',
+      location: 'Remote - US or CA Based',
+      salaryRange: '$6,500 - $8,000/month OTE',
+      oteMin: 6500,
+      oteMax: 8000,
+      revenue: 50000,
+      type: 'Full-time',
+      description:
+        'B2B AI SaaS company looking for experienced setters to join our growing sales team. Work with cutting-edge AI technology and help businesses transform their operations.',
+      requirements: [
+        'Fluent English (C1 or higher)',
+        '3+ years of cold calling experience',
+        'B2B sales background preferred',
+        'Experience with SaaS products',
+        'US or Canada timezone availability',
+      ],
+      isActive: true,
+    },
+  });
+
+  const job3 = await prisma.jobOffer.create({
+    data: {
+      title: '$6k/Mo CSMs for Yoga Biz-Opp',
+      company: 'Impact Academy',
+      location: 'Remote',
+      salaryRange: '$4,000 - $6,000/month ($2k base + commission)',
+      oteMin: 4000,
+      oteMax: 6000,
+      revenue: 300000,
+      type: 'Full-time',
+      description:
+        'Customer Success Manager position for a yoga online business opportunity company. Help yoga teachers succeed with our $5.9k ticket program. Revenue: $300k/Mo.',
+      requirements: [
+        'Fluent English (B2 or higher)',
+        'Customer success experience',
+        'Passion for wellness industry',
+        'Strong communication skills',
+        'Experience with online coaching programs',
+      ],
+      isActive: true,
+    },
+  });
+
+  const job4 = await prisma.jobOffer.create({
+    data: {
+      title: 'Senior Frontend Developer',
+      company: 'TechCorp Inc.',
+      location: 'Remote - Worldwide',
+      salaryRange: '$80,000 - $120,000/year',
+      oteMin: 6666,
+      oteMax: 10000,
+      revenue: 0,
+      type: 'Full-time',
+      description:
+        "We're looking for an experienced Frontend Developer to join our international team. Work on cutting-edge web applications using React, TypeScript, and modern technologies.",
+      requirements: [
+        'Fluent English (B2 or higher)',
+        '4+ years of frontend development experience',
+        'Expert in React and TypeScript',
+        'Experience with modern CSS frameworks',
+        'Strong problem-solving skills',
+      ],
+      isActive: true,
+    },
+  });
+
+  const job5 = await prisma.jobOffer.create({
+    data: {
+      title: 'English Teacher (Online)',
+      company: 'Global Education',
+      location: 'Remote',
+      salaryRange: '$25 - $40/hour',
+      oteMin: 2000,
+      oteMax: 4000,
+      revenue: 0,
+      type: 'Part-time',
+      description:
+        'Teach English to students worldwide from the comfort of your home. Flexible schedule, great pay, and the opportunity to make a difference.',
+      requirements: [
+        'Native or near-native English speaker',
+        'TEFL/TESOL certification preferred',
+        'Teaching experience is a plus',
+        'Reliable internet connection',
+        'Patient and engaging personality',
+      ],
+      isActive: true,
+    },
+  });
+
+  const job6 = await prisma.jobOffer.create({
+    data: {
+      title: 'Marketing Coordinator',
+      company: 'Digital Agency Plus',
+      location: 'Hybrid - Buenos Aires',
+      salaryRange: '$45,000 - $60,000/year',
+      oteMin: 3750,
+      oteMax: 5000,
+      revenue: 25000,
+      type: 'Full-time',
+      description:
+        'Join our dynamic marketing team and help create impactful campaigns for international clients. Bilingual role requiring English and Spanish.',
+      requirements: [
+        'Fluent English and Spanish',
+        '2+ years of marketing experience',
+        'Experience with digital marketing tools',
+        'Creative mindset',
+        'Strong organizational skills',
+      ],
+      isActive: true,
+    },
+  });
+
+  // Create some job applications for the test user
+  await prisma.jobApplication.create({
+    data: {
+      userId: activeUser.id,
+      jobOfferId: job3.id,
+      status: ApplicationStatus.APPLIED,
+      notes: null,
+      appliedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+    },
+  });
+
+  await prisma.jobApplication.create({
+    data: {
+      userId: activeUser.id,
+      jobOfferId: job5.id,
+      status: ApplicationStatus.INTERVIEW,
+      notes: 'Interview scheduled for Thursday at 3pm',
+      appliedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+    },
+  });
+
+  await prisma.jobApplication.create({
+    data: {
+      userId: activeUser.id,
+      jobOfferId: job6.id,
+      status: ApplicationStatus.OFFER,
+      notes: 'Offer: $52k/year - Need to respond by Friday',
+      appliedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), // 14 days ago
+    },
+  });
+
+  console.log('🔔 Creating notifications...');
+
   await prisma.notification.createMany({
     data: [
       {
@@ -966,6 +1141,8 @@ async function main() {
   console.log(`- Enrollments: ${await prisma.classEnrollment.count()}`);
   console.log(`- Daily challenges: ${await prisma.dailyChallenge.count()}`);
   console.log(`- Challenge progress: ${await prisma.userDailyChallengeProgress.count()}`);
+  console.log(`- Job offers: ${await prisma.jobOffer.count()}`);
+  console.log(`- Job applications: ${await prisma.jobApplication.count()}`);
   console.log(`- Notifications: ${await prisma.notification.count()}`);
   console.log('\n🔐 Test credentials:');
   console.log('Email: eugenia@test.com');
@@ -977,6 +1154,10 @@ async function main() {
   console.log('- Module 4 (Advanced): 0% complete');
   console.log('- Overall Progress: ~54%');
   console.log('- Lessons Completed: 7/11');
+  console.log('\n💼 Job Applications:');
+  console.log('- Applied: 1 (CSMs for Yoga)');
+  console.log('- Interview: 1 (English Teacher)');
+  console.log('- Offer: 1 (Marketing Coordinator)');
 }
 
 main()

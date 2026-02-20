@@ -19,7 +19,7 @@ import { ClassResponseDto } from '@/application/classes/dto';
 export class PrismaClassSessionRepository implements IClassSessionRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAvailableClasses(): Promise<ClassResponseDto[]> {
+  async findAvailableClasses(userId?: string): Promise<ClassResponseDto[]> {
     const now = new Date();
 
     const classes = await this.prisma.classSession.findMany({
@@ -41,27 +41,44 @@ export class PrismaClassSessionRepository implements IClassSessionRepository {
             },
           },
         },
+        enrollments: userId
+          ? {
+              where: {
+                userId,
+                status: EnrollmentStatus.CONFIRMED,
+              },
+              select: {
+                id: true,
+              },
+            }
+          : false,
       },
     });
 
-    return classes.map(classSession => ({
-      id: classSession.id,
-      title: classSession.title,
-      type: formatClassType(classSession.type),
-      day: formatDayString(classSession.startTime),
-      date: formatDateString(classSession.startTime),
-      time: formatTimeRange(classSession.startTime, classSession.endTime),
-      capacity: {
-        current: classSession._count.enrollments,
-        max: classSession.capacityMax,
-      },
-      isEnrolled: false, // Este método es para clases disponibles, no hay contexto de usuario
-      isFull:
-        classSession.capacityMax !== null &&
-        classSession._count.enrollments >= classSession.capacityMax,
-      meetLink: classSession.meetLink,
-      description: classSession.description,
-    }));
+    return classes.map(classSession => {
+      const enrollmentsArray = (classSession as unknown as { enrollments?: { id: string }[] })
+        .enrollments;
+      const isUserEnrolled = userId && enrollmentsArray ? enrollmentsArray.length > 0 : false;
+
+      return {
+        id: classSession.id,
+        title: classSession.title,
+        type: formatClassType(classSession.type),
+        day: formatDayString(classSession.startTime),
+        date: formatDateString(classSession.startTime),
+        time: formatTimeRange(classSession.startTime, classSession.endTime),
+        capacity: {
+          current: classSession._count.enrollments,
+          max: classSession.capacityMax,
+        },
+        isEnrolled: isUserEnrolled,
+        isFull:
+          classSession.capacityMax !== null &&
+          classSession._count.enrollments >= classSession.capacityMax,
+        meetLink: classSession.meetLink,
+        description: classSession.description,
+      };
+    });
   }
 
   async findUserSchedule(
@@ -168,8 +185,19 @@ export class PrismaClassSessionRepository implements IClassSessionRepository {
   }
 
   async enrollUser(userId: string, classSessionId: number): Promise<void> {
-    await this.prisma.classEnrollment.create({
-      data: {
+    await this.prisma.classEnrollment.upsert({
+      where: {
+        userId_classSessionId: {
+          userId,
+          classSessionId,
+        },
+      },
+      update: {
+        status: EnrollmentStatus.CONFIRMED,
+        cancelledAt: null,
+        enrolledAt: new Date(),
+      },
+      create: {
         userId,
         classSessionId,
         status: EnrollmentStatus.CONFIRMED,

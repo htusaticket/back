@@ -9,6 +9,7 @@ import {
   QuizResultDto,
   AudioSubmissionResultDto,
   ChallengeHistoryDto,
+  QuizDetailDto,
 } from '../dto';
 
 // Umbral de aprobación para quiz (70%)
@@ -144,7 +145,9 @@ export class ChallengesService {
 
     // Calcular score
     let correctAnswers = 0;
+    const correctOptions: number[] = [];
     questions.forEach((question, index) => {
+      correctOptions.push(question.correctAnswer);
       if (question.correctAnswer === answers[index]) {
         correctAnswers++;
       }
@@ -169,6 +172,7 @@ export class ChallengesService {
       score,
       status,
       message,
+      correctOptions,
     };
   }
 
@@ -237,6 +241,29 @@ export class ChallengesService {
         score: item.score,
         feedback: item.feedback,
       })),
+    };
+  }
+
+  /**
+   * Obtener detalles de un quiz completado
+   */
+  async getQuizDetail(userId: string, progressId: string): Promise<QuizDetailDto> {
+    this.logger.debug(`Getting quiz detail for progress: ${progressId}`);
+
+    const detail = await this.challengesRepository.findQuizDetail(userId, progressId);
+
+    if (!detail) {
+      throw new NotFoundException('Quiz submission not found');
+    }
+
+    return {
+      id: detail.id,
+      challengeId: detail.challengeId,
+      title: detail.challengeTitle,
+      score: detail.score,
+      status: detail.status,
+      submittedAt: detail.submittedAt.toISOString(),
+      questions: detail.questions,
     };
   }
 }

@@ -31,15 +31,16 @@ export class ClassesController {
   @Get('available')
   @ApiOperation({
     summary: 'Listar clases disponibles',
-    description: 'Retorna solo clases futuras (date > now). Calcula si is_full (current >= max)',
+    description:
+      'Retorna solo clases futuras (date > now). Calcula si is_full (current >= max) e isEnrolled para el usuario actual',
   })
   @ApiResponse({
     status: 200,
     description: 'Lista de clases disponibles',
     type: [ClassResponseDto],
   })
-  async getAvailableClasses(): Promise<ClassResponseDto[]> {
-    return this.classesService.getAvailableClasses();
+  async getAvailableClasses(@CurrentUser() user: JwtPayload): Promise<ClassResponseDto[]> {
+    return this.classesService.getAvailableClasses(user.userId);
   }
 
   /**

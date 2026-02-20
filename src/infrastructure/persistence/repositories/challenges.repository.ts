@@ -1,6 +1,6 @@
 // src/infrastructure/persistence/repositories/challenges.repository.ts
 import { Injectable } from '@nestjs/common';
-import { SubmissionStatus } from '@prisma/client';
+import { SubmissionStatus, ChallengeType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type {
   IDailyChallengeRepository,
@@ -8,6 +8,7 @@ import type {
   UserDailyChallengeProgress,
   ChallengeHistoryItem,
   QuizQuestion,
+  QuizDetailItem,
 } from '@/core/interfaces';
 
 @Injectable()
@@ -219,6 +220,50 @@ export class ChallengesRepository implements IDailyChallengeRepository {
       feedback: item.feedback,
       fileUrl: item.fileUrl,
     }));
+  }
+
+  async findQuizDetail(userId: string, progressId: string): Promise<QuizDetailItem | null> {
+    const progress = await this.prisma.userDailyChallengeProgress.findFirst({
+      where: {
+        id: progressId,
+        userId,
+        completed: true,
+      },
+      include: {
+        challenge: {
+          select: {
+            id: true,
+            title: true,
+            type: true,
+            questions: true,
+          },
+        },
+      },
+    });
+
+    if (!progress) return null;
+
+    // Verificar que sea un quiz
+    if (progress.challenge.type !== ChallengeType.MULTIPLE_CHOICE) return null;
+
+    const questions = progress.challenge.questions as unknown as QuizQuestion[];
+    const userAnswers = (progress.answers as number[]) || [];
+
+    return {
+      id: progress.id,
+      challengeId: progress.challenge.id,
+      challengeTitle: progress.challenge.title,
+      score: progress.score,
+      status: progress.status,
+      submittedAt: progress.completedAt || progress.createdAt,
+      questions: questions.map((q, index) => ({
+        id: q.id,
+        text: q.text,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+        userAnswer: userAnswers[index] ?? -1,
+      })),
+    };
   }
 
   async findChallengeQuestions(

@@ -53,3 +53,20 @@ export interface ChallengeHistoryItem {
   feedback: string | null;
   fileUrl: string | null;
 }
+
+// Quiz detail for history view
+export interface QuizDetailItem {
+  id: string;
+  challengeId: number;
+  challengeTitle: string;
+  score: number | null;
+  status: SubmissionStatus;
+  submittedAt: Date;
+  questions: {
+    id: number;
+    text: string;
+    options: string[];
+    correctAnswer: number;
+    userAnswer: number;
+  }[];
+}

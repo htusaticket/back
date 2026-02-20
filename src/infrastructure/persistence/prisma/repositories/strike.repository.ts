@@ -1,7 +1,10 @@
 // src/infrastructure/persistence/prisma/repositories/strike.repository.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import { IStrikeRepository, Strike } from '@/core/interfaces';
+import { IStrikeRepository, Strike, StrikeInfo } from '@/core/interfaces';
+
+const MAX_STRIKES = 3;
+const STRIKE_RESET_DAYS = 14;
 
 @Injectable()
 export class PrismaStrikeRepository implements IStrikeRepository {
@@ -34,5 +37,59 @@ export class PrismaStrikeRepository implements IStrikeRepository {
     return this.prisma.strike.count({
       where: { userId },
     });
+  }
+
+  async findLastByUserId(userId: string): Promise<Strike | null> {
+    return this.prisma.strike.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async getStrikeInfo(userId: string): Promise<StrikeInfo> {
+    // Obtener el último strike
+    const lastStrike = await this.findLastByUserId(userId);
+
+    if (!lastStrike) {
+      return {
+        strikesCount: 0,
+        maxStrikes: MAX_STRIKES,
+        resetDate: null,
+      };
+    }
+
+    // Calcular fecha de reseteo (14 días desde el último strike)
+    const resetDate = new Date(lastStrike.createdAt);
+    resetDate.setDate(resetDate.getDate() + STRIKE_RESET_DAYS);
+
+    const now = new Date();
+
+    // Si ya pasó la fecha de reseteo, no hay strikes activos
+    if (now > resetDate) {
+      return {
+        strikesCount: 0,
+        maxStrikes: MAX_STRIKES,
+        resetDate: null,
+      };
+    }
+
+    // Contar strikes dentro del período de 14 días desde el último
+    const periodStart = new Date(lastStrike.createdAt);
+    periodStart.setDate(periodStart.getDate() - STRIKE_RESET_DAYS);
+
+    const strikesCount = await this.prisma.strike.count({
+      where: {
+        userId,
+        createdAt: {
+          gte: periodStart,
+        },
+      },
+    });
+
+    return {
+      strikesCount: Math.min(strikesCount, MAX_STRIKES),
+      maxStrikes: MAX_STRIKES,
+      resetDate: resetDate.toISOString(),
+    };
   }
 }

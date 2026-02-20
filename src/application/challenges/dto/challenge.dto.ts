@@ -87,6 +87,12 @@ export class QuizResultDto {
 
   @ApiProperty({ example: 'Great job! You passed the quiz.', description: 'Mensaje de feedback' })
   message!: string;
+
+  @ApiProperty({
+    example: [1, 2, 0, 1],
+    description: 'Array con el índice de la respuesta correcta para cada pregunta',
+  })
+  correctOptions!: number[];
 }
 
 // ==================== AUDIO SUBMISSION ====================
@@ -146,4 +152,49 @@ export class ChallengeHistoryItemDto {
 export class ChallengeHistoryDto {
   @ApiProperty({ type: [ChallengeHistoryItemDto], description: 'Lista de challenges pasados' })
   history!: ChallengeHistoryItemDto[];
+}
+
+// ==================== QUIZ DETAIL ====================
+
+export class QuizDetailQuestionDto {
+  @ApiProperty({ example: 1, description: 'ID de la pregunta' })
+  id!: number;
+
+  @ApiProperty({ example: "What does 'ROI' stand for?", description: 'Texto de la pregunta' })
+  text!: string;
+
+  @ApiProperty({
+    example: ['Rate of Inflation', 'Return on Investment', 'Risk of Insolvency'],
+    description: 'Opciones de respuesta',
+  })
+  options!: string[];
+
+  @ApiProperty({ example: 1, description: 'Índice de la respuesta correcta' })
+  correctAnswer!: number;
+
+  @ApiProperty({ example: 0, description: 'Índice de la respuesta del usuario' })
+  userAnswer!: number;
+}
+
+export class QuizDetailDto {
+  @ApiProperty({ example: 'cuid123', description: 'ID del progreso' })
+  id!: string;
+
+  @ApiProperty({ example: 1, description: 'ID del challenge' })
+  challengeId!: number;
+
+  @ApiProperty({ example: 'Grammar Quiz: Present Perfect', description: 'Título del quiz' })
+  title!: string;
+
+  @ApiProperty({ example: 90, description: 'Puntaje obtenido' })
+  score!: number | null;
+
+  @ApiProperty({ enum: ['APPROVED', 'NEEDS_IMPROVEMENT'], description: 'Estado' })
+  status!: string;
+
+  @ApiProperty({ example: '2026-02-17T14:30:00Z', description: 'Fecha de envío' })
+  submittedAt!: string;
+
+  @ApiProperty({ type: [QuizDetailQuestionDto], description: 'Preguntas con respuestas' })
+  questions!: QuizDetailQuestionDto[];
 }

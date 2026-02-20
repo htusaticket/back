@@ -4,6 +4,7 @@ import type {
   UserDailyChallengeProgress,
   ChallengeHistoryItem,
   QuizQuestion,
+  QuizDetailItem,
 } from '../entities/daily-challenge.entity';
 import type { SubmissionStatus } from '@prisma/client';
 
@@ -64,6 +65,11 @@ export interface IDailyChallengeRepository {
    * Obtener historial de challenges del usuario
    */
   findUserHistory(userId: string, limit?: number): Promise<ChallengeHistoryItem[]>;
+
+  /**
+   * Obtener detalles de un quiz completado con las respuestas del usuario
+   */
+  findQuizDetail(userId: string, progressId: string): Promise<QuizDetailItem | null>;
 
   /**
    * Obtener preguntas de un challenge (sin respuestas correctas para el frontend)
