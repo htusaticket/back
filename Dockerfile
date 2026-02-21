@@ -39,10 +39,9 @@ ENV HOST=0.0.0.0
 ENV PORT=5000
 ENV NODE_ENV=production
 COPY --from=builder /app/package.json /app/package-lock.json ./
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=dependencies /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/generated ./generated
 # Agregar script para manejo de migraciones y arranque
 COPY scripts/start.sh ./
 RUN chmod +x start.sh
