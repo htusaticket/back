@@ -34,7 +34,7 @@ RUN npx prisma generate
 COPY . .
 RUN npm run build
 # Verificar que el build se creó correctamente
-RUN ls -la dist/ && test -f dist/main.js
+RUN ls -la dist/src/ && test -f dist/src/main.js
 
 # Stage 4: Production Image
 FROM node:20-alpine AS production
