@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -85,12 +86,14 @@ async function bootstrap() {
   // Swagger - solo en desarrollo
   if (env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
-      .setTitle('ZAZ Créditos API')
-      .setDescription('API para el sistema de créditos ZAZ')
+      .setTitle('JFalcon Academy API')
+      .setDescription('API para JFalcon Academy - English Learning Platform')
       .setVersion('1.0')
       .addBearerAuth()
-      .addTag('auth', 'Autenticación')
-      .addTag('users', 'Usuarios')
+      .addTag('Auth', 'Autenticación y gestión de usuarios')
+      .addTag('Classes', 'Gestión de clases en vivo y workshops')
+      .addTag('Dashboard', 'Resumen e información del dashboard')
+      .addTag('Health', 'Health checks y monitoreo')
       .build();
 
     const document = SwaggerModule.createDocument(app, config);

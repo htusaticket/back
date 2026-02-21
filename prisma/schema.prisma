@@ -18,25 +18,68 @@ enum UserRole {
   MODERATOR
 }
 
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
 enum ClassType {
   REGULAR
   WORKSHOP
 }
 
+enum ChallengeType {
+  AUDIO
+  MULTIPLE_CHOICE
+  WRITING
+}
+
+enum EnrollmentStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  NEEDS_IMPROVEMENT
+}
+
+enum ResourceType {
+  PDF
+  LINK
+  VIDEO
+  DOCUMENT
+}
+
+enum NotificationType {
+  STRIKE_APPLIED
+  CLASS_REMINDER
+  MATERIAL_AVAILABLE
+  CHALLENGE_FEEDBACK
+  CLASS_CONFIRMED
+  GENERAL
+}
+
 // Modelo base de Usuario
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
+  id        String     @id @default(cuid())
+  email     String     @unique
   password  String
-  name      String?
-  firstName String?  @map("first_name")
-  lastName  String?  @map("last_name")
+  firstName String     @map("first_name")
+  lastName  String     @map("last_name")
+  phone     String?
+  city      String?
+  country   String?
+  reference String?    // ¿Cómo nos conociste?
   avatar    String?
-  role      UserRole @default(USER)
-  isActive  Boolean  @default(true) @map("is_active")
+  role      UserRole   @default(USER)
+  status    UserStatus @default(PENDING)
 
   // Relaciones Base
-  sessions UserSession[]
+  sessions       UserSession[]
+  passwordResets PasswordReset[]
 
   // Relaciones Academy
   lessonProgress UserLessonProgress[]
@@ -44,9 +87,16 @@ model User {
 
   // Relaciones Classes
   classEnrollments ClassEnrollment[]
+  strikes          Strike[]
 
   // Relaciones Jobs
   jobApplications JobApplication[]
+
+  // Relaciones Challenges
+  challengeProgress UserDailyChallengeProgress[]
+
+  // Relaciones Notifications
+  notifications Notification[]
 
   // Auditoría
   createdAt DateTime @default(now()) @map("created_at")
@@ -54,8 +104,25 @@ model User {
 
   @@index([email])
   @@index([role])
-  @@index([isActive])
+  @@index([status])
   @@map("users")
+}
+
+// Tabla para tokens de recuperación de contraseña
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@map("password_resets")
 }
 
 // Tabla para tracking de sesiones/tokens
@@ -87,6 +154,7 @@ model Module {
   title       String
   description String
   image       String // URL
+  order       Int    @default(0)
 
   lessons      Lesson[]
   userProgress UserModuleProgress[]
@@ -94,30 +162,51 @@ model Module {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([order])
   @@map("modules")
 }
 
 model Lesson {
-  id         Int     @id @default(autoincrement())
-  title      String
-  duration   String // e.g. "10 min"
-  contentUrl String? @map("content_url") // Video url or content
-  order      Int     @default(0)
+  id          Int     @id @default(autoincrement())
+  title       String
+  description String? @db.Text
+  duration    String // e.g. "10 min"
+  contentUrl  String? @map("content_url") // Video url or content
+  order       Int     @default(0)
 
   moduleId Int    @map("module_id")
   module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
 
   userProgress UserLessonProgress[]
+  resources    LessonResource[]
 
   @@index([moduleId])
+  @@index([order])
   @@map("lessons")
 }
 
+model LessonResource {
+  id       Int          @id @default(autoincrement())
+  title    String
+  fileUrl  String       @map("file_url")
+  type     ResourceType @default(PDF)
+  size     String?      // e.g. "245 KB"
+  lessonId Int          @map("lesson_id")
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([lessonId])
+  @@map("lesson_resources")
+}
+
 model UserLessonProgress {
-  id        String  @id @default(cuid())
-  userId    String  @map("user_id")
-  lessonId  Int     @map("lesson_id")
-  completed Boolean @default(false)
+  id             String    @id @default(cuid())
+  userId         String    @map("user_id")
+  lessonId       Int       @map("lesson_id")
+  completed      Boolean   @default(false)
+  lastAccessedAt DateTime? @map("last_accessed_at")
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
@@ -155,11 +244,13 @@ model ClassSession {
   startTime DateTime @map("start_time")
   endTime   DateTime @map("end_time")
 
-  capacityMax Int?    @map("capacity_max") // null means unlimited
-  meetLink    String? @map("meet_link")
-  description String?
+  capacityMax    Int?    @map("capacity_max") // null means unlimited
+  meetLink       String? @map("meet_link")
+  materialsLink  String? @map("materials_link")
+  description    String?
 
   enrollments ClassEnrollment[]
+  strikes     Strike[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -169,22 +260,117 @@ model ClassSession {
 }
 
 model ClassEnrollment {
-  id             String   @id @default(cuid())
-  userId         String   @map("user_id")
-  classSessionId Int      @map("class_session_id")
-  enrolledAt     DateTime @default(now()) @map("enrolled_at")
-  status         String   @default("CONFIRMED") // CONFIRMED, CANCELLED
+  id             String           @id @default(cuid())
+  userId         String           @map("user_id")
+  classSessionId Int              @map("class_session_id")
+  enrolledAt     DateTime         @default(now()) @map("enrolled_at")
+  status         EnrollmentStatus @default(CONFIRMED)
+  cancelledAt    DateTime?        @map("cancelled_at")
 
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   classSession ClassSession @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
 
   @@unique([userId, classSessionId])
+  @@index([status])
   @@map("class_enrollments")
+}
+
+model Strike {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  classSessionId Int      @map("class_session_id")
+  reason         String   @default("LATE_CANCELLATION")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classSession ClassSession @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("strikes")
+}
+
+// ====================================================
+// CHALLENGES
+// ====================================================
+
+model DailyChallenge {
+  id           Int           @id @default(autoincrement())
+  title        String
+  type         ChallengeType
+  instructions String        @db.Text
+  date         DateTime      // Fecha para la que es el challenge
+  questions    Json?         // Para quiz questions (array de objetos)
+  audioUrl     String?       @map("audio_url") // Para challenges de audio
+  points       Int           @default(10)
+  isActive     Boolean       @default(true) @map("is_active")
+
+  userProgress UserDailyChallengeProgress[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([date])
+  @@index([isActive])
+  @@map("daily_challenges")
+}
+
+model UserDailyChallengeProgress {
+  id          String           @id @default(cuid())
+  userId      String           @map("user_id")
+  challengeId Int              @map("challenge_id")
+  completed   Boolean          @default(false)
+  completedAt DateTime?        @map("completed_at")
+  answers     Json?            // Respuestas del usuario (para quiz)
+  fileUrl     String?          @map("file_url") // URL del archivo subido (para audio)
+  status      SubmissionStatus @default(PENDING)
+  feedback    String?          @db.Text // Feedback del profesor (solo para audio)
+  score       Int?             // Puntaje obtenido
+
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge DailyChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, challengeId])
+  @@index([userId, completedAt])
+  @@index([status])
+  @@map("user_daily_challenge_progress")
+}
+
+// ====================================================
+// NOTIFICATIONS
+// ====================================================
+
+model Notification {
+  id      String           @id @default(cuid())
+  userId  String           @map("user_id")
+  type    NotificationType
+  title   String
+  message String           @db.Text
+  isRead  Boolean          @default(false) @map("is_read")
+  data    Json?            // Metadata adicional (classId, challengeId, etc.)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
 }
 
 // ====================================================
 // JOBS
 // ====================================================
+
+enum ApplicationStatus {
+  APPLIED
+  INTERVIEW
+  OFFER
+  REJECTED
+}
 
 model JobOffer {
   id           Int      @id @default(autoincrement())
@@ -192,8 +378,11 @@ model JobOffer {
   company      String
   location     String
   salaryRange  String   @map("salary_range")
-  type         String // "Full-time", etc.
-  description  String
+  oteMin       Int      @default(0) @map("ote_min") // OTE minimum in dollars per month
+  oteMax       Int      @default(0) @map("ote_max") // OTE maximum in dollars per month
+  revenue      Int      @default(0) // Monthly revenue requirement in dollars
+  type         String // "Full-time", "Part-time"
+  description  String   @db.Text
   requirements String[] // Supports arrays in Postgres
   isActive     Boolean  @default(true) @map("is_active")
 
@@ -202,19 +391,25 @@ model JobOffer {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([isActive])
+  @@index([type])
+  @@index([oteMax])
+  @@index([revenue])
   @@map("job_offers")
 }
 
 model JobApplication {
-  id         String   @id @default(cuid())
-  userId     String   @map("user_id")
-  jobOfferId Int      @map("job_offer_id")
-  status     String   @default("APPLIED")
-  appliedAt  DateTime @default(now()) @map("applied_at")
+  id         String            @id @default(cuid())
+  userId     String            @map("user_id")
+  jobOfferId Int               @map("job_offer_id")
+  status     ApplicationStatus @default(APPLIED)
+  notes      String?           @db.Text // Notas personales del usuario
+  appliedAt  DateTime          @default(now()) @map("applied_at")
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   jobOffer JobOffer @relation(fields: [jobOfferId], references: [id], onDelete: Cascade)
 
   @@unique([userId, jobOfferId])
+  @@index([userId, status])
   @@map("job_applications")
 }

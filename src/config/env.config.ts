@@ -24,7 +24,22 @@ const EnvSchema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
 
   // Sentry para monitoreo de errores
-  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_DSN: z.string().optional(),
+
+  // Resend para emails
+  RESEND_API_KEY: z.string().min(1, 'RESEND_API_KEY es requerida'),
+  RESEND_FROM_EMAIL: z.string().email().default('noreply@jfalcon.com'),
+  RESEND_FROM_NAME: z.string().default('JFalcon'),
+
+  // Frontend URL para links en emails
+  FRONTEND_URL: z.string().url().default('http://localhost:3000'),
+
+  // Cloudflare R2 Storage (opcional - si no está configurado, las subidas de archivos estarán deshabilitadas)
+  CLOUDFLARE_R2_ACCOUNT_ID: z.string().optional(),
+  CLOUDFLARE_R2_ACCESS_KEY_ID: z.string().optional(),
+  CLOUDFLARE_R2_SECRET_ACCESS_KEY: z.string().optional(),
+  CLOUDFLARE_R2_BUCKET_NAME: z.string().optional(),
+  CLOUDFLARE_R2_PUBLIC_URL: z.string().url().optional().or(z.literal('')),
 });
 
 export type EnvConfig = z.infer<typeof EnvSchema>;
