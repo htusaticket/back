@@ -62,5 +62,5 @@ USER node
 EXPOSE 5000
 # Healthcheck para verificar el estado del servicio
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD wget -q -O- http://localhost:5000/api/health || exit 1
+    CMD wget -q -O- http://localhost:5000/health || exit 1
 CMD ["./start.sh"]
