@@ -42,6 +42,8 @@ COPY --from=builder /app/package.json /app/package-lock.json ./
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
+# Regenerar Prisma Client para Alpine
+RUN npx prisma generate
 # Agregar script para manejo de migraciones y arranque
 COPY scripts/start.sh ./
 RUN chmod +x start.sh
