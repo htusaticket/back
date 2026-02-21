@@ -5,7 +5,7 @@ echo "🚀 Starting JFalcon Backend..."
 # Verificar que DATABASE_URL esté definida
 if [ -z "$DATABASE_URL" ]; then
   echo "⚠️ DATABASE_URL not set, starting without migrations..."
-  exec node dist/main
+  exec node dist/src/main
 fi
 
 echo "⏳ Waiting for database to be ready..."
