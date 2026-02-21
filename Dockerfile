@@ -25,9 +25,11 @@ RUN npx prisma generate
 # Stage 3: Build Application
 FROM node:20-alpine AS builder
 WORKDIR /app
-COPY --from=dependencies /app/node_modules ./node_modules
-COPY . .
+COPY package.json package-lock.json ./
+COPY prisma ./prisma/
+RUN npm ci --ignore-scripts
 RUN npx prisma generate
+COPY . .
 RUN npm run build
 
 # Stage 4: Production Image
