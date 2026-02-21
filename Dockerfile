@@ -18,6 +18,7 @@ FROM node:20-alpine AS dependencies
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY prisma ./prisma/
+COPY prisma.config.ts ./
 RUN npm ci --omit=dev --ignore-scripts
 RUN npx prisma generate
 
@@ -27,6 +28,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY prisma ./prisma/
+COPY prisma.config.ts ./
 RUN npm ci --ignore-scripts
 RUN npx prisma generate
 COPY . .
@@ -42,6 +44,7 @@ COPY --from=builder /app/package.json /app/package-lock.json ./
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./
 # Regenerar Prisma Client para Alpine
 RUN npx prisma generate
 # Agregar script para manejo de migraciones y arranque
