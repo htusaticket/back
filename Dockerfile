@@ -18,7 +18,7 @@ FROM node:20-alpine AS dependencies
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY prisma ./prisma/
-RUN npm install --production
+RUN npm ci --omit=dev --ignore-scripts
 RUN npx prisma generate
 
 
