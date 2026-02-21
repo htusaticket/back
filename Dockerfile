@@ -1,5 +1,5 @@
 # Stage 1: Base Development Image
-FROM node:18-alpine AS development
+FROM node:20-alpine AS development
 WORKDIR /app
 ENV HOST=0.0.0.0
 ENV PORT=5000
@@ -14,7 +14,7 @@ RUN npx prisma generate
 CMD ["npm", "run", "start:dev"]
 
 # Stage 2: Install Dependencies
-FROM node:18-alpine AS dependencies
+FROM node:20-alpine AS dependencies
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY prisma ./prisma/
@@ -23,7 +23,7 @@ RUN npx prisma generate
 
 
 # Stage 3: Build Application
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
@@ -31,7 +31,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # Stage 4: Production Image
-FROM node:18-alpine AS production
+FROM node:20-alpine AS production
 WORKDIR /app
 ENV HOST=0.0.0.0
 ENV PORT=5000
