@@ -1,33 +1,31 @@
 #!/bin/sh
-set -e
 
 echo "🚀 Starting JFalcon Backend..."
 
-# Esperar a que la base de datos esté disponible
+# Verificar que DATABASE_URL esté definida
+if [ -z "$DATABASE_URL" ]; then
+  echo "⚠️ DATABASE_URL not set, starting without migrations..."
+  exec node dist/main
+fi
+
 echo "⏳ Waiting for database to be ready..."
-max_retries=30
+max_retries=15
 counter=0
-until npx prisma db execute --stdin < /dev/null 2>/dev/null || [ $counter -eq $max_retries ]; do
+
+# Intentar conectar a la base de datos
+while [ $counter -lt $max_retries ]; do
+  if npx prisma migrate deploy 2>&1; then
+    echo "✅ Database migrations completed!"
+    break
+  fi
   counter=$((counter + 1))
   echo "Database not ready yet... retry $counter/$max_retries"
-  sleep 2
+  sleep 3
 done
 
 if [ $counter -eq $max_retries ]; then
-  echo "❌ Database connection timeout"
-  exit 1
+  echo "⚠️ Could not run migrations, starting app anyway..."
 fi
 
-echo "✅ Database is ready!"
-
-# Ejecutar migraciones
-echo "🔄 Running database migrations..."
-npx prisma migrate deploy
-
-# Generar cliente Prisma (por si acaso)
-echo "📦 Generating Prisma Client..."
-npx prisma generate
-
 echo "✨ Starting application..."
-# Iniciar la aplicación
 exec node dist/main
