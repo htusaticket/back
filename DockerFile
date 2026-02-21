@@ -21,6 +21,7 @@ COPY prisma ./prisma/
 RUN npm install --production
 RUN npx prisma generate
 
+
 # Stage 3: Build Application
 FROM node:18-alpine AS builder
 WORKDIR /app
