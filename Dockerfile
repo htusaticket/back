@@ -27,12 +27,14 @@ RUN npx prisma generate
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts
 COPY prisma ./prisma/
 COPY prisma.config.ts ./
-RUN npm ci --ignore-scripts
 RUN npx prisma generate
 COPY . .
 RUN npm run build
+# Verificar que el build se creó correctamente
+RUN ls -la dist/ && test -f dist/main.js
 
 # Stage 4: Production Image
 FROM node:20-alpine AS production
@@ -50,6 +52,8 @@ RUN npx prisma generate
 # Agregar script para manejo de migraciones y arranque
 COPY scripts/start.sh ./
 RUN chmod +x start.sh
+# Verificar que dist existe
+RUN ls -la dist/
 USER node
 EXPOSE 5000
 # Healthcheck para verificar el estado del servicio
