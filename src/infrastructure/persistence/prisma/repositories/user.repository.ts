@@ -1,6 +1,6 @@
 // src/infrastructure/persistence/prisma/repositories/user.repository.ts
 import { Injectable } from '@nestjs/common';
-import { User, UserStatus } from '@prisma/client';
+import { User, UserStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
 import { IUserRepository, CreateUserData, UpdateUserData } from '@/core/interfaces/user.repository';
 
@@ -17,6 +17,12 @@ export class PrismaUserRepository implements IUserRepository {
   async findByEmail(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { email: email.toLowerCase() },
+    });
+  }
+
+  async findAllByRole(role: UserRole): Promise<User[]> {
+    return this.prisma.user.findMany({
+      where: { role, status: 'ACTIVE' },
     });
   }
 

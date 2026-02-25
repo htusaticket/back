@@ -11,7 +11,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { UserStatus } from '@prisma/client';
+import { UserStatus, UserRole } from '@prisma/client';
 
 import { IUserRepository, USER_REPOSITORY } from '@/core/interfaces/user.repository';
 import {
@@ -59,6 +59,7 @@ export class AuthService {
   /**
    * Registra un nuevo usuario con status PENDING
    * El usuario debe esperar aprobación del admin para poder acceder
+   * Envía emails de notificación al usuario y al admin
    */
   async register(dto: RegisterDto): Promise<{ message: string }> {
     this.logger.log(`Intento de registro para email: ${dto.email}`);
@@ -89,6 +90,23 @@ export class AuthService {
     });
 
     this.logger.log(`Usuario registrado exitosamente: ${dto.email}`);
+
+    // Enviar email al usuario notificando que su registro está en revisión
+    await this.emailService.sendRegistrationPendingEmail(dto.email, dto.firstName);
+
+    // Obtener todos los administradores activos para notificarles
+    const admins = await this.userRepository.findAllByRole(UserRole.ADMIN);
+    const adminEmails = admins.map((admin) => admin.email);
+
+    // Enviar notificación a todos los administradores sobre el nuevo registro
+    await this.emailService.sendNewRegistrationNotificationToAdmins(adminEmails, {
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      email: dto.email,
+      phone: dto.phone,
+      city: dto.city,
+      country: dto.country,
+    });
 
     return {
       message: 'Registro exitoso. Tu cuenta está pendiente de aprobación.',
