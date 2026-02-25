@@ -29,6 +29,7 @@ export interface UpdateUserData {
 export interface IUserRepository {
   findById(id: string): Promise<User | null>;
   findByEmail(email: string): Promise<User | null>;
+  findAllByRole(role: UserRole): Promise<User[]>;
   create(data: CreateUserData): Promise<User>;
   update(id: string, data: UpdateUserData): Promise<User>;
   updatePassword(id: string, hashedPassword: string): Promise<User>;

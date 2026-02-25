@@ -3,6 +3,15 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Resend } from 'resend';
 import { getEnvConfig } from '@/config/env.config';
 
+interface NewUserData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  city?: string;
+  country?: string;
+}
+
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
@@ -18,7 +27,7 @@ export class EmailService {
    */
   async sendPasswordResetEmail(to: string, firstName: string, resetLink: string): Promise<void> {
     try {
-      const { error } = await this.resend.emails.send({
+      const { data, error } = await this.resend.emails.send({
         from: `${this.env.RESEND_FROM_NAME} <${this.env.RESEND_FROM_EMAIL}>`,
         to,
         subject: 'Recupera tu contraseña - JFalcon',
@@ -26,14 +35,123 @@ export class EmailService {
       });
 
       if (error) {
-        this.logger.error(`Error enviando email a ${to}:`, error);
+        this.logger.error(`Error de Resend enviando email a ${to}:`, JSON.stringify(error));
         throw new Error('Error al enviar email');
       }
 
-      this.logger.log(`Email de recuperación enviado a: ${to}`);
+      this.logger.log(`Email de recuperación enviado a: ${to} (ID: ${data?.id})`);
     } catch (error) {
       this.logger.error(`Error enviando email a ${to}:`, error);
       // No lanzar error para no revelar información
+    }
+  }
+
+  /**
+   * Envía email al usuario notificando que su registro está en revisión
+   */
+  async sendRegistrationPendingEmail(to: string, firstName: string): Promise<void> {
+    try {
+      const { data, error } = await this.resend.emails.send({
+        from: `${this.env.RESEND_FROM_NAME} <${this.env.RESEND_FROM_EMAIL}>`,
+        to,
+        subject: 'Registro recibido - JFalcon',
+        html: this.getRegistrationPendingTemplate(firstName),
+      });
+
+      if (error) {
+        this.logger.error(`Error de Resend enviando email de registro pendiente a ${to}:`, JSON.stringify(error));
+        throw new Error('Error al enviar email');
+      }
+
+      this.logger.log(`Email de registro pendiente enviado a: ${to} (ID: ${data?.id})`);
+    } catch (error) {
+      this.logger.error(`Error enviando email de registro pendiente a ${to}:`, error);
+    }
+  }
+
+  /**
+   * Envía email a todos los administradores notificando un nuevo registro por aprobar
+   */
+  async sendNewRegistrationNotificationToAdmins(
+    adminEmails: string[],
+    userData: NewUserData,
+  ): Promise<void> {
+    if (adminEmails.length === 0) {
+      this.logger.warn('No hay administradores activos para notificar');
+      return;
+    }
+
+    const reviewLink = `${this.env.FRONTEND_URL}/admin/users`;
+    
+    for (const adminEmail of adminEmails) {
+      try {
+        const { data, error } = await this.resend.emails.send({
+          from: `${this.env.RESEND_FROM_NAME} <${this.env.RESEND_FROM_EMAIL}>`,
+          to: adminEmail,
+          subject: 'Nuevo registro pendiente de aprobación - JFalcon',
+          html: this.getNewRegistrationAdminTemplate(userData, reviewLink),
+        });
+
+        if (error) {
+          this.logger.error(`Error de Resend enviando notificación al admin ${adminEmail}:`, JSON.stringify(error));
+        } else {
+          this.logger.log(`Notificación de nuevo registro enviada a: ${adminEmail} (ID: ${data?.id})`);
+        }
+      } catch (error) {
+        this.logger.error(`Error enviando notificación al admin ${adminEmail}:`, error);
+      }
+    }
+  }
+
+  /**
+   * Envía email al usuario notificando que su registro fue aprobado
+   */
+  async sendRegistrationApprovedEmail(to: string, firstName: string): Promise<void> {
+    try {
+      const loginLink = `${this.env.FRONTEND_URL}/login`;
+      
+      const { data, error } = await this.resend.emails.send({
+        from: `${this.env.RESEND_FROM_NAME} <${this.env.RESEND_FROM_EMAIL}>`,
+        to,
+        subject: '¡Tu cuenta ha sido aprobada! - JFalcon',
+        html: this.getRegistrationApprovedTemplate(firstName, loginLink),
+      });
+
+      if (error) {
+        this.logger.error(`Error de Resend enviando email de aprobación a ${to}:`, JSON.stringify(error));
+        throw new Error('Error al enviar email');
+      }
+
+      this.logger.log(`Email de aprobación enviado a: ${to} (ID: ${data?.id})`);
+    } catch (error) {
+      this.logger.error(`Error enviando email de aprobación a ${to}:`, error);
+    }
+  }
+
+  /**
+   * Envía email al usuario notificando que su registro fue rechazado
+   */
+  async sendRegistrationRejectedEmail(
+    to: string,
+    firstName: string,
+    reason?: string,
+  ): Promise<void> {
+    try {
+      const { data, error } = await this.resend.emails.send({
+        from: `${this.env.RESEND_FROM_NAME} <${this.env.RESEND_FROM_EMAIL}>`,
+        to,
+        subject: 'Actualización sobre tu registro - JFalcon',
+        html: this.getRegistrationRejectedTemplate(firstName, reason),
+      });
+
+      if (error) {
+        this.logger.error(`Error de Resend enviando email de rechazo a ${to}:`, JSON.stringify(error));
+        throw new Error('Error al enviar email');
+      }
+
+      this.logger.log(`Email de rechazo enviado a: ${to} (ID: ${data?.id})`);
+    } catch (error) {
+      this.logger.error(`Error enviando email de rechazo a ${to}:`, error);
     }
   }
 
@@ -111,6 +229,395 @@ export class EmailService {
               </p>
               <p style="margin: 10px 0 0; color: #888888; font-size: 12px;">
                 Revisa tu bandeja de spam si no encuentras este correo.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `;
+  }
+
+  /**
+   * Template HTML para email de registro pendiente (al usuario)
+   */
+  private getRegistrationPendingTemplate(firstName: string): string {
+    return `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro recibido</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 20px; text-align: center; background-color: #1a1a2e; border-radius: 8px 8px 0 0;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px;">JFalcon</h1>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <h2 style="margin: 0 0 20px; color: #1a1a2e; font-size: 24px;">
+                ¡Bienvenido, ${firstName}! 🎉
+              </h2>
+              
+              <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
+                Hemos recibido tu solicitud de registro en <strong>JFalcon</strong>.
+              </p>
+              
+              <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
+                Tu cuenta se encuentra actualmente <strong>en período de revisión</strong>. 
+                Nuestro equipo verificará tu información y te notificaremos por correo electrónico 
+                una vez que tu cuenta haya sido aprobada.
+              </p>
+              
+              <!-- Status Box -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
+                <tr>
+                  <td style="padding: 20px; background-color: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                    <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
+                      <strong>⏳ Estado: En revisión</strong><br>
+                      Este proceso puede tomar entre 24 a 48 horas hábiles.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
+                Mientras tanto, te invitamos a seguir explorando nuestras oportunidades.
+              </p>
+              
+              <p style="margin: 30px 0 0; color: #888888; font-size: 14px; line-height: 1.6;">
+                Si tienes alguna pregunta, no dudes en contactarnos.
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 40px; background-color: #f8f8f8; border-radius: 0 0 8px 8px; text-align: center;">
+              <p style="margin: 0; color: #888888; font-size: 12px;">
+                © ${new Date().getFullYear()} JFalcon. Todos los derechos reservados.
+              </p>
+              <p style="margin: 10px 0 0; color: #888888; font-size: 12px;">
+                Revisa tu bandeja de spam si no encuentras nuestros correos.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `;
+  }
+
+  /**
+   * Template HTML para notificación de nuevo registro (al admin)
+   */
+  private getNewRegistrationAdminTemplate(userData: NewUserData, reviewLink: string): string {
+    return `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nuevo registro pendiente</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 20px; text-align: center; background-color: #1a1a2e; border-radius: 8px 8px 0 0;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px;">JFalcon</h1>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <h2 style="margin: 0 0 20px; color: #1a1a2e; font-size: 24px;">
+                Nuevo registro pendiente 📋
+              </h2>
+              
+              <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
+                Un nuevo usuario ha solicitado registro en la plataforma y está pendiente de tu aprobación.
+              </p>
+              
+              <!-- User Info Box -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 20px 0; background-color: #f8f9fa; border-radius: 8px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <h3 style="margin: 0 0 15px; color: #1a1a2e; font-size: 16px;">
+                      Datos del solicitante:
+                    </h3>
+                    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                      <tr>
+                        <td style="padding: 8px 0; color: #666666; font-size: 14px; width: 120px;">
+                          <strong>Nombre:</strong>
+                        </td>
+                        <td style="padding: 8px 0; color: #4a4a4a; font-size: 14px;">
+                          ${userData.firstName} ${userData.lastName}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; color: #666666; font-size: 14px;">
+                          <strong>Email:</strong>
+                        </td>
+                        <td style="padding: 8px 0; color: #4a4a4a; font-size: 14px;">
+                          ${userData.email}
+                        </td>
+                      </tr>
+                      ${userData.phone ? `
+                      <tr>
+                        <td style="padding: 8px 0; color: #666666; font-size: 14px;">
+                          <strong>Teléfono:</strong>
+                        </td>
+                        <td style="padding: 8px 0; color: #4a4a4a; font-size: 14px;">
+                          ${userData.phone}
+                        </td>
+                      </tr>
+                      ` : ''}
+                      ${userData.city || userData.country ? `
+                      <tr>
+                        <td style="padding: 8px 0; color: #666666; font-size: 14px;">
+                          <strong>Ubicación:</strong>
+                        </td>
+                        <td style="padding: 8px 0; color: #4a4a4a; font-size: 14px;">
+                          ${[userData.city, userData.country].filter(Boolean).join(', ')}
+                        </td>
+                      </tr>
+                      ` : ''}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 20px 0 30px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
+                Para revisar y aprobar o rechazar esta solicitud, haz clic en el siguiente botón:
+              </p>
+              
+              <!-- Button -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td align="center">
+                    <a href="${reviewLink}" 
+                       style="display: inline-block; padding: 16px 40px; background-color: #4f46e5; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: bold; border-radius: 8px;">
+                      Revisar Solicitud
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 30px 0 0; color: #888888; font-size: 14px; line-height: 1.6;">
+                Si el botón no funciona, copia y pega este enlace en tu navegador:
+              </p>
+              
+              <p style="margin: 10px 0 0; color: #4f46e5; font-size: 12px; word-break: break-all;">
+                ${reviewLink}
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 40px; background-color: #f8f8f8; border-radius: 0 0 8px 8px; text-align: center;">
+              <p style="margin: 0; color: #888888; font-size: 12px;">
+                © ${new Date().getFullYear()} JFalcon. Todos los derechos reservados.
+              </p>
+              <p style="margin: 10px 0 0; color: #888888; font-size: 12px;">
+                Este es un correo automático del sistema de administración.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `;
+  }
+
+  /**
+   * Template HTML para email de registro aprobado
+   */
+  private getRegistrationApprovedTemplate(firstName: string, loginLink: string): string {
+    return `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cuenta aprobada</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 20px; text-align: center; background-color: #1a1a2e; border-radius: 8px 8px 0 0;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px;">JFalcon</h1>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <h2 style="margin: 0 0 20px; color: #1a1a2e; font-size: 24px;">
+                ¡Felicidades, ${firstName}! 🎉
+              </h2>
+              
+              <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
+                Nos complace informarte que tu cuenta en <strong>JFalcon</strong> ha sido <strong>aprobada</strong>.
+              </p>
+              
+              <!-- Success Box -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
+                <tr>
+                  <td style="padding: 20px; background-color: #d1fae5; border-radius: 8px; border-left: 4px solid #10b981;">
+                    <p style="margin: 0; color: #065f46; font-size: 14px; line-height: 1.6;">
+                      <strong>✅ Estado: Cuenta activa</strong><br>
+                      Ya puedes acceder a todas las funcionalidades de la plataforma.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 0 0 30px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
+                Para comenzar, inicia sesión con tu correo electrónico y contraseña:
+              </p>
+              
+              <!-- Button -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td align="center">
+                    <a href="${loginLink}" 
+                       style="display: inline-block; padding: 16px 40px; background-color: #10b981; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: bold; border-radius: 8px;">
+                      Iniciar Sesión
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 30px 0 0; color: #888888; font-size: 14px; line-height: 1.6;">
+                Si el botón no funciona, copia y pega este enlace en tu navegador:
+              </p>
+              
+              <p style="margin: 10px 0 0; color: #4f46e5; font-size: 12px; word-break: break-all;">
+                ${loginLink}
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 40px; background-color: #f8f8f8; border-radius: 0 0 8px 8px; text-align: center;">
+              <p style="margin: 0; color: #888888; font-size: 12px;">
+                © ${new Date().getFullYear()} JFalcon. Todos los derechos reservados.
+              </p>
+              <p style="margin: 10px 0 0; color: #888888; font-size: 12px;">
+                ¡Bienvenido a nuestra comunidad!
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `;
+  }
+
+  /**
+   * Template HTML para email de registro rechazado
+   */
+  private getRegistrationRejectedTemplate(firstName: string, reason?: string): string {
+    return `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Actualización de registro</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 20px; text-align: center; background-color: #1a1a2e; border-radius: 8px 8px 0 0;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px;">JFalcon</h1>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <h2 style="margin: 0 0 20px; color: #1a1a2e; font-size: 24px;">
+                Hola, ${firstName}
+              </h2>
+              
+              <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
+                Gracias por tu interés en unirte a <strong>JFalcon</strong>.
+              </p>
+              
+              <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
+                Lamentamos informarte que después de revisar tu solicitud, no hemos podido aprobar 
+                tu registro en este momento.
+              </p>
+              
+              <!-- Rejection Box -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
+                <tr>
+                  <td style="padding: 20px; background-color: #fee2e2; border-radius: 8px; border-left: 4px solid #ef4444;">
+                    <p style="margin: 0; color: #991b1b; font-size: 14px; line-height: 1.6;">
+                      <strong>❌ Estado: No aprobado</strong>
+                      ${reason ? `<br><br><strong>Motivo:</strong> ${reason}` : ''}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
+                Si crees que esto es un error o deseas más información, no dudes en contactarnos 
+                respondiendo a este correo.
+              </p>
+              
+              <p style="margin: 30px 0 0; color: #888888; font-size: 14px; line-height: 1.6;">
+                Agradecemos tu comprensión y te deseamos mucho éxito.
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 40px; background-color: #f8f8f8; border-radius: 0 0 8px 8px; text-align: center;">
+              <p style="margin: 0; color: #888888; font-size: 12px;">
+                © ${new Date().getFullYear()} JFalcon. Todos los derechos reservados.
+              </p>
+              <p style="margin: 10px 0 0; color: #888888; font-size: 12px;">
+                Gracias por tu interés en nuestra plataforma.
               </p>
             </td>
           </tr>
