@@ -9,16 +9,33 @@ export interface StrikeInfo {
   resetDate: string | null; // Fecha en formato ISO, null si no hay strikes
 }
 
+export interface StrikeWithDetails extends Strike {
+  classSession?: {
+    id: number;
+    title: string;
+  } | null;
+}
+
 export interface IStrikeRepository {
   /**
-   * Crear un nuevo strike
+   * Crear un nuevo strike automático (por clase)
    */
   create(userId: string, classSessionId: number, reason?: string): Promise<Strike>;
+
+  /**
+   * Crear un strike manual (emitido por admin)
+   */
+  createManual(userId: string, reason: string, classSessionId?: number): Promise<Strike>;
 
   /**
    * Obtener todos los strikes de un usuario
    */
   findByUserId(userId: string): Promise<Strike[]>;
+
+  /**
+   * Obtener todos los strikes de un usuario con detalles de clase
+   */
+  findByUserIdWithDetails(userId: string): Promise<StrikeWithDetails[]>;
 
   /**
    * Contar strikes de un usuario

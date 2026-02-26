@@ -56,8 +56,9 @@ export class ProfileService {
       year: 'numeric',
     });
 
-    // Determinar plan de suscripción (por ahora basado en rol, podría mejorarse)
-    const plan = user.role === 'ADMIN' || user.role === 'MODERATOR' ? 'Staff' : 'High Ticket';
+    // Determinar plan de suscripción basado en el campo plan del usuario o rol
+    const plan =
+      user.plan || (user.role === 'ADMIN' || user.role === 'SUPERADMIN' ? 'Staff' : 'PRO');
 
     return {
       user: this.mapUserToDto(user),

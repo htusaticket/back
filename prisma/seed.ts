@@ -100,7 +100,7 @@ async function main() {
       password: hashedPassword,
       firstName: 'Sarah',
       lastName: 'Johnson',
-      role: UserRole.MODERATOR,
+      role: UserRole.ADMIN,
       status: UserStatus.ACTIVE,
     },
   });

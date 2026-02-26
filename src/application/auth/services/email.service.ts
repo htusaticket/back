@@ -30,7 +30,7 @@ export class EmailService {
       const { data, error } = await this.resend.emails.send({
         from: `${this.env.RESEND_FROM_NAME} <${this.env.RESEND_FROM_EMAIL}>`,
         to,
-        subject: 'Recupera tu contraseña - JFalcon',
+        subject: 'Recupera tu contraseña - High Ticket USA',
         html: this.getPasswordResetTemplate(firstName, resetLink),
       });
 
@@ -54,12 +54,15 @@ export class EmailService {
       const { data, error } = await this.resend.emails.send({
         from: `${this.env.RESEND_FROM_NAME} <${this.env.RESEND_FROM_EMAIL}>`,
         to,
-        subject: 'Registro recibido - JFalcon',
+        subject: 'Registro recibido - High Ticket USA',
         html: this.getRegistrationPendingTemplate(firstName),
       });
 
       if (error) {
-        this.logger.error(`Error de Resend enviando email de registro pendiente a ${to}:`, JSON.stringify(error));
+        this.logger.error(
+          `Error de Resend enviando email de registro pendiente a ${to}:`,
+          JSON.stringify(error),
+        );
         throw new Error('Error al enviar email');
       }
 
@@ -82,20 +85,25 @@ export class EmailService {
     }
 
     const reviewLink = `${this.env.FRONTEND_URL}/admin/users`;
-    
+
     for (const adminEmail of adminEmails) {
       try {
         const { data, error } = await this.resend.emails.send({
           from: `${this.env.RESEND_FROM_NAME} <${this.env.RESEND_FROM_EMAIL}>`,
           to: adminEmail,
-          subject: 'Nuevo registro pendiente de aprobación - JFalcon',
+          subject: 'Nuevo registro pendiente de aprobación - High Ticket USA',
           html: this.getNewRegistrationAdminTemplate(userData, reviewLink),
         });
 
         if (error) {
-          this.logger.error(`Error de Resend enviando notificación al admin ${adminEmail}:`, JSON.stringify(error));
+          this.logger.error(
+            `Error de Resend enviando notificación al admin ${adminEmail}:`,
+            JSON.stringify(error),
+          );
         } else {
-          this.logger.log(`Notificación de nuevo registro enviada a: ${adminEmail} (ID: ${data?.id})`);
+          this.logger.log(
+            `Notificación de nuevo registro enviada a: ${adminEmail} (ID: ${data?.id})`,
+          );
         }
       } catch (error) {
         this.logger.error(`Error enviando notificación al admin ${adminEmail}:`, error);
@@ -109,16 +117,19 @@ export class EmailService {
   async sendRegistrationApprovedEmail(to: string, firstName: string): Promise<void> {
     try {
       const loginLink = `${this.env.FRONTEND_URL}/login`;
-      
+
       const { data, error } = await this.resend.emails.send({
         from: `${this.env.RESEND_FROM_NAME} <${this.env.RESEND_FROM_EMAIL}>`,
         to,
-        subject: '¡Tu cuenta ha sido aprobada! - JFalcon',
+        subject: '¡Tu cuenta ha sido aprobada! - High Ticket USA',
         html: this.getRegistrationApprovedTemplate(firstName, loginLink),
       });
 
       if (error) {
-        this.logger.error(`Error de Resend enviando email de aprobación a ${to}:`, JSON.stringify(error));
+        this.logger.error(
+          `Error de Resend enviando email de aprobación a ${to}:`,
+          JSON.stringify(error),
+        );
         throw new Error('Error al enviar email');
       }
 
@@ -140,12 +151,15 @@ export class EmailService {
       const { data, error } = await this.resend.emails.send({
         from: `${this.env.RESEND_FROM_NAME} <${this.env.RESEND_FROM_EMAIL}>`,
         to,
-        subject: 'Actualización sobre tu registro - JFalcon',
+        subject: 'Actualización sobre tu registro - High Ticket USA',
         html: this.getRegistrationRejectedTemplate(firstName, reason),
       });
 
       if (error) {
-        this.logger.error(`Error de Resend enviando email de rechazo a ${to}:`, JSON.stringify(error));
+        this.logger.error(
+          `Error de Resend enviando email de rechazo a ${to}:`,
+          JSON.stringify(error),
+        );
         throw new Error('Error al enviar email');
       }
 
@@ -159,6 +173,7 @@ export class EmailService {
    * Template HTML para email de recuperación de contraseña
    */
   private getPasswordResetTemplate(firstName: string, resetLink: string): string {
+    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/logo-transparent.webp';
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -174,8 +189,8 @@ export class EmailService {
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 40px 40px 20px; text-align: center; background-color: #1a1a2e; border-radius: 8px 8px 0 0;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px;">JFalcon</h1>
+            <td style="padding: 30px 40px; text-align: center; background-color: #1a1a2e; border-radius: 8px 8px 0 0;">
+              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 200px; height: auto; display: block; margin: 0 auto;" />
             </td>
           </tr>
           
@@ -225,10 +240,7 @@ export class EmailService {
           <tr>
             <td style="padding: 20px 40px; background-color: #f8f8f8; border-radius: 0 0 8px 8px; text-align: center;">
               <p style="margin: 0; color: #888888; font-size: 12px;">
-                © ${new Date().getFullYear()} JFalcon. Todos los derechos reservados.
-              </p>
-              <p style="margin: 10px 0 0; color: #888888; font-size: 12px;">
-                Revisa tu bandeja de spam si no encuentras este correo.
+                © ${new Date().getFullYear()} High Ticket USA. Todos los derechos reservados.
               </p>
             </td>
           </tr>
@@ -245,6 +257,7 @@ export class EmailService {
    * Template HTML para email de registro pendiente (al usuario)
    */
   private getRegistrationPendingTemplate(firstName: string): string {
+    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/logo-transparent.webp';
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -260,8 +273,8 @@ export class EmailService {
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 40px 40px 20px; text-align: center; background-color: #1a1a2e; border-radius: 8px 8px 0 0;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px;">JFalcon</h1>
+            <td style="padding: 30px 40px; text-align: center; background-color: #1a1a2e; border-radius: 8px 8px 0 0;">
+              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 200px; height: auto; display: block; margin: 0 auto;" />
             </td>
           </tr>
           
@@ -273,7 +286,7 @@ export class EmailService {
               </h2>
               
               <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
-                Hemos recibido tu solicitud de registro en <strong>JFalcon</strong>.
+                Hemos recibido tu solicitud de registro en <strong>High Ticket USA</strong>.
               </p>
               
               <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
@@ -295,11 +308,7 @@ export class EmailService {
               </table>
               
               <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
-                Mientras tanto, te invitamos a seguir explorando nuestras oportunidades.
-              </p>
-              
-              <p style="margin: 30px 0 0; color: #888888; font-size: 14px; line-height: 1.6;">
-                Si tienes alguna pregunta, no dudes en contactarnos.
+                Si tienes alguna pregunta no dudes en contactarnos en <a href="mailto:info@highticketusa.com" style="color: #4f46e5;">info@highticketusa.com</a>
               </p>
             </td>
           </tr>
@@ -308,10 +317,7 @@ export class EmailService {
           <tr>
             <td style="padding: 20px 40px; background-color: #f8f8f8; border-radius: 0 0 8px 8px; text-align: center;">
               <p style="margin: 0; color: #888888; font-size: 12px;">
-                © ${new Date().getFullYear()} JFalcon. Todos los derechos reservados.
-              </p>
-              <p style="margin: 10px 0 0; color: #888888; font-size: 12px;">
-                Revisa tu bandeja de spam si no encuentras nuestros correos.
+                © ${new Date().getFullYear()} High Ticket USA. Todos los derechos reservados.
               </p>
             </td>
           </tr>
@@ -328,6 +334,7 @@ export class EmailService {
    * Template HTML para notificación de nuevo registro (al admin)
    */
   private getNewRegistrationAdminTemplate(userData: NewUserData, reviewLink: string): string {
+    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/logo-transparent.webp';
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -343,8 +350,8 @@ export class EmailService {
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 40px 40px 20px; text-align: center; background-color: #1a1a2e; border-radius: 8px 8px 0 0;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px;">JFalcon</h1>
+            <td style="padding: 30px 40px; text-align: center; background-color: #1a1a2e; border-radius: 8px 8px 0 0;">
+              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 200px; height: auto; display: block; margin: 0 auto;" />
             </td>
           </tr>
           
@@ -383,7 +390,9 @@ export class EmailService {
                           ${userData.email}
                         </td>
                       </tr>
-                      ${userData.phone ? `
+                      ${
+                        userData.phone
+                          ? `
                       <tr>
                         <td style="padding: 8px 0; color: #666666; font-size: 14px;">
                           <strong>Teléfono:</strong>
@@ -392,8 +401,12 @@ export class EmailService {
                           ${userData.phone}
                         </td>
                       </tr>
-                      ` : ''}
-                      ${userData.city || userData.country ? `
+                      `
+                          : ''
+                      }
+                      ${
+                        userData.city || userData.country
+                          ? `
                       <tr>
                         <td style="padding: 8px 0; color: #666666; font-size: 14px;">
                           <strong>Ubicación:</strong>
@@ -402,7 +415,9 @@ export class EmailService {
                           ${[userData.city, userData.country].filter(Boolean).join(', ')}
                         </td>
                       </tr>
-                      ` : ''}
+                      `
+                          : ''
+                      }
                     </table>
                   </td>
                 </tr>
@@ -438,7 +453,7 @@ export class EmailService {
           <tr>
             <td style="padding: 20px 40px; background-color: #f8f8f8; border-radius: 0 0 8px 8px; text-align: center;">
               <p style="margin: 0; color: #888888; font-size: 12px;">
-                © ${new Date().getFullYear()} JFalcon. Todos los derechos reservados.
+                © ${new Date().getFullYear()} High Ticket USA. Todos los derechos reservados.
               </p>
               <p style="margin: 10px 0 0; color: #888888; font-size: 12px;">
                 Este es un correo automático del sistema de administración.
@@ -458,6 +473,7 @@ export class EmailService {
    * Template HTML para email de registro aprobado
    */
   private getRegistrationApprovedTemplate(firstName: string, loginLink: string): string {
+    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/logo-transparent.webp';
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -473,8 +489,8 @@ export class EmailService {
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 40px 40px 20px; text-align: center; background-color: #1a1a2e; border-radius: 8px 8px 0 0;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px;">JFalcon</h1>
+            <td style="padding: 30px 40px; text-align: center; background-color: #1a1a2e; border-radius: 8px 8px 0 0;">
+              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 200px; height: auto; display: block; margin: 0 auto;" />
             </td>
           </tr>
           
@@ -486,7 +502,7 @@ export class EmailService {
               </h2>
               
               <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
-                Nos complace informarte que tu cuenta en <strong>JFalcon</strong> ha sido <strong>aprobada</strong>.
+                Nos complace informarte que tu cuenta en <strong>High Ticket USA</strong> ha sido <strong>aprobada</strong>.
               </p>
               
               <!-- Success Box -->
@@ -524,6 +540,10 @@ export class EmailService {
               <p style="margin: 10px 0 0; color: #4f46e5; font-size: 12px; word-break: break-all;">
                 ${loginLink}
               </p>
+              
+              <p style="margin: 30px 0 0; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
+                Si tienes alguna pregunta no dudes en contactarnos en <a href="mailto:info@highticketusa.com" style="color: #4f46e5;">info@highticketusa.com</a>
+              </p>
             </td>
           </tr>
           
@@ -531,7 +551,7 @@ export class EmailService {
           <tr>
             <td style="padding: 20px 40px; background-color: #f8f8f8; border-radius: 0 0 8px 8px; text-align: center;">
               <p style="margin: 0; color: #888888; font-size: 12px;">
-                © ${new Date().getFullYear()} JFalcon. Todos los derechos reservados.
+                © ${new Date().getFullYear()} High Ticket USA. Todos los derechos reservados.
               </p>
               <p style="margin: 10px 0 0; color: #888888; font-size: 12px;">
                 ¡Bienvenido a nuestra comunidad!
@@ -551,6 +571,7 @@ export class EmailService {
    * Template HTML para email de registro rechazado
    */
   private getRegistrationRejectedTemplate(firstName: string, reason?: string): string {
+    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/logo-transparent.webp';
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -566,8 +587,8 @@ export class EmailService {
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 40px 40px 20px; text-align: center; background-color: #1a1a2e; border-radius: 8px 8px 0 0;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px;">JFalcon</h1>
+            <td style="padding: 30px 40px; text-align: center; background-color: #1a1a2e; border-radius: 8px 8px 0 0;">
+              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 200px; height: auto; display: block; margin: 0 auto;" />
             </td>
           </tr>
           
@@ -579,7 +600,7 @@ export class EmailService {
               </h2>
               
               <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
-                Gracias por tu interés en unirte a <strong>JFalcon</strong>.
+                Gracias por tu interés en unirte a <strong>High Ticket USA</strong>.
               </p>
               
               <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
@@ -600,8 +621,7 @@ export class EmailService {
               </table>
               
               <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
-                Si crees que esto es un error o deseas más información, no dudes en contactarnos 
-                respondiendo a este correo.
+                Si tienes alguna pregunta no dudes en contactarnos en <a href="mailto:info@highticketusa.com" style="color: #4f46e5;">info@highticketusa.com</a>
               </p>
               
               <p style="margin: 30px 0 0; color: #888888; font-size: 14px; line-height: 1.6;">
@@ -614,10 +634,7 @@ export class EmailService {
           <tr>
             <td style="padding: 20px 40px; background-color: #f8f8f8; border-radius: 0 0 8px 8px; text-align: center;">
               <p style="margin: 0; color: #888888; font-size: 12px;">
-                © ${new Date().getFullYear()} JFalcon. Todos los derechos reservados.
-              </p>
-              <p style="margin: 10px 0 0; color: #888888; font-size: 12px;">
-                Gracias por tu interés en nuestra plataforma.
+                © ${new Date().getFullYear()} High Ticket USA. Todos los derechos reservados.
               </p>
             </td>
           </tr>

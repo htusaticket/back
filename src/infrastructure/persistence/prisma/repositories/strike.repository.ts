@@ -1,7 +1,7 @@
 // src/infrastructure/persistence/prisma/repositories/strike.repository.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import { IStrikeRepository, Strike, StrikeInfo } from '@/core/interfaces';
+import { IStrikeRepository, Strike, StrikeInfo, StrikeWithDetails } from '@/core/interfaces';
 
 const MAX_STRIKES = 3;
 const STRIKE_RESET_DAYS = 14;
@@ -20,6 +20,18 @@ export class PrismaStrikeRepository implements IStrikeRepository {
         userId,
         classSessionId,
         reason,
+        isManual: false,
+      },
+    });
+  }
+
+  async createManual(userId: string, reason: string, classSessionId?: number): Promise<Strike> {
+    return this.prisma.strike.create({
+      data: {
+        userId,
+        classSessionId: classSessionId ?? null,
+        reason,
+        isManual: true,
       },
     });
   }
@@ -31,6 +43,25 @@ export class PrismaStrikeRepository implements IStrikeRepository {
         createdAt: 'desc',
       },
     });
+  }
+
+  async findByUserIdWithDetails(userId: string): Promise<StrikeWithDetails[]> {
+    const strikes = await this.prisma.strike.findMany({
+      where: { userId },
+      include: {
+        classSession: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return strikes as StrikeWithDetails[];
   }
 
   async countByUserId(userId: string): Promise<number> {
@@ -47,13 +78,17 @@ export class PrismaStrikeRepository implements IStrikeRepository {
   }
 
   async getStrikeInfo(userId: string): Promise<StrikeInfo> {
+    // Obtener la configuración del sistema (o usar valores por defecto)
+    const config = await this.prisma.systemConfig.findFirst();
+    const maxStrikes = config?.maxStrikesForSuspension ?? MAX_STRIKES;
+
     // Obtener el último strike
     const lastStrike = await this.findLastByUserId(userId);
 
     if (!lastStrike) {
       return {
         strikesCount: 0,
-        maxStrikes: MAX_STRIKES,
+        maxStrikes,
         resetDate: null,
       };
     }
@@ -68,7 +103,7 @@ export class PrismaStrikeRepository implements IStrikeRepository {
     if (now > resetDate) {
       return {
         strikesCount: 0,
-        maxStrikes: MAX_STRIKES,
+        maxStrikes,
         resetDate: null,
       };
     }
@@ -87,8 +122,8 @@ export class PrismaStrikeRepository implements IStrikeRepository {
     });
 
     return {
-      strikesCount: Math.min(strikesCount, MAX_STRIKES),
-      maxStrikes: MAX_STRIKES,
+      strikesCount: Math.min(strikesCount, maxStrikes),
+      maxStrikes,
       resetDate: resetDate.toISOString(),
     };
   }

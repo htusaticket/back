@@ -12,16 +12,24 @@ datasource db {
 
 // Enums
 enum UserRole {
-  ADMIN
-  USER
-  GUEST
-  MODERATOR
+  SUPERADMIN    // Control total del sistema
+  ADMIN         // Teachers - pueden gestionar clases y correcciones
+  USER          // Alumnos
+  JOB_UPLOADER  // Rol especial para subir ofertas de trabajo
 }
 
 enum UserStatus {
   PENDING
   ACTIVE
   SUSPENDED
+}
+
+enum UserPlan {
+  PRO         // Nivel 1 - Acceso completo
+  ELITE       // Nivel 1 - Acceso completo
+  LEVEL_UP    // Nivel 1 - Acceso completo
+  HIRING_HUB  // Nivel 2 - Contenido + Job Board (sin clases en vivo)
+  SKILL_BUILDER // Nivel 3 - Solo contenido
 }
 
 enum ClassType {
@@ -38,6 +46,13 @@ enum ChallengeType {
 enum EnrollmentStatus {
   CONFIRMED
   CANCELLED
+}
+
+enum AttendanceStatus {
+  NOT_MARKED
+  PRESENT
+  LATE
+  ABSENT
 }
 
 enum SubmissionStatus {
@@ -76,6 +91,12 @@ model User {
   avatar    String?
   role      UserRole   @default(USER)
   status    UserStatus @default(PENDING)
+  
+  // Campos de plan y fechas (para alumnos)
+  plan       UserPlan?  @default(PRO)
+  startDate  DateTime?  @map("start_date")  // Fecha de ingreso al programa
+  endDate    DateTime?  @map("end_date")    // Fecha de terminación del programa
+  adminNotes String?    @map("admin_notes") @db.Text // Notas del admin (JSON con formato)
 
   // Relaciones Base
   sessions       UserSession[]
@@ -260,30 +281,36 @@ model ClassSession {
 }
 
 model ClassEnrollment {
-  id             String           @id @default(cuid())
-  userId         String           @map("user_id")
-  classSessionId Int              @map("class_session_id")
-  enrolledAt     DateTime         @default(now()) @map("enrolled_at")
-  status         EnrollmentStatus @default(CONFIRMED)
-  cancelledAt    DateTime?        @map("cancelled_at")
+  id               String           @id @default(cuid())
+  userId           String           @map("user_id")
+  classSessionId   Int              @map("class_session_id")
+  enrolledAt       DateTime         @default(now()) @map("enrolled_at")
+  status           EnrollmentStatus @default(CONFIRMED)
+  cancelledAt      DateTime?        @map("cancelled_at")
+  
+  // Campo de asistencia
+  attendanceStatus AttendanceStatus @default(NOT_MARKED) @map("attendance_status")
+  attendanceMarkedAt DateTime?      @map("attendance_marked_at")
 
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   classSession ClassSession @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
 
   @@unique([userId, classSessionId])
   @@index([status])
+  @@index([attendanceStatus])
   @@map("class_enrollments")
 }
 
 model Strike {
   id             String   @id @default(cuid())
   userId         String   @map("user_id")
-  classSessionId Int      @map("class_session_id")
+  classSessionId Int?     @map("class_session_id") // Opcional para strikes manuales
   reason         String   @default("LATE_CANCELLATION")
+  isManual       Boolean  @default(false) @map("is_manual") // Strike emitido manualmente por admin
   createdAt      DateTime @default(now()) @map("created_at")
 
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  classSession ClassSession @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classSession ClassSession? @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([createdAt])
@@ -412,4 +439,24 @@ model JobApplication {
   @@unique([userId, jobOfferId])
   @@index([userId, status])
   @@map("job_applications")
+}
+
+// ====================================================
+// SYSTEM CONFIGURATION
+// ====================================================
+
+model SystemConfig {
+  id    String @id @default("default") // Solo habrá un registro
+  
+  // Configuración de Strikes
+  maxStrikesForSuspension Int @default(3) @map("max_strikes_for_suspension")
+  suspensionDurationDays  Int @default(7) @map("suspension_duration_days")
+  
+  // Configuración de visibilidad de features
+  jobBoardEnabled Boolean @default(true) @map("job_board_enabled")
+  
+  // Auditoría
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("system_config")
 }

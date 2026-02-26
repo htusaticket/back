@@ -36,5 +36,5 @@
     }
   },
   "include": ["src/**/*", "prisma.config.ts"],
-  "exclude": ["node_modules", "dist", "test"]
+  "exclude": ["node_modules", "dist", "test", "prisma/seed.ts", "prisma/seed-sprint5.ts"]
 }

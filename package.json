@@ -27,6 +27,7 @@
     "db:migrate:status": "prisma migrate status",
     "db:migrate:reset": "prisma migrate reset",
     "db:seed": "prisma db seed",
+    "db:seed:sprint5": "npx tsx prisma/seed-sprint5.ts",
     "db:studio": "prisma studio",
     "db:generate": "prisma generate",
     "prepare": "is-ci || husky install",

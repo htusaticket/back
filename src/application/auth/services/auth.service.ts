@@ -96,7 +96,7 @@ export class AuthService {
 
     // Obtener todos los administradores activos para notificarles
     const admins = await this.userRepository.findAllByRole(UserRole.ADMIN);
-    const adminEmails = admins.map((admin) => admin.email);
+    const adminEmails = admins.map(admin => admin.email);
 
     // Enviar notificación a todos los administradores sobre el nuevo registro
     await this.emailService.sendNewRegistrationNotificationToAdmins(adminEmails, {

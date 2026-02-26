@@ -6,6 +6,7 @@ import { AcademyModule } from './controllers/academy/academy.module';
 import { ChallengesModule } from './controllers/challenges/challenges.module';
 import { JobsModule } from './controllers/jobs/jobs.module';
 import { ProfileModule } from './controllers/profile/profile.module';
+import { AdminModule } from './controllers/admin/admin.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ProfileModule } from './controllers/profile/profile.module';
     ChallengesModule,
     JobsModule,
     ProfileModule,
+    AdminModule,
   ],
   controllers: [],
   exports: [
@@ -25,6 +27,7 @@ import { ProfileModule } from './controllers/profile/profile.module';
     ChallengesModule,
     JobsModule,
     ProfileModule,
+    AdminModule,
   ],
 })
 export class HttpModule {}
