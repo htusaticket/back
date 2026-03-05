@@ -11,13 +11,14 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { UserStatus, UserRole } from '@prisma/client';
+import { UserStatus, UserRole, NotificationType } from '@prisma/client';
 
 import { IUserRepository, USER_REPOSITORY } from '@/core/interfaces/user.repository';
 import {
   IPasswordResetRepository,
   PASSWORD_RESET_REPOSITORY,
 } from '@/core/interfaces/password-reset.repository';
+import { PrismaService } from '@/infrastructure/persistence/prisma/prisma.service';
 import { EmailService } from './email.service';
 import { getEnvConfig } from '@/config/env.config';
 
@@ -54,12 +55,13 @@ export class AuthService {
     private readonly passwordResetRepository: IPasswordResetRepository,
     private readonly jwtService: JwtService,
     private readonly emailService: EmailService,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
    * Registra un nuevo usuario con status PENDING
    * El usuario debe esperar aprobación del admin para poder acceder
-   * Envía emails de notificación al usuario y al admin
+   * Envía notificaciones web a admins/superadmins y email al usuario
    */
   async register(dto: RegisterDto): Promise<{ message: string }> {
     this.logger.log(`Intento de registro para email: ${dto.email}`);
@@ -77,7 +79,7 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(dto.password, this.env.BCRYPT_SALT_ROUNDS);
 
     // Crear usuario con status PENDING
-    await this.userRepository.create({
+    const newUser = await this.userRepository.create({
       email: dto.email,
       password: hashedPassword,
       firstName: dto.firstName,
@@ -94,19 +96,38 @@ export class AuthService {
     // Enviar email al usuario notificando que su registro está en revisión
     await this.emailService.sendRegistrationPendingEmail(dto.email, dto.firstName);
 
-    // Obtener todos los administradores activos para notificarles
-    const admins = await this.userRepository.findAllByRole(UserRole.ADMIN);
-    const adminEmails = admins.map(admin => admin.email);
-
-    // Enviar notificación a todos los administradores sobre el nuevo registro
-    await this.emailService.sendNewRegistrationNotificationToAdmins(adminEmails, {
-      firstName: dto.firstName,
-      lastName: dto.lastName,
-      email: dto.email,
-      phone: dto.phone,
-      city: dto.city,
-      country: dto.country,
+    // Obtener todos los administradores y superadmins activos para notificarles
+    const adminsAndSuperadmins = await this.prisma.user.findMany({
+      where: {
+        role: { in: [UserRole.ADMIN, UserRole.SUPERADMIN] },
+        status: UserStatus.ACTIVE,
+      },
+      select: { id: true },
     });
+
+    // Crear notificaciones web persistentes para todos los admins y superadmins
+    if (adminsAndSuperadmins.length > 0) {
+      await this.prisma.notification.createMany({
+        data: adminsAndSuperadmins.map(admin => ({
+          userId: admin.id,
+          type: NotificationType.NEW_REGISTRATION,
+          title: 'Nuevo registro pendiente',
+          message: `${dto.firstName} ${dto.lastName} (${dto.email}) se ha registrado y espera aprobación.`,
+          isRead: false,
+          data: {
+            pendingUserId: newUser.id,
+            firstName: dto.firstName,
+            lastName: dto.lastName,
+            email: dto.email,
+            phone: dto.phone,
+            city: dto.city,
+            country: dto.country,
+          },
+        })),
+      });
+
+      this.logger.log(`Notificaciones creadas para ${adminsAndSuperadmins.length} administradores`);
+    }
 
     return {
       message: 'Registro exitoso. Tu cuenta está pendiente de aprobación.',
@@ -153,7 +174,8 @@ export class AuthService {
         });
 
       case UserStatus.ACTIVE:
-        // Continuar con el login
+        // Continuar con el login normal
+        // El frontend verificará si tiene subscripción activa
         break;
     }
 
@@ -178,6 +200,7 @@ export class AuthService {
   /**
    * Obtiene los datos del usuario actual
    * Verifica que el usuario siga activo (no haya sido suspendido)
+   * Usuarios ACTIVE sin subscripción pueden acceder pero verán contenido limitado
    */
   async getMe(userId: string): Promise<UserResponseDto> {
     const user = await this.userRepository.findById(userId);
@@ -204,6 +227,7 @@ export class AuthService {
       });
     }
 
+    // ACTIVE puede obtener sus datos, el frontend verificará subscripción
     return this.mapUserToResponse(user);
   }
 
@@ -305,6 +329,8 @@ export class AuthService {
     avatar: string | null;
     role: string;
     status: string;
+    isPunished: boolean;
+    punishedUntil: Date | null;
     createdAt: Date;
   }): UserResponseDto {
     return {
@@ -319,6 +345,8 @@ export class AuthService {
       avatar: user.avatar,
       role: user.role,
       status: user.status,
+      isPunished: user.isPunished,
+      punishedUntil: user.punishedUntil,
       createdAt: user.createdAt,
     };
   }

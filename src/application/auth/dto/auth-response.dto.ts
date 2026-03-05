@@ -34,6 +34,18 @@ export class UserResponseDto {
   @ApiProperty({ example: 'ACTIVE', enum: ['PENDING', 'ACTIVE', 'SUSPENDED'] })
   status!: string;
 
+  @ApiProperty({
+    example: false,
+    description: 'Si el usuario está castigado (sin acceso a clases)',
+  })
+  isPunished!: boolean;
+
+  @ApiPropertyOptional({
+    example: '2026-02-15T10:00:00.000Z',
+    description: 'Fecha hasta la que está castigado',
+  })
+  punishedUntil?: Date | null;
+
   @ApiProperty({ example: '2026-02-02T10:00:00.000Z' })
   createdAt!: Date;
 }

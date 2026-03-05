@@ -1,6 +1,6 @@
 // src/application/profile/services/profile.service.ts
 import { Injectable, Inject, NotFoundException, Logger } from '@nestjs/common';
-import { UserStatus } from '@prisma/client';
+import { SubscriptionStatus } from '@prisma/client';
 import {
   IUserRepository,
   USER_REPOSITORY,
@@ -14,8 +14,6 @@ import {
   UpdateProfileResponseDto,
   UserProfileDto,
 } from '../dto';
-
-const MAX_STRIKES = 3;
 
 @Injectable()
 export class ProfileService {
@@ -38,17 +36,20 @@ export class ProfileService {
       throw new NotFoundException('Usuario no encontrado');
     }
 
+    // Obtener subscripción activa
+    const activeSubscription = await this.prisma.subscription.findFirst({
+      where: {
+        userId,
+        status: SubscriptionStatus.ACTIVE,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
     // Obtener stats y strikes en paralelo
     const [stats, strikeInfo] = await Promise.all([
       this.getProfileStats(userId),
       this.strikeRepository.getStrikeInfo(userId),
     ]);
-
-    // Verificar si debe suspenderse por strikes
-    if (strikeInfo.strikesCount >= MAX_STRIKES && user.status === UserStatus.ACTIVE) {
-      await this.userRepository.updateStatus(userId, UserStatus.SUSPENDED);
-      this.logger.warn(`Usuario ${userId} suspendido por alcanzar ${MAX_STRIKES} strikes`);
-    }
 
     // Formatear fecha de membresía
     const memberSince = user.createdAt.toLocaleDateString('en-US', {
@@ -56,18 +57,24 @@ export class ProfileService {
       year: 'numeric',
     });
 
-    // Determinar plan de suscripción basado en el campo plan del usuario o rol
+    // Determinar plan de suscripción basado en subscripción activa o rol
     const plan =
-      user.plan || (user.role === 'ADMIN' || user.role === 'SUPERADMIN' ? 'Staff' : 'PRO');
+      activeSubscription?.plan ||
+      (user.role === 'ADMIN' || user.role === 'SUPERADMIN' ? 'Staff' : null);
 
     return {
       user: this.mapUserToDto(user),
       subscription: {
         plan,
         memberSince,
+        hasActiveSubscription: !!activeSubscription,
+        startDate: activeSubscription?.startDate || null,
+        endDate: activeSubscription?.endDate || null,
       },
       stats,
       strikes: strikeInfo,
+      isPunished: user.isPunished,
+      punishedUntil: user.punishedUntil,
     };
   }
 

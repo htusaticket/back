@@ -1,5 +1,5 @@
 // src/core/interfaces/user.repository.ts
-import type { User, UserStatus, UserRole, UserPlan } from '@prisma/client';
+import type { User, UserStatus, UserRole } from '@prisma/client';
 
 export interface CreateUserData {
   email: string;
@@ -12,9 +12,6 @@ export interface CreateUserData {
   reference?: string | null;
   role?: UserRole;
   status?: UserStatus;
-  plan?: UserPlan;
-  startDate?: Date | null;
-  endDate?: Date | null;
 }
 
 export interface UpdateUserData {
@@ -29,17 +26,15 @@ export interface UpdateUserData {
   password?: string;
   status?: UserStatus;
   role?: UserRole;
-  plan?: UserPlan;
-  startDate?: Date | null;
-  endDate?: Date | null;
   adminNotes?: string | null;
+  isPunished?: boolean;
+  punishedUntil?: Date | null;
 }
 
 export interface FindUsersOptions {
   search?: string;
   role?: UserRole;
   status?: UserStatus;
-  plan?: UserPlan;
   page?: number;
   limit?: number;
 }

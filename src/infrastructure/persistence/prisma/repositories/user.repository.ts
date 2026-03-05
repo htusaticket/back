@@ -33,7 +33,7 @@ export class PrismaUserRepository implements IUserRepository {
   }
 
   async findMany(options: FindUsersOptions): Promise<PaginatedUsers> {
-    const { search, role, status, plan, page = 1, limit = 10 } = options;
+    const { search, role, status, page = 1, limit = 10 } = options;
 
     const where: Prisma.UserWhereInput = {};
 
@@ -49,7 +49,6 @@ export class PrismaUserRepository implements IUserRepository {
     // Filtros adicionales
     if (role) where.role = role;
     if (status) where.status = status;
-    if (plan) where.plan = plan;
 
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({

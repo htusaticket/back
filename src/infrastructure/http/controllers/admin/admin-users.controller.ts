@@ -4,6 +4,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -18,6 +19,8 @@ import { AdminUsersService } from '@/application/admin/services/admin-users.serv
 import { JwtAuthGuard } from '@/application/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/application/auth/guards/roles.guard';
 import { Roles } from '@/application/auth/decorators/roles.decorator';
+import { CurrentUser } from '@/application/auth/decorators/current-user.decorator';
+import { JwtPayload } from '@/application/auth/services/auth.service';
 
 import {
   GetUsersQueryDto,
@@ -26,11 +29,14 @@ import {
   UpdateUserNotesDto,
   IssueStrikeDto,
   UpdateUserDto,
+  RejectRegistrationDto,
   PaginatedUsersResponseDto,
   UserDetailDto,
   CreateUserResponseDto,
   UpdateStatusResponseDto,
   IssueStrikeResponseDto,
+  ApproveRegistrationResponseDto,
+  RejectRegistrationResponseDto,
 } from '@/application/admin/dto/users';
 
 @ApiTags('Admin - Users')
@@ -171,5 +177,119 @@ export class AdminUsersController {
     @Body() dto: IssueStrikeDto,
   ): Promise<IssueStrikeResponseDto> {
     return this.adminUsersService.issueStrike(userId, dto);
+  }
+
+  /**
+   * POST /api/admin/users/:id/approve
+   * Aprobar un registro pendiente (PENDING → INACTIVE)
+   */
+  @Post(':id/approve')
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Aprobar registro',
+    description:
+      'Aprueba un registro pendiente. El usuario pasa a INACTIVE y puede loguear, pero sin acceso al contenido hasta que pague.',
+  })
+  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiResponse({ status: 200, description: 'Registro aprobado' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  @ApiResponse({ status: 409, description: 'El usuario no está en estado PENDING' })
+  async approveRegistration(@Param('id') userId: string): Promise<ApproveRegistrationResponseDto> {
+    return this.adminUsersService.approveRegistration(userId);
+  }
+
+  /**
+   * DELETE /api/admin/users/:id/reject
+   * Rechazar un registro pendiente (elimina de la BD)
+   */
+  @Delete(':id/reject')
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Rechazar registro',
+    description:
+      'Rechaza un registro pendiente. Se envía email con el motivo y se elimina el usuario de la BD.',
+  })
+  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiResponse({ status: 200, description: 'Registro rechazado' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  @ApiResponse({ status: 409, description: 'El usuario no está en estado PENDING' })
+  async rejectRegistration(
+    @Param('id') userId: string,
+    @Body() dto: RejectRegistrationDto,
+  ): Promise<RejectRegistrationResponseDto> {
+    return this.adminUsersService.rejectRegistration(userId, dto);
+  }
+
+  /**
+   * POST /api/admin/users/:id/suspend
+   * Suspender (banear) un usuario - Solo SUPERADMIN
+   */
+  @Post(':id/suspend')
+  @Roles(UserRole.SUPERADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Suspender usuario (ban)',
+    description:
+      'Suspende (banea) un usuario. Solo SUPERADMIN. El usuario no podrá acceder a la plataforma.',
+  })
+  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiResponse({ status: 200, description: 'Usuario suspendido' })
+  @ApiResponse({ status: 403, description: 'Solo SUPERADMIN puede suspender usuarios' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  @ApiResponse({ status: 409, description: 'El usuario ya está suspendido' })
+  async suspendUser(
+    @Param('id') userId: string,
+    @Body() dto: { reason?: string },
+    @CurrentUser() currentUser: JwtPayload,
+  ): Promise<UpdateStatusResponseDto> {
+    return this.adminUsersService.suspendUser(userId, currentUser.role as UserRole, dto?.reason);
+  }
+
+  /**
+   * POST /api/admin/users/:id/unsuspend
+   * Quitar suspensión a un usuario - Solo SUPERADMIN
+   */
+  @Post(':id/unsuspend')
+  @Roles(UserRole.SUPERADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Quitar suspensión (unban)',
+    description:
+      'Quita la suspensión a un usuario. Solo SUPERADMIN. El usuario podrá volver a acceder.',
+  })
+  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiResponse({ status: 200, description: 'Suspensión removida' })
+  @ApiResponse({ status: 403, description: 'Solo SUPERADMIN puede quitar suspensiones' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  @ApiResponse({ status: 409, description: 'El usuario no está suspendido' })
+  async unsuspendUser(
+    @Param('id') userId: string,
+    @CurrentUser() currentUser: JwtPayload,
+  ): Promise<UpdateStatusResponseDto> {
+    return this.adminUsersService.unsuspendUser(userId, currentUser.role as UserRole);
+  }
+
+  /**
+   * POST /api/admin/users/:id/remove-punishment
+   * Quitar castigo a un usuario - Solo SUPERADMIN
+   */
+  @Post(':id/remove-punishment')
+  @Roles(UserRole.SUPERADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Quitar castigo',
+    description: 'Quita el castigo a un usuario y resetea sus strikes. Solo SUPERADMIN.',
+  })
+  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiResponse({ status: 200, description: 'Castigo removido y strikes reseteados' })
+  @ApiResponse({ status: 403, description: 'Solo SUPERADMIN puede quitar castigos' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async removePunishment(
+    @Param('id') userId: string,
+    @CurrentUser() currentUser: JwtPayload,
+  ): Promise<UpdateStatusResponseDto> {
+    return this.adminUsersService.removePunishment(userId, currentUser.role as UserRole);
   }
 }

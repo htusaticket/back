@@ -19,9 +19,9 @@ enum UserRole {
 }
 
 enum UserStatus {
-  PENDING
-  ACTIVE
-  SUSPENDED
+  PENDING    // Esperando aprobación del registro
+  ACTIVE     // Aprobado - puede o no tener subscripción activa
+  SUSPENDED  // Baneado manualmente por admin
 }
 
 enum UserPlan {
@@ -30,6 +30,12 @@ enum UserPlan {
   LEVEL_UP    // Nivel 1 - Acceso completo
   HIRING_HUB  // Nivel 2 - Contenido + Job Board (sin clases en vivo)
   SKILL_BUILDER // Nivel 3 - Solo contenido
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
 }
 
 enum ClassType {
@@ -75,6 +81,9 @@ enum NotificationType {
   CHALLENGE_FEEDBACK
   CLASS_CONFIRMED
   GENERAL
+  NEW_REGISTRATION   // Notificación a admins de nuevo registro
+  PLAN_EXPIRED       // Notificación al usuario de plan expirado
+  REGISTRATION_APPROVED // Notificación al usuario de registro aprobado
 }
 
 // Modelo base de Usuario
@@ -92,15 +101,19 @@ model User {
   role      UserRole   @default(USER)
   status    UserStatus @default(PENDING)
   
-  // Campos de plan y fechas (para alumnos)
-  plan       UserPlan?  @default(PRO)
-  startDate  DateTime?  @map("start_date")  // Fecha de ingreso al programa
-  endDate    DateTime?  @map("end_date")    // Fecha de terminación del programa
+  // Campos de castigo por strikes
+  isPunished    Boolean   @default(false) @map("is_punished")
+  punishedUntil DateTime? @map("punished_until")
+  
+  // Notas del admin
   adminNotes String?    @map("admin_notes") @db.Text // Notas del admin (JSON con formato)
 
   // Relaciones Base
   sessions       UserSession[]
   passwordResets PasswordReset[]
+
+  // Relación de Subscripción
+  subscriptions Subscription[]
 
   // Relaciones Academy
   lessonProgress UserLessonProgress[]
@@ -126,7 +139,41 @@ model User {
   @@index([email])
   @@index([role])
   @@index([status])
+  @@index([isPunished])
   @@map("users")
+}
+
+// ====================================================
+// SUBSCRIPTIONS
+// ====================================================
+
+model Subscription {
+  id        String             @id @default(cuid())
+  userId    String             @map("user_id")
+  plan      UserPlan
+  status    SubscriptionStatus @default(ACTIVE)
+  
+  // Fechas
+  startDate DateTime  @map("start_date")
+  endDate   DateTime  @map("end_date")
+  
+  // Info de pago (manual por SUPERADMIN)
+  hasPaid     Boolean  @default(false) @map("has_paid")
+  paidAt      DateTime? @map("paid_at")
+  paymentNote String?  @map("payment_note") // Nota sobre el pago
+  
+  // Quién asignó el plan
+  assignedBy String?  @map("assigned_by") // ID del admin que asignó
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([status])
+  @@index([endDate])
+  @@map("subscriptions")
 }
 
 // Tabla para tokens de recuperación de contraseña
@@ -176,6 +223,7 @@ model Module {
   description String
   image       String // URL
   order       Int    @default(0)
+  visibleForSkillBuilder Boolean @default(false) @map("visible_for_skill_builder") // Si es visible para plan SKILL_BUILDER
 
   lessons      Lesson[]
   userProgress UserModuleProgress[]
@@ -331,6 +379,7 @@ model DailyChallenge {
   audioUrl     String?       @map("audio_url") // Para challenges de audio
   points       Int           @default(10)
   isActive     Boolean       @default(true) @map("is_active")
+  visibleForSkillBuilder Boolean @default(false) @map("visible_for_skill_builder") // Si es visible para plan SKILL_BUILDER
 
   userProgress UserDailyChallengeProgress[]
 
@@ -448,15 +497,104 @@ model JobApplication {
 model SystemConfig {
   id    String @id @default("default") // Solo habrá un registro
   
-  // Configuración de Strikes
-  maxStrikesForSuspension Int @default(3) @map("max_strikes_for_suspension")
-  suspensionDurationDays  Int @default(7) @map("suspension_duration_days")
+  // Configuración de Strikes y Punishment
+  maxStrikesForPunishment  Int @default(3) @map("max_strikes_for_punishment")
+  punishmentDurationDays   Int @default(14) @map("punishment_duration_days") // Duración del castigo en días
+  lateCancellationHours    Int @default(24) @map("late_cancellation_hours") // Horas antes de clase para cancelación sin strike
   
   // Configuración de visibilidad de features
   jobBoardEnabled Boolean @default(true) @map("job_board_enabled")
+  academyEnabled  Boolean @default(true) @map("academy_enabled")
   
   // Auditoría
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("system_config")
+}
+
+// ====================================================
+// AUDIT LOGS
+// ====================================================
+
+enum AuditAction {
+  // User actions
+  USER_CREATED
+  USER_APPROVED
+  USER_REJECTED
+  USER_SUSPENDED
+  USER_ACTIVATED
+  USER_DELETED
+  USER_UPDATED
+  USER_STRIKE_ISSUED
+  
+  // Admin actions
+  ADMIN_CREATED
+  ADMIN_UPDATED
+  ADMIN_DELETED
+  
+  // Subscription actions
+  SUBSCRIPTION_CREATED
+  SUBSCRIPTION_UPDATED
+  SUBSCRIPTION_CANCELLED
+  SUBSCRIPTION_DELETED
+  
+  // Class actions
+  CLASS_CREATED
+  CLASS_UPDATED
+  CLASS_DELETED
+  CLASS_ATTENDANCE_MARKED
+  
+  // Academy actions
+  MODULE_CREATED
+  MODULE_UPDATED
+  MODULE_DELETED
+  LESSON_CREATED
+  LESSON_UPDATED
+  LESSON_DELETED
+  
+  // Challenge actions
+  CHALLENGE_CREATED
+  CHALLENGE_UPDATED
+  CHALLENGE_DELETED
+  SUBMISSION_REVIEWED
+  
+  // Job actions
+  JOB_CREATED
+  JOB_UPDATED
+  JOB_DELETED
+  
+  // System actions
+  SYSTEM_CONFIG_UPDATED
+  LOGIN_SUCCESS
+  LOGIN_FAILED
+}
+
+model AuditLog {
+  id          String      @id @default(cuid())
+  
+  // Who performed the action
+  adminId     String      @map("admin_id")
+  adminEmail  String      @map("admin_email")
+  adminName   String      @map("admin_name")
+  
+  // What action was performed
+  action      AuditAction
+  
+  // Target of the action (e.g., user id, class id, etc.)
+  targetType  String?     @map("target_type") // "USER", "CLASS", "MODULE", etc.
+  targetId    String?     @map("target_id")
+  targetName  String?     @map("target_name") // Descriptive name
+  
+  // Additional details
+  details     Json?       // Additional context about the action
+  ipAddress   String?     @map("ip_address")
+  userAgent   String?     @map("user_agent")
+  
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  @@index([adminId])
+  @@index([action])
+  @@index([targetType])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

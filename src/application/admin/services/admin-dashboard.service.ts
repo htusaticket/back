@@ -281,11 +281,26 @@ export class AdminDashboardService {
   }
 
   /**
-   * Marcar notificación como leída (placeholder - en el futuro podríamos persistir esto)
+   * Marcar notificación como leída
    */
-  markNotificationAsRead(notificationId: string): void {
+  async markNotificationAsRead(notificationId: string): Promise<void> {
     this.logger.debug(`Marking notification as read: ${notificationId}`);
-    // For now, this is a no-op since notifications are generated dynamically
-    // In a full implementation, we would track read status in a separate table
+
+    await this.prisma.notification.update({
+      where: { id: notificationId },
+      data: { isRead: true },
+    });
+  }
+
+  /**
+   * Marcar todas las notificaciones como leídas
+   */
+  async markAllNotificationsAsRead(userId: string): Promise<void> {
+    this.logger.debug(`Marking all notifications as read for user: ${userId}`);
+
+    await this.prisma.notification.updateMany({
+      where: { userId, isRead: false },
+      data: { isRead: true },
+    });
   }
 }

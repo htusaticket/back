@@ -7,6 +7,7 @@ import { ChallengesModule } from './controllers/challenges/challenges.module';
 import { JobsModule } from './controllers/jobs/jobs.module';
 import { ProfileModule } from './controllers/profile/profile.module';
 import { AdminModule } from './controllers/admin/admin.module';
+import { NotificationsModule } from './controllers/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AdminModule } from './controllers/admin/admin.module';
     JobsModule,
     ProfileModule,
     AdminModule,
+    NotificationsModule,
   ],
   controllers: [],
   exports: [
@@ -28,6 +30,7 @@ import { AdminModule } from './controllers/admin/admin.module';
     JobsModule,
     ProfileModule,
     AdminModule,
+    NotificationsModule,
   ],
 })
 export class HttpModule {}

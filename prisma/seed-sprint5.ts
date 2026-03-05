@@ -14,6 +14,7 @@ import {
   AttendanceStatus,
   ChallengeType,
   SubmissionStatus,
+  ResourceType,
 } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -153,6 +154,7 @@ async function main() {
 
   interface CreatedUser {
     id: string;
+    email: string;
     status: UserStatus;
     firstName: string;
   }
@@ -186,9 +188,275 @@ async function main() {
           student.status === UserStatus.SUSPENDED ? 'Suspendido por acumular 3 strikes' : null,
       },
     });
-    createdStudents.push(created);
-    console.log(`   ✓ Alumno: ${created.email} (${student.plan})`);
+    createdStudents.push({ ...created, email: student.email });
+    console.log(`   ✓ Alumno: ${student.email} (${student.plan})`);
   }
+
+  // Obtener referencia al usuario alumno.elite@test.com
+  const eliteUser = createdStudents.find(s => s.email === 'alumno.elite@test.com');
+
+  // Usuario Demo Principal - diego@test.com
+  const demoStartDate = new Date();
+  demoStartDate.setMonth(demoStartDate.getMonth() - 2);
+  const demoEndDate = new Date(demoStartDate);
+  demoEndDate.setMonth(demoEndDate.getMonth() + 12);
+
+  const demoUser = await prisma.user.upsert({
+    where: { email: 'diego@test.com' },
+    update: {},
+    create: {
+      email: 'diego@test.com',
+      password: hashedPassword,
+      firstName: 'Diego',
+      lastName: 'Demo User',
+      phone: '+5491155556666',
+      role: UserRole.USER,
+      status: UserStatus.ACTIVE,
+      plan: UserPlan.PRO,
+      city: 'Buenos Aires',
+      country: 'Argentina',
+      startDate: demoStartDate,
+      endDate: demoEndDate,
+    },
+  });
+  console.log(`   ✓ Usuario Demo: ${demoUser.email} (PRO)`);
+
+  // ==================== MÓDULOS Y LECCIONES ====================
+  console.log('\n📚 Creando módulos y lecciones...');
+
+  // Module 1: Foundations & Goals
+  const module1 = await prisma.module.upsert({
+    where: { id: 1 },
+    update: {},
+    create: {
+      title: 'Foundations & Goals',
+      description:
+        'Start your journey by setting clear objectives and understanding the core principles of effective language learning.',
+      image:
+        'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=1000&auto=format&fit=crop',
+      order: 1,
+    },
+  });
+
+  const lesson1_1 = await prisma.lesson.upsert({
+    where: { id: 1 },
+    update: {},
+    create: {
+      title: 'Introduction to the Course',
+      description: 'Welcome to JFalcon Academy! Learn about the course structure and objectives.',
+      duration: '10 min',
+      contentUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+      order: 1,
+      moduleId: module1.id,
+    },
+  });
+
+  const lesson1_2 = await prisma.lesson.upsert({
+    where: { id: 2 },
+    update: {},
+    create: {
+      title: 'Setting SMART Goals',
+      description:
+        'Learn how to set Specific, Measurable, Achievable, Relevant, and Time-bound goals.',
+      duration: '15 min',
+      contentUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+      order: 2,
+      moduleId: module1.id,
+    },
+  });
+
+  const lesson1_3 = await prisma.lesson.upsert({
+    where: { id: 3 },
+    update: {},
+    create: {
+      title: 'Essential Vocabulary Building',
+      description: 'Discover effective techniques for building and retaining new vocabulary.',
+      duration: '20 min',
+      contentUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+      order: 3,
+      moduleId: module1.id,
+    },
+  });
+
+  // Module 2: Conversation Basics
+  const module2 = await prisma.module.upsert({
+    where: { id: 2 },
+    update: {},
+    create: {
+      title: 'Conversation Basics',
+      description:
+        'Master the fundamentals of everyday English conversation with practical phrases and techniques.',
+      image:
+        'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=1000&auto=format&fit=crop',
+      order: 2,
+    },
+  });
+
+  const lesson2_1 = await prisma.lesson.upsert({
+    where: { id: 4 },
+    update: {},
+    create: {
+      title: 'Greetings & Introductions',
+      description: 'Learn formal and informal ways to greet people and introduce yourself.',
+      duration: '12 min',
+      contentUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+      order: 1,
+      moduleId: module2.id,
+    },
+  });
+
+  const lesson2_2 = await prisma.lesson.upsert({
+    where: { id: 5 },
+    update: {},
+    create: {
+      title: 'Small Talk Mastery',
+      description: 'Master the art of small talk for networking and social situations.',
+      duration: '18 min',
+      contentUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+      order: 2,
+      moduleId: module2.id,
+    },
+  });
+
+  // Module 3: Business Communication
+  const module3 = await prisma.module.upsert({
+    where: { id: 3 },
+    update: {},
+    create: {
+      title: 'Business Communication',
+      description:
+        'Develop professional English skills for the workplace, emails, and presentations.',
+      image:
+        'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=1000&auto=format&fit=crop',
+      order: 3,
+    },
+  });
+
+  const lesson3_1 = await prisma.lesson.upsert({
+    where: { id: 6 },
+    update: {},
+    create: {
+      title: 'Professional Email Writing',
+      description: 'Write clear, professional emails that get results.',
+      duration: '25 min',
+      contentUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+      order: 1,
+      moduleId: module3.id,
+    },
+  });
+
+  const lesson3_2 = await prisma.lesson.upsert({
+    where: { id: 7 },
+    update: {},
+    create: {
+      title: 'Meeting Vocabulary',
+      description: 'Essential vocabulary and phrases for business meetings.',
+      duration: '20 min',
+      contentUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+      order: 2,
+      moduleId: module3.id,
+    },
+  });
+
+  console.log(`   ✓ 3 módulos con ${7} lecciones creados`);
+
+  // Crear recursos para las lecciones
+  await prisma.lessonResource.createMany({
+    data: [
+      // Lesson 1 - Introduction: PDF + 2 extra videos
+      {
+        title: 'Course Syllabus.pdf',
+        fileUrl: 'https://example.com/resources/course-syllabus.pdf',
+        type: ResourceType.PDF,
+        size: '245 KB',
+        lessonId: lesson1_1.id,
+      },
+      {
+        title: 'Welcome Message from Instructor',
+        fileUrl: 'https://www.youtube.com/watch?v=9bZkp7q19f0',
+        type: ResourceType.VIDEO,
+        size: null,
+        lessonId: lesson1_1.id,
+      },
+      {
+        title: 'Platform Tour & Features',
+        fileUrl: 'https://www.youtube.com/watch?v=kJQP7kiw5Fk',
+        type: ResourceType.VIDEO,
+        size: null,
+        lessonId: lesson1_1.id,
+      },
+      // Lesson 2 - SMART Goals: PDF + 1 extra video
+      {
+        title: 'Goal Setting Worksheet.pdf',
+        fileUrl: 'https://example.com/resources/goal-worksheet.pdf',
+        type: ResourceType.PDF,
+        size: '180 KB',
+        lessonId: lesson1_2.id,
+      },
+      {
+        title: 'Real Student Goal Examples',
+        fileUrl: 'https://www.youtube.com/watch?v=hT_nvWreIhg',
+        type: ResourceType.VIDEO,
+        size: null,
+        lessonId: lesson1_2.id,
+      },
+      // Lesson 3 - Vocabulary: only PDF
+      {
+        title: 'Vocabulary Flashcards',
+        fileUrl: 'https://example.com/resources/flashcards.pdf',
+        type: ResourceType.PDF,
+        size: '320 KB',
+        lessonId: lesson1_3.id,
+      },
+    ],
+    skipDuplicates: true,
+  });
+  console.log(`   ✓ Recursos de lecciones creados (incluye videos adicionales)`);
+
+  // Progreso del usuario demo en los módulos
+  await prisma.userLessonProgress.upsert({
+    where: { userId_lessonId: { userId: demoUser.id, lessonId: lesson1_1.id } },
+    update: {},
+    create: {
+      userId: demoUser.id,
+      lessonId: lesson1_1.id,
+      completed: true,
+      lastAccessedAt: new Date(),
+    },
+  });
+
+  await prisma.userLessonProgress.upsert({
+    where: { userId_lessonId: { userId: demoUser.id, lessonId: lesson1_2.id } },
+    update: {},
+    create: {
+      userId: demoUser.id,
+      lessonId: lesson1_2.id,
+      completed: true,
+      lastAccessedAt: new Date(),
+    },
+  });
+
+  await prisma.userModuleProgress.upsert({
+    where: { userId_moduleId: { userId: demoUser.id, moduleId: module1.id } },
+    update: {},
+    create: {
+      userId: demoUser.id,
+      moduleId: module1.id,
+      progress: 66, // 2 de 3 lecciones completadas
+    },
+  });
+
+  await prisma.userModuleProgress.upsert({
+    where: { userId_moduleId: { userId: demoUser.id, moduleId: module2.id } },
+    update: {},
+    create: {
+      userId: demoUser.id,
+      moduleId: module2.id,
+      progress: 0,
+    },
+  });
+
+  console.log(`   ✓ Progreso del usuario demo en módulos creado`);
 
   // ==================== CLASES ====================
   console.log('\n📅 Creando clases de prueba...');
@@ -233,7 +501,7 @@ async function main() {
   ];
 
   interface CreatedClass {
-    id: string;
+    id: number;
     title: string;
   }
 
@@ -375,14 +643,16 @@ async function main() {
       daysOffset: -3,
       questions: [
         {
-          question: 'What is the past tense of "go"?',
+          id: 1,
+          text: 'What is the past tense of "go"?',
           options: ['goed', 'went', 'gone', 'going'],
-          correct: 1,
+          correctAnswer: 1,
         },
         {
-          question: 'What is the past tense of "eat"?',
+          id: 2,
+          text: 'What is the past tense of "eat"?',
           options: ['eated', 'eaten', 'ate', 'eating'],
-          correct: 2,
+          correctAnswer: 2,
         },
       ],
     },
@@ -397,12 +667,193 @@ async function main() {
       type: ChallengeType.AUDIO,
       instructions:
         'Practice pronouncing these difficult words: thorough, entrepreneurship, February.',
+      daysOffset: -1,
+    },
+    {
+      title: 'Job Interview Essentials Quiz',
+      type: ChallengeType.MULTIPLE_CHOICE,
+      instructions:
+        'Prepare for your next job interview! Test your knowledge of common interview questions and best practices.',
       daysOffset: 0,
+      questions: [
+        {
+          id: 1,
+          text: 'What is the best way to answer "Tell me about yourself"?',
+          options: [
+            'Talk about your hobbies and family',
+            'Give a brief professional summary relevant to the role',
+            'Read your entire resume',
+            'Ask them to be more specific',
+          ],
+          correctAnswer: 1,
+        },
+        {
+          id: 2,
+          text: 'When asked about a weakness, you should:',
+          options: [
+            'Say you have no weaknesses',
+            'Mention a real weakness and how you are improving',
+            "Talk about a coworker's weakness",
+            'Change the subject',
+          ],
+          correctAnswer: 1,
+        },
+        {
+          id: 3,
+          text: 'What does "STAR method" stand for in interviews?',
+          options: [
+            'Success, Teamwork, Achievement, Results',
+            'Situation, Task, Action, Result',
+            'Skills, Training, Abilities, References',
+            'Strategy, Timeline, Assessment, Review',
+          ],
+          correctAnswer: 1,
+        },
+        {
+          id: 4,
+          text: 'At the end of an interview, what is a good question to ask?',
+          options: [
+            'How much vacation time do I get?',
+            'What does success look like in this role?',
+            'Can I leave early on Fridays?',
+            "Do you monitor employees' computers?",
+          ],
+          correctAnswer: 1,
+        },
+      ],
+    },
+    {
+      title: 'Common Expressions Quiz',
+      type: ChallengeType.MULTIPLE_CHOICE,
+      instructions: 'Test your knowledge of common English expressions and idioms.',
+      daysOffset: 1,
+      questions: [
+        {
+          id: 1,
+          text: 'What does "break the ice" mean?',
+          options: [
+            'To destroy something cold',
+            'To start a conversation in a social situation',
+            'To cancel a meeting',
+            'To solve a difficult problem',
+          ],
+          correctAnswer: 1,
+        },
+        {
+          id: 2,
+          text: 'If someone says "It\'s a piece of cake", they mean it is:',
+          options: ['Delicious', 'Very easy', 'Expensive', 'Boring'],
+          correctAnswer: 1,
+        },
+        {
+          id: 3,
+          text: 'What does "to be on the same page" mean?',
+          options: [
+            'To read together',
+            'To have the same understanding',
+            'To work in the same office',
+            'To share a book',
+          ],
+          correctAnswer: 1,
+        },
+      ],
+    },
+    {
+      title: 'Business Vocabulary Quiz',
+      type: ChallengeType.MULTIPLE_CHOICE,
+      instructions: 'Test your business English vocabulary with these questions.',
+      daysOffset: 1,
+      questions: [
+        {
+          id: 1,
+          text: 'What does "ROI" stand for?',
+          options: [
+            'Return on Investment',
+            'Rate of Interest',
+            'Risk of Inflation',
+            'Revenue on Income',
+          ],
+          correctAnswer: 0,
+        },
+        {
+          id: 2,
+          text: 'Which word means "to discuss terms of an agreement"?',
+          options: ['Delegate', 'Negotiate', 'Facilitate', 'Collaborate'],
+          correctAnswer: 1,
+        },
+        {
+          id: 3,
+          text: 'What is a "deadline"?',
+          options: [
+            'A type of loan',
+            'The final date to complete something',
+            'A business meeting',
+            'An email signature',
+          ],
+          correctAnswer: 1,
+        },
+      ],
+    },
+    {
+      title: 'Introduce Yourself',
+      type: ChallengeType.AUDIO,
+      instructions:
+        'Record a professional introduction of yourself as if you were meeting a potential employer. Include your name, background, and what makes you unique.',
+      daysOffset: 2,
+    },
+    {
+      title: 'Conditionals Quiz',
+      type: ChallengeType.MULTIPLE_CHOICE,
+      instructions: 'Practice your understanding of conditional sentences.',
+      daysOffset: 3,
+      questions: [
+        {
+          id: 1,
+          text: 'Complete: "If I ___ more time, I would learn another language."',
+          options: ['have', 'had', 'will have', 'having'],
+          correctAnswer: 1,
+        },
+        {
+          id: 2,
+          text: 'Which sentence is a first conditional?',
+          options: [
+            'If I won the lottery, I would travel.',
+            'If it rains, I will stay home.',
+            'If I were you, I would study.',
+            'I wish I had studied more.',
+          ],
+          correctAnswer: 1,
+        },
+        {
+          id: 3,
+          text: 'Complete: "If she ___ earlier, she wouldn\'t have missed the train."',
+          options: ['left', 'had left', 'leaves', 'would leave'],
+          correctAnswer: 1,
+        },
+        {
+          id: 4,
+          text: 'What type of conditional is: "If I were rich, I would buy a yacht."?',
+          options: [
+            'Zero conditional',
+            'First conditional',
+            'Second conditional',
+            'Third conditional',
+          ],
+          correctAnswer: 2,
+        },
+      ],
+    },
+    {
+      title: 'Describe a Challenge You Overcame',
+      type: ChallengeType.AUDIO,
+      instructions:
+        'Tell us about a difficult situation you faced and how you overcame it. Use past tense and try to include some business vocabulary.',
+      daysOffset: 4,
     },
   ];
 
   interface CreatedChallenge {
-    id: string;
+    id: number;
     title: string;
     type: ChallengeType;
   }
@@ -474,6 +925,195 @@ async function main() {
 
   console.log(`   ✓ ${submissionCount} submissions creadas`);
 
+  // ==================== SUBMISSIONS PARA USUARIO DEMO ====================
+  console.log('\n🎮 Creando progreso de challenges para usuario demo...');
+
+  // Buscar challenges creados para asignarlos al usuario demo
+  const quizChallenges = createdChallenges.filter(c => c.type === ChallengeType.MULTIPLE_CHOICE);
+  const voiceChallenges = createdChallenges.filter(c => c.type === ChallengeType.AUDIO);
+
+  // Quiz completado con aprobación
+  if (quizChallenges.length > 0) {
+    try {
+      await prisma.userDailyChallengeProgress.upsert({
+        where: {
+          userId_challengeId: {
+            userId: demoUser.id,
+            challengeId: quizChallenges[0].id,
+          },
+        },
+        update: {},
+        create: {
+          userId: demoUser.id,
+          challengeId: quizChallenges[0].id,
+          completed: true,
+          completedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // hace 2 días
+          answers: [1, 2], // respuestas correctas
+          status: SubmissionStatus.APPROVED,
+          score: 100,
+        },
+      });
+      console.log(`   ✓ Quiz completado para demo user: ${quizChallenges[0].title}`);
+    } catch (e) {
+      // Ignorar duplicados
+    }
+  }
+
+  // Audio con feedback pendiente
+  if (voiceChallenges.length > 0) {
+    try {
+      await prisma.userDailyChallengeProgress.upsert({
+        where: {
+          userId_challengeId: {
+            userId: demoUser.id,
+            challengeId: voiceChallenges[0].id,
+          },
+        },
+        update: {},
+        create: {
+          userId: demoUser.id,
+          challengeId: voiceChallenges[0].id,
+          completed: true,
+          completedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000), // hace 4 días
+          fileUrl: 'https://storage.example.com/audio/diego-morning-routine.mp3',
+          status: SubmissionStatus.PENDING,
+        },
+      });
+      console.log(`   ✓ Audio pendiente para demo user: ${voiceChallenges[0].title}`);
+    } catch (e) {
+      // Ignorar duplicados
+    }
+
+    // Otro audio aprobado
+    if (voiceChallenges.length > 1) {
+      try {
+        await prisma.userDailyChallengeProgress.upsert({
+          where: {
+            userId_challengeId: {
+              userId: demoUser.id,
+              challengeId: voiceChallenges[1].id,
+            },
+          },
+          update: {},
+          create: {
+            userId: demoUser.id,
+            challengeId: voiceChallenges[1].id,
+            completed: true,
+            completedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // hace 1 día
+            fileUrl: 'https://storage.example.com/audio/diego-dream-job.mp3',
+            status: SubmissionStatus.APPROVED,
+            feedback: 'Excellent pronunciation and clear structure! Keep up the great work.',
+            score: 92,
+          },
+        });
+        console.log(`   ✓ Audio aprobado para demo user: ${voiceChallenges[1].title}`);
+      } catch (e) {
+        // Ignorar duplicados
+      }
+    }
+  }
+
+  // Inscribir al usuario demo en clases
+  if (createdClasses.length > 0) {
+    for (const cls of createdClasses.slice(0, 3)) {
+      try {
+        const classData = classesData[createdClasses.indexOf(cls)];
+        await prisma.classEnrollment.create({
+          data: {
+            userId: demoUser.id,
+            classSessionId: cls.id,
+            status: 'CONFIRMED',
+            attendanceStatus:
+              classData && classData.daysOffset < 0
+                ? AttendanceStatus.PRESENT
+                : AttendanceStatus.NOT_MARKED,
+            attendanceMarkedAt: classData && classData.daysOffset < 0 ? new Date() : null,
+          },
+        });
+      } catch (e) {
+        // Ignorar duplicados
+      }
+    }
+    console.log(`   ✓ Usuario demo inscrito en clases`);
+  }
+
+  // ==================== PROGRESO PARA ALUMNO ELITE ====================
+  console.log('\n👑 Creando progreso para alumno.elite@test.com...');
+
+  if (eliteUser) {
+    // Progreso de módulos para elite user
+    await prisma.userLessonProgress.upsert({
+      where: { userId_lessonId: { userId: eliteUser.id, lessonId: lesson1_1.id } },
+      update: {},
+      create: {
+        userId: eliteUser.id,
+        lessonId: lesson1_1.id,
+        completed: true,
+        lastAccessedAt: new Date(),
+      },
+    });
+
+    await prisma.userModuleProgress.upsert({
+      where: { userId_moduleId: { userId: eliteUser.id, moduleId: module1.id } },
+      update: {},
+      create: {
+        userId: eliteUser.id,
+        moduleId: module1.id,
+        progress: 33,
+      },
+    });
+
+    console.log(`   ✓ Progreso de módulos para elite user`);
+
+    // Los quizzes de hoy (daysOffset: 0) estarán disponibles para elite user
+    // No creamos progress para los quizzes de hoy, así puede completarlos
+
+    // Crear un audio pendiente para el historial
+    if (voiceChallenges.length > 0) {
+      try {
+        await prisma.userDailyChallengeProgress.upsert({
+          where: {
+            userId_challengeId: {
+              userId: eliteUser.id,
+              challengeId: voiceChallenges[0].id,
+            },
+          },
+          update: {},
+          create: {
+            userId: eliteUser.id,
+            challengeId: voiceChallenges[0].id,
+            completed: true,
+            completedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+            fileUrl: 'https://storage.example.com/audio/elite-morning-routine.mp3',
+            status: SubmissionStatus.APPROVED,
+            feedback: 'Great job María! Your pronunciation is improving.',
+            score: 88,
+          },
+        });
+        console.log(`   ✓ Audio aprobado para elite user`);
+      } catch (e) {
+        // Ignorar duplicados
+      }
+    }
+
+    // Inscribir al elite user en clases
+    for (const cls of createdClasses.slice(0, 2)) {
+      try {
+        await prisma.classEnrollment.create({
+          data: {
+            userId: eliteUser.id,
+            classSessionId: cls.id,
+            status: 'CONFIRMED',
+            attendanceStatus: AttendanceStatus.NOT_MARKED,
+          },
+        });
+      } catch (e) {
+        // Ignorar duplicados
+      }
+    }
+    console.log(`   ✓ Elite user inscrito en clases`);
+  }
+
   // ==================== RESUMEN ====================
   console.log('\n' + '='.repeat(50));
   console.log('🎉 Seed de Sprint 5 completado exitosamente!');
@@ -483,9 +1123,19 @@ async function main() {
   console.log('   │ SuperAdmin: superadmin@jfalcon.com          │');
   console.log('   │ Teacher:    teacher@jfalcon.com             │');
   console.log('   │ Alumno Pro: alumno.pro@test.com             │');
-  console.log('   │ Alumno Elite: alumno.elite@test.com         │');
+  console.log('   │ Alumno Elite: alumno.elite@test.com ⭐      │');
+  console.log('   │ Demo User:  diego@test.com (con módulos)    │');
   console.log('   │ Password para todos: Test123!               │');
   console.log('   └─────────────────────────────────────────────┘');
+  console.log('\n⭐ Alumno Elite (alumno.elite@test.com):');
+  console.log('   - Quiz de Job Interview disponible HOY');
+  console.log('   - Módulos de academy con progreso');
+  console.log('   - Historial de challenges');
+  console.log('\n🎓 Usuario Demo (diego@test.com):');
+  console.log('   - 3 módulos de academy disponibles');
+  console.log('   - 2 lecciones completadas en módulo 1');
+  console.log('   - Challenges de quiz y audio con progreso');
+  console.log('   - Inscrito en clases');
 }
 
 main()

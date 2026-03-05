@@ -5,6 +5,8 @@ import {
   PrismaClient,
   UserRole,
   UserStatus,
+  UserPlan,
+  SubscriptionStatus,
   ClassType,
   ChallengeType,
   EnrollmentStatus,
@@ -12,6 +14,7 @@ import {
   SubmissionStatus,
   ResourceType,
   ApplicationStatus,
+  AuditAction,
 } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -28,6 +31,7 @@ async function main() {
 
   // Clear existing data (in correct order to respect foreign keys)
   console.log('🧹 Cleaning database...');
+  await prisma.auditLog.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.strike.deleteMany();
   await prisma.classEnrollment.deleteMany();
@@ -43,7 +47,19 @@ async function main() {
   await prisma.userSession.deleteMany();
   await prisma.jobApplication.deleteMany();
   await prisma.jobOffer.deleteMany();
+  await prisma.subscription.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.systemConfig.deleteMany();
+
+  console.log('⚙️ Creating system config...');
+  // Create system configuration
+  await prisma.systemConfig.create({
+    data: {
+      maxStrikesForPunishment: 3,
+      punishmentDurationDays: 7,
+      lateCancellationHours: 2,
+    },
+  });
 
   console.log('✨ Creating users...');
 
@@ -93,6 +109,37 @@ async function main() {
     },
   });
 
+  // Create superadmin user
+  const superAdminUser = await prisma.user.create({
+    data: {
+      email: 'superadmin@test.com',
+      password: hashedPassword,
+      firstName: 'Carlos',
+      lastName: 'Rodriguez',
+      phone: '+54 11 5555-1234',
+      city: 'Buenos Aires',
+      country: 'Argentina',
+      role: UserRole.SUPERADMIN,
+      status: UserStatus.ACTIVE,
+    },
+  });
+
+  // Create pending user (for testing approval flow)
+  const pendingUser = await prisma.user.create({
+    data: {
+      email: 'pending@test.com',
+      password: hashedPassword,
+      firstName: 'Pending',
+      lastName: 'User',
+      phone: '+5555555555',
+      city: 'Test City',
+      country: 'Test Country',
+      reference: 'Testing approval flow',
+      role: UserRole.USER,
+      status: UserStatus.PENDING,
+    },
+  });
+
   // Create teacher user (for feedback simulation)
   const teacherUser = await prisma.user.create({
     data: {
@@ -105,7 +152,44 @@ async function main() {
     },
   });
 
-  console.log('📚 Creating modules and lessons...');
+  console.log('� Creating subscriptions...');
+
+  // Create subscriptions for active users
+  const subscriptionStartDate = new Date();
+  const subscriptionEndDate = new Date(subscriptionStartDate);
+  subscriptionEndDate.setMonth(subscriptionEndDate.getMonth() + 1);
+
+  // Active subscription for first user (PRO plan)
+  await prisma.subscription.create({
+    data: {
+      userId: activeUser.id,
+      plan: UserPlan.PRO,
+      status: SubscriptionStatus.ACTIVE,
+      startDate: subscriptionStartDate,
+      endDate: subscriptionEndDate,
+      hasPaid: true,
+      paidAt: subscriptionStartDate,
+      paymentNote: 'Seed - initial payment',
+      assignedBy: superAdminUser.id,
+    },
+  });
+
+  // Active subscription for second user (ELITE plan)
+  await prisma.subscription.create({
+    data: {
+      userId: secondUser.id,
+      plan: UserPlan.ELITE,
+      status: SubscriptionStatus.ACTIVE,
+      startDate: subscriptionStartDate,
+      endDate: subscriptionEndDate,
+      hasPaid: true,
+      paidAt: subscriptionStartDate,
+      paymentNote: 'Seed - initial payment',
+      assignedBy: superAdminUser.id,
+    },
+  });
+
+  console.log('�📚 Creating modules and lessons...');
 
   // ====================
   // MODULE 1: Foundations & Goals
@@ -1134,6 +1218,142 @@ async function main() {
     ],
   });
 
+  // Create sample audit logs (reusing 'now' variable from above)
+  await prisma.auditLog.createMany({
+    data: [
+      {
+        adminId: superAdminUser.id,
+        adminEmail: superAdminUser.email,
+        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        action: AuditAction.USER_APPROVED,
+        targetType: 'User',
+        targetId: String(activeUser.id),
+        targetName: `${activeUser.firstName} ${activeUser.lastName}`,
+        details: { previousStatus: 'PENDING', newStatus: 'ACTIVE' },
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        createdAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+      },
+      {
+        adminId: superAdminUser.id,
+        adminEmail: superAdminUser.email,
+        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        action: AuditAction.MODULE_CREATED,
+        targetType: 'Module',
+        targetId: String(module1.id),
+        targetName: module1.title,
+        details: { order: module1.order },
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        createdAt: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000), // 6 days ago
+      },
+      {
+        adminId: superAdminUser.id,
+        adminEmail: superAdminUser.email,
+        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        action: AuditAction.CLASS_CREATED,
+        targetType: 'ClassSession',
+        targetId: String(class1.id),
+        targetName: class1.title,
+        details: { type: class1.type, capacityMax: class1.capacityMax },
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        createdAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
+      },
+      {
+        adminId: superAdminUser.id,
+        adminEmail: superAdminUser.email,
+        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        action: AuditAction.SUBSCRIPTION_CREATED,
+        targetType: 'Subscription',
+        targetId: 'sub_001',
+        targetName: 'Premium Plan - Monthly',
+        details: { planType: 'PREMIUM', billingCycle: 'MONTHLY', userId: activeUser.id },
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        createdAt: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000), // 4 days ago
+      },
+      {
+        adminId: superAdminUser.id,
+        adminEmail: superAdminUser.email,
+        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        action: AuditAction.CHALLENGE_CREATED,
+        targetType: 'DailyChallenge',
+        targetId: String(todayChallenge.id),
+        targetName: 'Today Challenge',
+        details: { type: todayChallenge.type },
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        createdAt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+      },
+      {
+        adminId: superAdminUser.id,
+        adminEmail: superAdminUser.email,
+        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        action: AuditAction.JOB_CREATED,
+        targetType: 'JobOffer',
+        targetId: String(job1.id),
+        targetName: job1.title,
+        details: { company: job1.company, location: job1.location },
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        createdAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+      },
+      {
+        adminId: superAdminUser.id,
+        adminEmail: superAdminUser.email,
+        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        action: AuditAction.USER_STRIKE_ISSUED,
+        targetType: 'User',
+        targetId: String(activeUser.id),
+        targetName: `${activeUser.firstName} ${activeUser.lastName}`,
+        details: { reason: 'Inappropriate behavior in class', strikeNumber: 1 },
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        createdAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+      },
+      {
+        adminId: superAdminUser.id,
+        adminEmail: superAdminUser.email,
+        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        action: AuditAction.SYSTEM_CONFIG_UPDATED,
+        targetType: 'System',
+        targetId: 'system_settings',
+        targetName: 'Platform Settings',
+        details: { setting: 'registration_enabled', oldValue: false, newValue: true },
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        createdAt: new Date(now.getTime() - 12 * 60 * 60 * 1000), // 12 hours ago
+      },
+      {
+        adminId: superAdminUser.id,
+        adminEmail: superAdminUser.email,
+        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        action: AuditAction.LOGIN_SUCCESS,
+        targetType: 'Admin',
+        targetId: String(superAdminUser.id),
+        targetName: superAdminUser.email,
+        details: { loginMethod: 'password' },
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        createdAt: new Date(now.getTime() - 2 * 60 * 60 * 1000), // 2 hours ago
+      },
+      {
+        adminId: superAdminUser.id,
+        adminEmail: superAdminUser.email,
+        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        action: AuditAction.USER_UPDATED,
+        targetType: 'User',
+        targetId: String(activeUser.id),
+        targetName: `${activeUser.firstName} ${activeUser.lastName}`,
+        details: { field: 'email', oldValue: 'old@test.com', newValue: 'eugenia@test.com' },
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        createdAt: new Date(now.getTime() - 30 * 60 * 1000), // 30 minutes ago
+      },
+    ],
+  });
+
   console.log('✅ Seed completed successfully!');
   console.log('\n📊 Summary:');
   console.log(`- Users created: ${await prisma.user.count()}`);
@@ -1147,6 +1367,7 @@ async function main() {
   console.log(`- Job offers: ${await prisma.jobOffer.count()}`);
   console.log(`- Job applications: ${await prisma.jobApplication.count()}`);
   console.log(`- Notifications: ${await prisma.notification.count()}`);
+  console.log(`- Audit logs: ${await prisma.auditLog.count()}`);
   console.log('\n🔐 Test credentials:');
   console.log('Email: eugenia@test.com');
   console.log('Password: password123');

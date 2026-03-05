@@ -170,10 +170,38 @@ export class EmailService {
   }
 
   /**
+   * Envía email al usuario notificando que su plan ha expirado
+   */
+  async sendPlanExpiredEmail(to: string, firstName: string, planName: string): Promise<void> {
+    try {
+      const loginLink = `${this.env.FRONTEND_URL}/login`;
+
+      const { data, error } = await this.resend.emails.send({
+        from: `${this.env.RESEND_FROM_NAME} <${this.env.RESEND_FROM_EMAIL}>`,
+        to,
+        subject: 'Tu plan ha expirado - High Ticket USA',
+        html: this.getPlanExpiredTemplate(firstName, planName, loginLink),
+      });
+
+      if (error) {
+        this.logger.error(
+          `Error de Resend enviando email de plan expirado a ${to}:`,
+          JSON.stringify(error),
+        );
+        throw new Error('Error al enviar email');
+      }
+
+      this.logger.log(`Email de plan expirado enviado a: ${to} (ID: ${data?.id})`);
+    } catch (error) {
+      this.logger.error(`Error enviando email de plan expirado a ${to}:`, error);
+    }
+  }
+
+  /**
    * Template HTML para email de recuperación de contraseña
    */
   private getPasswordResetTemplate(firstName: string, resetLink: string): string {
-    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/logo-transparent.webp';
+    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/falcon-logo.png';
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -257,7 +285,7 @@ export class EmailService {
    * Template HTML para email de registro pendiente (al usuario)
    */
   private getRegistrationPendingTemplate(firstName: string): string {
-    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/logo-transparent.webp';
+    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/falcon-logo.png';
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -334,7 +362,7 @@ export class EmailService {
    * Template HTML para notificación de nuevo registro (al admin)
    */
   private getNewRegistrationAdminTemplate(userData: NewUserData, reviewLink: string): string {
-    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/logo-transparent.webp';
+    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/falcon-logo.png';
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -473,7 +501,7 @@ export class EmailService {
    * Template HTML para email de registro aprobado
    */
   private getRegistrationApprovedTemplate(firstName: string, loginLink: string): string {
-    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/logo-transparent.webp';
+    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/falcon-logo.png';
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -571,7 +599,7 @@ export class EmailService {
    * Template HTML para email de registro rechazado
    */
   private getRegistrationRejectedTemplate(firstName: string, reason?: string): string {
-    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/logo-transparent.webp';
+    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/falcon-logo.png';
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -626,6 +654,97 @@ export class EmailService {
               
               <p style="margin: 30px 0 0; color: #888888; font-size: 14px; line-height: 1.6;">
                 Agradecemos tu comprensión y te deseamos mucho éxito.
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 40px; background-color: #f8f8f8; border-radius: 0 0 8px 8px; text-align: center;">
+              <p style="margin: 0; color: #888888; font-size: 12px;">
+                © ${new Date().getFullYear()} High Ticket USA. Todos los derechos reservados.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `;
+  }
+
+  /**
+   * Template HTML para email de plan expirado
+   */
+  private getPlanExpiredTemplate(firstName: string, planName: string, loginLink: string): string {
+    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/falcon-logo.png';
+    return `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tu plan ha expirado</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 0;">
+        <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 30px 40px; text-align: center; background-color: #1a1a2e; border-radius: 8px 8px 0 0;">
+              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 200px; height: auto; display: block; margin: 0 auto;" />
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <h2 style="margin: 0 0 20px; color: #1a1a2e; font-size: 24px;">
+                Hola, ${firstName} 👋
+              </h2>
+              
+              <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
+                Te informamos que tu plan <strong>${planName}</strong> en <strong>High Ticket USA</strong> ha expirado.
+              </p>
+              
+              <!-- Expired Box -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
+                <tr>
+                  <td style="padding: 20px; background-color: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                    <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
+                      <strong>⚠️ Plan Expirado</strong><br>
+                      Tu acceso al contenido de la plataforma ha sido temporalmente suspendido hasta que renueves tu plan.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
+                Para continuar accediendo a todo el contenido de la plataforma, te invitamos a renovar tu suscripción.
+              </p>
+              
+              <p style="margin: 0 0 30px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
+                Inicia sesión para ver las opciones de renovación disponibles:
+              </p>
+              
+              <!-- Button -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td align="center">
+                    <a href="${loginLink}" 
+                       style="display: inline-block; padding: 16px 40px; background-color: #4f46e5; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: bold; border-radius: 8px;">
+                      Renovar Mi Plan
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 30px 0 0; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
+                Si tienes alguna pregunta no dudes en contactarnos en <a href="mailto:info@highticketusa.com" style="color: #4f46e5;">info@highticketusa.com</a>
               </p>
             </td>
           </tr>

@@ -13,15 +13,30 @@ export class PrismaJobRepository implements IJobRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAllActive(filters?: JobFilters, userId?: string): Promise<JobWithApplicationStatus[]> {
+    // Calcular fecha de hace 4 meses
+    const fourMonthsAgo = new Date();
+    fourMonthsAgo.setMonth(fourMonthsAgo.getMonth() - 4);
+
+    // Base where: activas Y (menos de 4 meses O el usuario ya aplicó)
     const where: Prisma.JobOfferWhereInput = {
       isActive: true,
+      OR: [
+        // Ofertas de menos de 4 meses de antigüedad
+        { createdAt: { gte: fourMonthsAgo } },
+        // O ofertas donde el usuario ya aplicó (si hay userId)
+        ...(userId ? [{ applications: { some: { userId } } }] : []),
+      ],
     };
 
     // Filtro de búsqueda por título o empresa
     if (filters?.search) {
-      where.OR = [
-        { title: { contains: filters.search, mode: 'insensitive' } },
-        { company: { contains: filters.search, mode: 'insensitive' } },
+      where.AND = [
+        {
+          OR: [
+            { title: { contains: filters.search, mode: 'insensitive' } },
+            { company: { contains: filters.search, mode: 'insensitive' } },
+          ],
+        },
       ];
     }
 
@@ -88,8 +103,15 @@ export class PrismaJobRepository implements IJobRepository {
   }
 
   async countActive(): Promise<number> {
+    // Contar solo ofertas de menos de 4 meses
+    const fourMonthsAgo = new Date();
+    fourMonthsAgo.setMonth(fourMonthsAgo.getMonth() - 4);
+
     return this.prisma.jobOffer.count({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        createdAt: { gte: fourMonthsAgo },
+      },
     });
   }
 

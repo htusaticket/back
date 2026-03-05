@@ -94,17 +94,35 @@ export class UserProfileDto {
 }
 
 export class SubscriptionInfoDto {
-  @ApiProperty({
-    example: 'High Ticket',
-    description: 'Tipo de suscripción (High Ticket o Low Ticket)',
+  @ApiPropertyOptional({
+    example: 'PRO',
+    description: 'Tipo de plan (PRO, ELITE, etc) o null si no tiene',
   })
-  plan!: string;
+  plan?: string | null;
 
   @ApiProperty({
     example: 'January 2026',
     description: 'Fecha de inicio de membresía formateada',
   })
   memberSince!: string;
+
+  @ApiProperty({
+    example: true,
+    description: 'Si tiene una subscripción activa',
+  })
+  hasActiveSubscription!: boolean;
+
+  @ApiPropertyOptional({
+    example: '2026-01-15T10:00:00.000Z',
+    description: 'Fecha de inicio de la subscripción',
+  })
+  startDate?: Date | null;
+
+  @ApiPropertyOptional({
+    example: '2026-07-15T10:00:00.000Z',
+    description: 'Fecha de fin de la subscripción',
+  })
+  endDate?: Date | null;
 }
 
 export class StrikeInfoDto {
@@ -153,6 +171,15 @@ export class ProfileResponseDto {
 
   @ApiProperty({ type: StrikeInfoDto })
   strikes!: StrikeInfoDto;
+
+  @ApiProperty({ example: false, description: 'Si el usuario está castigado' })
+  isPunished!: boolean;
+
+  @ApiPropertyOptional({
+    example: '2026-02-15T10:00:00.000Z',
+    description: 'Fecha hasta la que está castigado',
+  })
+  punishedUntil?: Date | null;
 }
 
 export class UpdateProfileResponseDto {

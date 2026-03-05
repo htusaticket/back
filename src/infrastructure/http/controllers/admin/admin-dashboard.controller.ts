@@ -64,8 +64,24 @@ export class AdminDashboardController {
   })
   @ApiParam({ name: 'id', description: 'ID de la notificación' })
   @ApiResponse({ status: 200, description: 'Notificación marcada como leída' })
-  markAsRead(@Param('id') id: string): { success: boolean } {
-    this.dashboardService.markNotificationAsRead(id);
+  async markAsRead(@Param('id') id: string): Promise<{ success: boolean }> {
+    await this.dashboardService.markNotificationAsRead(id);
+    return { success: true };
+  }
+
+  /**
+   * POST /api/admin/dashboard/notifications/read-all
+   * Marcar todas las notificaciones como leídas
+   */
+  @Post('notifications/read-all')
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Marcar todas las notificaciones como leídas',
+  })
+  @ApiResponse({ status: 200, description: 'Notificaciones marcadas como leídas' })
+  async markAllAsRead(@CurrentUser() user: JwtPayload): Promise<{ success: boolean }> {
+    await this.dashboardService.markAllNotificationsAsRead(user.userId);
     return { success: true };
   }
 }

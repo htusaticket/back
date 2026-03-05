@@ -1,17 +1,8 @@
 // src/application/admin/dto/users/admin-users.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsString,
-  IsEmail,
-  IsOptional,
-  IsEnum,
-  IsInt,
-  IsDateString,
-  MinLength,
-  Min,
-} from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsEnum, IsInt, MinLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import { UserRole, UserStatus, UserPlan } from '@prisma/client';
+import { UserRole, UserStatus, UserPlan, SubscriptionStatus } from '@prisma/client';
 
 // ==================== QUERY DTOs ====================
 
@@ -30,11 +21,6 @@ export class GetUsersQueryDto {
   @IsOptional()
   @IsEnum(UserStatus)
   status?: UserStatus;
-
-  @ApiPropertyOptional({ enum: UserPlan, description: 'Filtrar por plan' })
-  @IsOptional()
-  @IsEnum(UserPlan)
-  plan?: UserPlan;
 
   @ApiPropertyOptional({ default: 1, description: 'Número de página' })
   @IsOptional()
@@ -82,27 +68,30 @@ export class CreateUserDto {
   @IsOptional()
   @IsEnum(UserRole)
   role?: UserRole;
-
-  @ApiPropertyOptional({ enum: UserPlan, default: UserPlan.PRO })
-  @IsOptional()
-  @IsEnum(UserPlan)
-  plan?: UserPlan;
-
-  @ApiPropertyOptional({ description: 'Fecha de inicio del programa' })
-  @IsOptional()
-  @IsDateString()
-  startDate?: string;
-
-  @ApiPropertyOptional({ description: 'Fecha de fin del programa' })
-  @IsOptional()
-  @IsDateString()
-  endDate?: string;
 }
 
 export class UpdateUserStatusDto {
   @ApiProperty({ enum: UserStatus })
   @IsEnum(UserStatus)
   status!: UserStatus;
+
+  @ApiPropertyOptional({ description: 'Motivo del rechazo (solo cuando status es rechazado)' })
+  @IsOptional()
+  @IsString()
+  reason?: string;
+}
+
+// DTO para aprobar un registro (PENDING → INACTIVE)
+export class ApproveRegistrationDto {
+  // No se necesitan campos, solo la acción
+}
+
+// DTO para rechazar un registro (elimina de BD)
+export class RejectRegistrationDto {
+  @ApiProperty({ description: 'Motivo del rechazo que se enviará al usuario' })
+  @IsString()
+  @MinLength(10, { message: 'El motivo debe tener al menos 10 caracteres' })
+  reason!: string;
 }
 
 export class UpdateUserNotesDto {
@@ -164,21 +153,6 @@ export class UpdateUserDto {
   @IsOptional()
   @IsEnum(UserRole)
   role?: UserRole;
-
-  @ApiPropertyOptional({ enum: UserPlan })
-  @IsOptional()
-  @IsEnum(UserPlan)
-  plan?: UserPlan;
-
-  @ApiPropertyOptional({ description: 'Fecha de inicio del programa' })
-  @IsOptional()
-  @IsDateString()
-  startDate?: string;
-
-  @ApiPropertyOptional({ description: 'Fecha de fin del programa' })
-  @IsOptional()
-  @IsDateString()
-  endDate?: string;
 }
 
 // ==================== RESPONSE INTERFACES ====================
@@ -193,6 +167,8 @@ export interface UserListItemDto {
   plan: UserPlan | null;
   createdAt: Date;
   lastLogin: string | null;
+  isPunished: boolean;
+  punishedUntil: Date | null;
 }
 
 export interface PaginatedUsersResponseDto {
@@ -234,6 +210,15 @@ export interface ModuleProgressDto {
   status: 'Completed' | 'In Progress' | 'Not Started';
 }
 
+export interface UserSubscriptionDto {
+  id: string;
+  plan: UserPlan;
+  status: SubscriptionStatus;
+  startDate: Date;
+  endDate: Date;
+  hasPaid: boolean;
+}
+
 export interface UserDetailDto {
   id: string;
   email: string;
@@ -249,11 +234,14 @@ export interface UserDetailDto {
   plan: UserPlan | null;
   startDate: Date | null;
   endDate: Date | null;
+  isPunished: boolean;
+  punishedUntil: Date | null;
   adminNotes: string | null;
   createdAt: Date;
   stats: UserStatsDto;
   strikes: UserStrikesDto;
   moduleProgress: ModuleProgressDto[];
+  subscription: UserSubscriptionDto | null;
 }
 
 export interface CreateUserResponseDto {
@@ -272,5 +260,16 @@ export interface IssueStrikeResponseDto {
   message: string;
   strikeId: string;
   totalStrikes: number;
-  userSuspended: boolean;
+  userPunished: boolean; // Cambiado de userSuspended
+  punishedUntil: Date | null; // Nuevo campo
+}
+
+export interface ApproveRegistrationResponseDto {
+  success: boolean;
+  message: string;
+}
+
+export interface RejectRegistrationResponseDto {
+  success: boolean;
+  message: string;
 }

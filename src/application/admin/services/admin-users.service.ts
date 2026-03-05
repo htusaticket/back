@@ -1,6 +1,13 @@
 // src/application/admin/services/admin-users.service.ts
-import { Injectable, Inject, Logger, NotFoundException, ConflictException } from '@nestjs/common';
-import { UserStatus, UserRole } from '@prisma/client';
+import {
+  Injectable,
+  Inject,
+  Logger,
+  NotFoundException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { UserStatus, UserRole, NotificationType } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 import {
@@ -8,10 +15,13 @@ import {
   USER_REPOSITORY,
   IStrikeRepository,
   STRIKE_REPOSITORY,
+  INotificationRepository,
+  NOTIFICATION_REPOSITORY,
   UpdateUserData,
 } from '@/core/interfaces';
 import { PrismaService } from '@/infrastructure/persistence/prisma/prisma.service';
 import { getEnvConfig } from '@/config/env.config';
+import { EmailService } from '@/application/auth/services/email.service';
 
 import {
   GetUsersQueryDto,
@@ -20,11 +30,14 @@ import {
   UpdateUserNotesDto,
   IssueStrikeDto,
   UpdateUserDto,
+  RejectRegistrationDto,
   PaginatedUsersResponseDto,
   UserDetailDto,
   CreateUserResponseDto,
   UpdateStatusResponseDto,
   IssueStrikeResponseDto,
+  ApproveRegistrationResponseDto,
+  RejectRegistrationResponseDto,
   UserStatsDto,
   ModuleProgressDto,
   StrikeDetailDto,
@@ -40,7 +53,10 @@ export class AdminUsersService {
     private readonly userRepository: IUserRepository,
     @Inject(STRIKE_REPOSITORY)
     private readonly strikeRepository: IStrikeRepository,
+    @Inject(NOTIFICATION_REPOSITORY)
+    private readonly notificationRepository: INotificationRepository,
     private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
   ) {}
 
   /**
@@ -53,23 +69,38 @@ export class AdminUsersService {
       ...(query.search && { search: query.search }),
       ...(query.role && { role: query.role }),
       ...(query.status && { status: query.status }),
-      ...(query.plan && { plan: query.plan }),
       page: query.page ?? 1,
       limit: query.limit ?? 10,
     });
 
+    // Obtener subscripciones activas para todos los usuarios
+    const userIds = result.users.map(u => u.id);
+    const activeSubscriptions = await this.prisma.subscription.findMany({
+      where: {
+        userId: { in: userIds },
+        status: 'ACTIVE',
+      },
+    });
+
+    const subscriptionMap = new Map(activeSubscriptions.map(sub => [sub.userId, sub]));
+
     return {
-      users: result.users.map(user => ({
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        status: user.status,
-        plan: user.plan,
-        createdAt: user.createdAt,
-        lastLogin: null,
-      })),
+      users: result.users.map(user => {
+        const subscription = subscriptionMap.get(user.id);
+        return {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          status: user.status,
+          plan: subscription?.plan || null,
+          createdAt: user.createdAt,
+          lastLogin: null,
+          isPunished: user.isPunished,
+          punishedUntil: user.punishedUntil,
+        };
+      }),
       total: result.total,
       page: result.page,
       limit: result.limit,
@@ -88,6 +119,15 @@ export class AdminUsersService {
     if (!user) {
       throw new NotFoundException('Usuario no encontrado');
     }
+
+    // Obtener subscripción activa
+    const activeSubscription = await this.prisma.subscription.findFirst({
+      where: {
+        userId,
+        status: 'ACTIVE',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
 
     // Obtener estadísticas
     const stats = await this.getUserStats(userId);
@@ -111,9 +151,11 @@ export class AdminUsersService {
       avatar: user.avatar,
       role: user.role,
       status: user.status,
-      plan: user.plan,
-      startDate: user.startDate,
-      endDate: user.endDate,
+      plan: activeSubscription?.plan || null,
+      startDate: activeSubscription?.startDate || null,
+      endDate: activeSubscription?.endDate || null,
+      isPunished: user.isPunished,
+      punishedUntil: user.punishedUntil,
       adminNotes: user.adminNotes,
       createdAt: user.createdAt,
       stats,
@@ -132,11 +174,22 @@ export class AdminUsersService {
         ),
       },
       moduleProgress,
+      subscription: activeSubscription
+        ? {
+            id: activeSubscription.id,
+            plan: activeSubscription.plan,
+            status: activeSubscription.status,
+            startDate: activeSubscription.startDate,
+            endDate: activeSubscription.endDate,
+            hasPaid: activeSubscription.hasPaid,
+          }
+        : null,
     };
   }
 
   /**
    * Crear un nuevo usuario (invitación manual)
+   * El plan se asigna por separado a través de subscriptions
    */
   async createUser(dto: CreateUserDto): Promise<CreateUserResponseDto> {
     this.logger.log(`Creating user with email: ${dto.email}`);
@@ -150,7 +203,7 @@ export class AdminUsersService {
     // Hashear password
     const hashedPassword = await bcrypt.hash(dto.password, this.env.BCRYPT_SALT_ROUNDS);
 
-    // Crear usuario
+    // Crear usuario con estado ACTIVE (sin subscripción por defecto)
     const user = await this.userRepository.create({
       email: dto.email,
       password: hashedPassword,
@@ -159,16 +212,14 @@ export class AdminUsersService {
       phone: dto.phone ?? null,
       role: dto.role ?? UserRole.USER,
       status: UserStatus.ACTIVE,
-      ...(dto.plan && { plan: dto.plan }),
-      startDate: dto.startDate ? new Date(dto.startDate) : null,
-      endDate: dto.endDate ? new Date(dto.endDate) : null,
     });
 
     this.logger.log(`User created successfully: ${user.id}`);
 
     return {
       success: true,
-      message: 'Usuario creado exitosamente',
+      message:
+        'Usuario creado exitosamente. Asigna una subscripción desde la gestión de subscripciones.',
       user: {
         id: user.id,
         email: user.email,
@@ -176,9 +227,11 @@ export class AdminUsersService {
         lastName: user.lastName,
         role: user.role,
         status: user.status,
-        plan: user.plan,
+        plan: null,
         createdAt: user.createdAt,
         lastLogin: null,
+        isPunished: user.isPunished,
+        punishedUntil: user.punishedUntil,
       },
     };
   }
@@ -232,9 +285,6 @@ export class AdminUsersService {
     if (dto.city !== undefined) updateData.city = dto.city;
     if (dto.country !== undefined) updateData.country = dto.country;
     if (dto.role !== undefined) updateData.role = dto.role;
-    if (dto.plan !== undefined) updateData.plan = dto.plan;
-    if (dto.startDate !== undefined) updateData.startDate = new Date(dto.startDate);
-    if (dto.endDate !== undefined) updateData.endDate = new Date(dto.endDate);
 
     await this.userRepository.update(userId, updateData);
 
@@ -265,6 +315,7 @@ export class AdminUsersService {
 
   /**
    * Emitir un strike manual
+   * Si alcanza el máximo, aplica punishment (no puede acceder a clases en vivo)
    */
   async issueStrike(userId: string, dto: IssueStrikeDto): Promise<IssueStrikeResponseDto> {
     this.logger.log(`Issuing manual strike to user ${userId}`);
@@ -277,24 +328,247 @@ export class AdminUsersService {
     // Crear el strike
     const strike = await this.strikeRepository.createManual(userId, dto.reason, dto.classSessionId);
 
-    // Verificar si el usuario debe ser suspendido
-    const strikeInfo = await this.strikeRepository.getStrikeInfo(userId);
-    let userSuspended = false;
+    // Notificar al usuario sobre el strike
+    await this.notificationRepository.create({
+      userId,
+      type: NotificationType.STRIKE_APPLIED,
+      title: 'Strike Applied',
+      message: `You have received a strike: ${dto.reason}`,
+      data: { strikeId: strike.id, reason: dto.reason, classSessionId: dto.classSessionId },
+    });
 
-    if (strikeInfo.strikesCount >= strikeInfo.maxStrikes) {
-      await this.userRepository.updateStatus(userId, UserStatus.SUSPENDED);
-      userSuspended = true;
-      this.logger.warn(`User ${userId} has been suspended due to reaching max strikes`);
+    // Obtener configuración del sistema
+    const config = (await this.prisma.systemConfig.findUnique({
+      where: { id: 'default' },
+    })) || { maxStrikesForPunishment: 3, punishmentDurationDays: 14 };
+
+    // Contar strikes activos del usuario
+    const strikeCount = await this.prisma.strike.count({
+      where: { userId },
+    });
+
+    let userPunished = false;
+    let punishedUntil: Date | null = null;
+
+    // Si alcanza el máximo, aplicar punishment (no suspender)
+    if (strikeCount >= config.maxStrikesForPunishment) {
+      punishedUntil = new Date();
+      punishedUntil.setDate(punishedUntil.getDate() + config.punishmentDurationDays);
+
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          isPunished: true,
+          punishedUntil,
+        },
+      });
+
+      userPunished = true;
+      this.logger.warn(
+        `User ${userId} has been punished until ${punishedUntil.toISOString()} due to reaching max strikes`,
+      );
     }
 
     return {
       success: true,
-      message: userSuspended
-        ? `Strike emitido. El usuario ha sido suspendido por alcanzar ${strikeInfo.maxStrikes} strikes.`
+      message: userPunished
+        ? `Strike emitido. El usuario ha sido castigado (sin acceso a clases en vivo) por ${config.punishmentDurationDays} días.`
         : 'Strike emitido exitosamente',
       strikeId: strike.id,
-      totalStrikes: strikeInfo.strikesCount,
-      userSuspended,
+      totalStrikes: strikeCount,
+      userPunished,
+      punishedUntil,
+    };
+  }
+
+  /**
+   * Aprobar un registro pendiente (PENDING → ACTIVE)
+   * El usuario puede ahora loguear. Si no tiene subscripción, verá overlay
+   * Admin y SuperAdmin pueden aprobar registros
+   */
+  async approveRegistration(userId: string): Promise<ApproveRegistrationResponseDto> {
+    this.logger.log(`Approving registration for user ${userId}`);
+
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    if (user.status !== UserStatus.PENDING) {
+      throw new ConflictException(
+        `Solo se pueden aprobar usuarios con estado PENDING. Estado actual: ${user.status}`,
+      );
+    }
+
+    // Cambiar a ACTIVE (puede loguear, pero sin subscripción verá overlay)
+    await this.userRepository.updateStatus(userId, UserStatus.ACTIVE);
+
+    // Enviar email de aprobación al usuario
+    await this.emailService.sendRegistrationApprovedEmail(user.email, user.firstName);
+
+    // Crear notificación para el usuario
+    await this.notificationRepository.create({
+      userId,
+      type: NotificationType.REGISTRATION_APPROVED,
+      title: '¡Registro Aprobado!',
+      message: 'Tu registro ha sido aprobado. Ya puedes iniciar sesión.',
+      data: {},
+    });
+
+    this.logger.log(`User ${userId} registration approved, status changed to ACTIVE`);
+
+    return {
+      success: true,
+      message: 'Registro aprobado exitosamente. El usuario puede iniciar sesión.',
+    };
+  }
+
+  /**
+   * Rechazar un registro pendiente (elimina de la BD)
+   * Se envía email con el motivo y se elimina para permitir re-registro
+   */
+  async rejectRegistration(
+    userId: string,
+    dto: RejectRegistrationDto,
+  ): Promise<RejectRegistrationResponseDto> {
+    this.logger.log(`Rejecting registration for user ${userId}`);
+
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    if (user.status !== UserStatus.PENDING) {
+      throw new ConflictException(
+        `Solo se pueden rechazar usuarios con estado PENDING. Estado actual: ${user.status}`,
+      );
+    }
+
+    // Guardar datos antes de eliminar para el email
+    const { email, firstName } = user;
+
+    // Enviar email de rechazo con el motivo
+    await this.emailService.sendRegistrationRejectedEmail(email, firstName, dto.reason);
+
+    // Eliminar usuario de la BD (permite re-registro con el mismo email)
+    await this.prisma.user.delete({
+      where: { id: userId },
+    });
+
+    this.logger.log(`User ${userId} registration rejected and deleted from DB`);
+
+    return {
+      success: true,
+      message: 'Registro rechazado. El usuario ha sido notificado y puede volver a registrarse.',
+    };
+  }
+
+  /**
+   * Suspender manualmente a un usuario (BAN)
+   * Solo SUPERADMIN puede hacer esto
+   */
+  async suspendUser(
+    userId: string,
+    adminRole: UserRole,
+    reason?: string,
+  ): Promise<UpdateStatusResponseDto> {
+    this.logger.log(`Suspending user ${userId}`);
+
+    if (adminRole !== UserRole.SUPERADMIN) {
+      throw new ForbiddenException('Solo el SUPERADMIN puede suspender usuarios');
+    }
+
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    if (user.status === UserStatus.SUSPENDED) {
+      throw new ConflictException('El usuario ya está suspendido');
+    }
+
+    await this.userRepository.updateStatus(userId, UserStatus.SUSPENDED);
+
+    // Guardar razón del ban en las notas del admin
+    if (reason) {
+      const currentNotes = user.adminNotes || '';
+      const banNote = `\n[BAN ${new Date().toISOString()}] ${reason}`;
+      await this.userRepository.updateNotes(userId, currentNotes + banNote);
+    }
+
+    this.logger.log(`User ${userId} has been suspended (banned)`);
+
+    return {
+      success: true,
+      message: 'Usuario suspendido (baneado) exitosamente',
+    };
+  }
+
+  /**
+   * Quitar suspensión a un usuario (UNBAN)
+   * Solo SUPERADMIN puede hacer esto
+   */
+  async unsuspendUser(userId: string, adminRole: UserRole): Promise<UpdateStatusResponseDto> {
+    this.logger.log(`Unsuspending user ${userId}`);
+
+    if (adminRole !== UserRole.SUPERADMIN) {
+      throw new ForbiddenException('Solo el SUPERADMIN puede quitar la suspensión');
+    }
+
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    if (user.status !== UserStatus.SUSPENDED) {
+      throw new ConflictException('El usuario no está suspendido');
+    }
+
+    await this.userRepository.updateStatus(userId, UserStatus.ACTIVE);
+
+    this.logger.log(`User ${userId} suspension removed`);
+
+    return {
+      success: true,
+      message: 'Suspensión removida. El usuario puede volver a acceder.',
+    };
+  }
+
+  /**
+   * Quitar punishment a un usuario manualmente
+   * Solo SUPERADMIN puede hacer esto
+   */
+  async removePunishment(userId: string, adminRole: UserRole): Promise<UpdateStatusResponseDto> {
+    this.logger.log(`Removing punishment from user ${userId}`);
+
+    if (adminRole !== UserRole.SUPERADMIN) {
+      throw new ForbiddenException('Solo el SUPERADMIN puede quitar el castigo');
+    }
+
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    // Quitar punishment y resetear strikes
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          isPunished: false,
+          punishedUntil: null,
+        },
+      }),
+      this.prisma.strike.deleteMany({
+        where: { userId },
+      }),
+    ]);
+
+    this.logger.log(`Punishment removed and strikes reset for user ${userId}`);
+
+    return {
+      success: true,
+      message: 'Castigo removido y strikes reseteados.',
     };
   }
 

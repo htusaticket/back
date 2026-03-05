@@ -80,7 +80,7 @@ export class PrismaStrikeRepository implements IStrikeRepository {
   async getStrikeInfo(userId: string): Promise<StrikeInfo> {
     // Obtener la configuración del sistema (o usar valores por defecto)
     const config = await this.prisma.systemConfig.findFirst();
-    const maxStrikes = config?.maxStrikesForSuspension ?? MAX_STRIKES;
+    const maxStrikes = config?.maxStrikesForPunishment ?? MAX_STRIKES;
 
     // Obtener el último strike
     const lastStrike = await this.findLastByUserId(userId);
