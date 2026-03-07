@@ -1,6 +1,6 @@
 // src/application/profile/services/profile.service.ts
 import { Injectable, Inject, NotFoundException, Logger } from '@nestjs/common';
-import { UserStatus } from '@prisma/client';
+import { SubscriptionStatus, UserPlan } from '@prisma/client';
 import {
   IUserRepository,
   USER_REPOSITORY,
@@ -8,14 +8,13 @@ import {
   STRIKE_REPOSITORY,
 } from '@/core/interfaces';
 import { PrismaService } from '@/infrastructure/persistence/prisma/prisma.service';
+import { getPlanFeatures, PlanFeatures } from '@/config/plans.config';
 import {
   ProfileResponseDto,
   UpdateProfileDto,
   UpdateProfileResponseDto,
   UserProfileDto,
 } from '../dto';
-
-const MAX_STRIKES = 3;
 
 @Injectable()
 export class ProfileService {
@@ -38,17 +37,21 @@ export class ProfileService {
       throw new NotFoundException('Usuario no encontrado');
     }
 
-    // Obtener stats y strikes en paralelo
-    const [stats, strikeInfo] = await Promise.all([
+    // Obtener subscripción activa
+    const activeSubscription = await this.prisma.subscription.findFirst({
+      where: {
+        userId,
+        status: SubscriptionStatus.ACTIVE,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Obtener stats, strikes y config del sistema en paralelo
+    const [stats, strikeInfo, systemConfig] = await Promise.all([
       this.getProfileStats(userId),
       this.strikeRepository.getStrikeInfo(userId),
+      this.getSystemConfig(),
     ]);
-
-    // Verificar si debe suspenderse por strikes
-    if (strikeInfo.strikesCount >= MAX_STRIKES && user.status === UserStatus.ACTIVE) {
-      await this.userRepository.updateStatus(userId, UserStatus.SUSPENDED);
-      this.logger.warn(`Usuario ${userId} suspendido por alcanzar ${MAX_STRIKES} strikes`);
-    }
 
     // Formatear fecha de membresía
     const memberSince = user.createdAt.toLocaleDateString('en-US', {
@@ -56,18 +59,81 @@ export class ProfileService {
       year: 'numeric',
     });
 
-    // Determinar plan de suscripción (por ahora basado en rol, podría mejorarse)
-    const plan = user.role === 'ADMIN' || user.role === 'MODERATOR' ? 'Staff' : 'High Ticket';
+    // Determinar plan de suscripción basado en subscripción activa o rol
+    const plan =
+      activeSubscription?.plan ||
+      (user.role === 'ADMIN' || user.role === 'SUPERADMIN' ? 'Staff' : null);
+
+    // Obtener features del plan
+    const planFeatures = this.getPlanFeaturesForUser(plan as UserPlan | 'Staff' | null);
 
     return {
       user: this.mapUserToDto(user),
       subscription: {
         plan,
         memberSince,
+        hasActiveSubscription: !!activeSubscription,
+        startDate: activeSubscription?.startDate || null,
+        endDate: activeSubscription?.endDate || null,
       },
       stats,
       strikes: strikeInfo,
+      isPunished: user.isPunished,
+      punishedUntil: user.punishedUntil,
+      planFeatures,
+      systemSettings: {
+        strikesEnabled: systemConfig.strikesEnabled,
+        jobBoardEnabled: systemConfig.jobBoardEnabled,
+        academyEnabled: systemConfig.academyEnabled,
+      },
     };
+  }
+
+  /**
+   * Obtener configuración del sistema
+   */
+  private async getSystemConfig() {
+    let config = await this.prisma.systemConfig.findUnique({
+      where: { id: 'default' },
+    });
+
+    // Si no existe, devolver valores por defecto
+    if (!config) {
+      return {
+        strikesEnabled: true,
+        jobBoardEnabled: true,
+        academyEnabled: true,
+      };
+    }
+
+    return config;
+  }
+
+  /**
+   * Obtener features del plan para el usuario
+   */
+  private getPlanFeaturesForUser(plan: UserPlan | 'Staff' | null): PlanFeatures {
+    // Staff (admin/superadmin) tiene acceso completo
+    if (plan === 'Staff') {
+      return {
+        academy: true,
+        challenges: true,
+        liveClasses: true,
+        jobBoard: true,
+      };
+    }
+
+    // Sin plan = sin acceso
+    if (!plan) {
+      return {
+        academy: false,
+        challenges: false,
+        liveClasses: false,
+        jobBoard: false,
+      };
+    }
+
+    return getPlanFeatures(plan);
   }
 
   /**
@@ -105,7 +171,7 @@ export class ProfileService {
    * Obtener estadísticas del perfil
    */
   private async getProfileStats(userId: string) {
-    const [completedClasses, completedLessons, completedChallenges] = await Promise.all([
+    const [completedClasses, jobApplications, completedChallenges] = await Promise.all([
       // Clases completadas: clases pasadas donde el usuario estuvo inscrito (CONFIRMED)
       this.prisma.classEnrollment.count({
         where: {
@@ -116,11 +182,10 @@ export class ProfileService {
           },
         },
       }),
-      // Lecciones completadas
-      this.prisma.userLessonProgress.count({
+      // Cantidad de job applications del usuario
+      this.prisma.jobApplication.count({
         where: {
           userId,
-          completed: true,
         },
       }),
       // Challenges completados (completed = true)
@@ -134,7 +199,7 @@ export class ProfileService {
 
     return {
       completedClasses,
-      completedLessons,
+      jobApplications,
       completedChallenges,
     };
   }

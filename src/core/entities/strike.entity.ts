@@ -2,7 +2,8 @@
 export interface Strike {
   id: string;
   userId: string;
-  classSessionId: number;
+  classSessionId: number | null;
   reason: string;
+  isManual: boolean;
   createdAt: Date;
 }

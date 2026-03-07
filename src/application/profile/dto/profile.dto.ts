@@ -94,17 +94,35 @@ export class UserProfileDto {
 }
 
 export class SubscriptionInfoDto {
-  @ApiProperty({
-    example: 'High Ticket',
-    description: 'Tipo de suscripción (High Ticket o Low Ticket)',
+  @ApiPropertyOptional({
+    example: 'PRO',
+    description: 'Tipo de plan (PRO, ELITE, etc) o null si no tiene',
   })
-  plan!: string;
+  plan?: string | null;
 
   @ApiProperty({
     example: 'January 2026',
     description: 'Fecha de inicio de membresía formateada',
   })
   memberSince!: string;
+
+  @ApiProperty({
+    example: true,
+    description: 'Si tiene una subscripción activa',
+  })
+  hasActiveSubscription!: boolean;
+
+  @ApiPropertyOptional({
+    example: '2026-01-15T10:00:00.000Z',
+    description: 'Fecha de inicio de la subscripción',
+  })
+  startDate?: Date | null;
+
+  @ApiPropertyOptional({
+    example: '2026-07-15T10:00:00.000Z',
+    description: 'Fecha de fin de la subscripción',
+  })
+  endDate?: Date | null;
 }
 
 export class StrikeInfoDto {
@@ -130,15 +148,40 @@ export class ProfileStatsDto {
 
   @ApiProperty({
     example: 7,
-    description: 'Lecciones marcadas como completadas',
+    description: 'Cantidad de job applications realizadas',
   })
-  completedLessons!: number;
+  jobApplications!: number;
 
   @ApiProperty({
     example: 15,
     description: 'Challenges completados',
   })
   completedChallenges!: number;
+}
+
+export class PlanFeaturesDto {
+  @ApiProperty({ example: true, description: 'Acceso a Academy' })
+  academy!: boolean;
+
+  @ApiProperty({ example: true, description: 'Acceso a Challenges' })
+  challenges!: boolean;
+
+  @ApiProperty({ example: true, description: 'Acceso a Live Classes' })
+  liveClasses!: boolean;
+
+  @ApiProperty({ example: true, description: 'Acceso a Job Board' })
+  jobBoard!: boolean;
+}
+
+export class SystemSettingsDto {
+  @ApiProperty({ example: true, description: 'Si strikes está habilitado globalmente' })
+  strikesEnabled!: boolean;
+
+  @ApiProperty({ example: true, description: 'Si Job Board está habilitado globalmente' })
+  jobBoardEnabled!: boolean;
+
+  @ApiProperty({ example: true, description: 'Si Academy está habilitado globalmente' })
+  academyEnabled!: boolean;
 }
 
 export class ProfileResponseDto {
@@ -153,6 +196,21 @@ export class ProfileResponseDto {
 
   @ApiProperty({ type: StrikeInfoDto })
   strikes!: StrikeInfoDto;
+
+  @ApiProperty({ example: false, description: 'Si el usuario está castigado' })
+  isPunished!: boolean;
+
+  @ApiPropertyOptional({
+    example: '2026-02-15T10:00:00.000Z',
+    description: 'Fecha hasta la que está castigado',
+  })
+  punishedUntil?: Date | null;
+
+  @ApiProperty({ type: PlanFeaturesDto, description: 'Features disponibles para el plan del usuario' })
+  planFeatures!: PlanFeaturesDto;
+
+  @ApiProperty({ type: SystemSettingsDto, description: 'Configuración global del sistema' })
+  systemSettings!: SystemSettingsDto;
 }
 
 export class UpdateProfileResponseDto {

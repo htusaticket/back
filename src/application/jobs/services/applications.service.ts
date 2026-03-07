@@ -50,14 +50,14 @@ export class ApplicationsService {
     return {
       stats: {
         applied: grouped.applied.length,
+        pending: grouped.pending.length,
         interview: grouped.interview.length,
-        offer: grouped.offer.length,
         rejected: grouped.rejected.length,
       },
       applications: {
         applied: mapApplications(grouped.applied),
+        pending: mapApplications(grouped.pending),
         interview: mapApplications(grouped.interview),
-        offer: mapApplications(grouped.offer),
         rejected: mapApplications(grouped.rejected),
       },
     };

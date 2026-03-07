@@ -2,6 +2,7 @@ import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { JwtModule } from '@nestjs/jwt';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HealthController } from './infrastructure/http/controllers/health.controller';
@@ -11,6 +12,9 @@ import { HttpModule } from './infrastructure/http/http.module';
 import { CorrelationIdMiddleware } from './application/common/middleware/correlation-id.middleware';
 import { MetricsService } from './application/common/services/metrics.service';
 import { SentryService } from './application/common/services/sentry.service';
+import { PlanExpirationService } from './application/common/services/plan-expiration.service';
+import { PunishmentResetService } from './application/common/services/punishment-reset.service';
+import { EmailService } from './application/auth/services/email.service';
 import { LoggerConfigModule } from './config/logger.config';
 import { validateEnv, getEnvConfig } from './config/env.config';
 
@@ -24,6 +28,7 @@ const env = getEnvConfig();
       isGlobal: true,
       validate: validateEnv,
     }),
+    ScheduleModule.forRoot(),
     LoggerConfigModule,
     ThrottlerModule.forRoot([
       {
@@ -41,7 +46,14 @@ const env = getEnvConfig();
     HttpModule,
   ],
   controllers: [AppController, HealthController],
-  providers: [AppService, MetricsService, SentryService],
+  providers: [
+    AppService,
+    MetricsService,
+    SentryService,
+    PlanExpirationService,
+    PunishmentResetService,
+    EmailService,
+  ],
   exports: [MetricsService, SentryService],
 })
 export class AppModule implements NestModule {

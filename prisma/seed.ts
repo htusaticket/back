@@ -5,6 +5,8 @@ import {
   PrismaClient,
   UserRole,
   UserStatus,
+  UserPlan,
+  SubscriptionStatus,
   ClassType,
   ChallengeType,
   EnrollmentStatus,
@@ -12,6 +14,7 @@ import {
   SubmissionStatus,
   ResourceType,
   ApplicationStatus,
+  AuditAction,
 } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -28,6 +31,7 @@ async function main() {
 
   // Clear existing data (in correct order to respect foreign keys)
   console.log('🧹 Cleaning database...');
+  await prisma.auditLog.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.strike.deleteMany();
   await prisma.classEnrollment.deleteMany();
@@ -43,7 +47,22 @@ async function main() {
   await prisma.userSession.deleteMany();
   await prisma.jobApplication.deleteMany();
   await prisma.jobOffer.deleteMany();
+  await prisma.subscription.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.systemConfig.deleteMany();
+
+  console.log('⚙️ Creating system config...');
+  // Create system configuration
+  await prisma.systemConfig.create({
+    data: {
+      strikesEnabled: true,
+      maxStrikesForPunishment: 3,
+      punishmentDurationDays: 7,
+      lateCancellationHours: 2,
+      jobBoardEnabled: true,
+      academyEnabled: true,
+    },
+  });
 
   console.log('✨ Creating users...');
 
@@ -93,6 +112,37 @@ async function main() {
     },
   });
 
+  // Create superadmin user
+  const superAdminUser = await prisma.user.create({
+    data: {
+      email: 'superadmin@test.com',
+      password: hashedPassword,
+      firstName: 'Carlos',
+      lastName: 'Rodriguez',
+      phone: '+54 11 5555-1234',
+      city: 'Buenos Aires',
+      country: 'Argentina',
+      role: UserRole.SUPERADMIN,
+      status: UserStatus.ACTIVE,
+    },
+  });
+
+  // Create pending user (for testing approval flow)
+  const pendingUser = await prisma.user.create({
+    data: {
+      email: 'pending@test.com',
+      password: hashedPassword,
+      firstName: 'Pending',
+      lastName: 'User',
+      phone: '+5555555555',
+      city: 'Test City',
+      country: 'Test Country',
+      reference: 'Testing approval flow',
+      role: UserRole.USER,
+      status: UserStatus.PENDING,
+    },
+  });
+
   // Create teacher user (for feedback simulation)
   const teacherUser = await prisma.user.create({
     data: {
@@ -100,12 +150,49 @@ async function main() {
       password: hashedPassword,
       firstName: 'Sarah',
       lastName: 'Johnson',
-      role: UserRole.MODERATOR,
+      role: UserRole.ADMIN,
       status: UserStatus.ACTIVE,
     },
   });
 
-  console.log('📚 Creating modules and lessons...');
+  console.log('� Creating subscriptions...');
+
+  // Create subscriptions for active users
+  const subscriptionStartDate = new Date();
+  const subscriptionEndDate = new Date(subscriptionStartDate);
+  subscriptionEndDate.setMonth(subscriptionEndDate.getMonth() + 1);
+
+  // Active subscription for first user (PRO plan)
+  await prisma.subscription.create({
+    data: {
+      userId: activeUser.id,
+      plan: UserPlan.PRO,
+      status: SubscriptionStatus.ACTIVE,
+      startDate: subscriptionStartDate,
+      endDate: subscriptionEndDate,
+      hasPaid: true,
+      paidAt: subscriptionStartDate,
+      paymentNote: 'Seed - initial payment',
+      assignedBy: superAdminUser.id,
+    },
+  });
+
+  // Active subscription for second user (ELITE plan)
+  await prisma.subscription.create({
+    data: {
+      userId: secondUser.id,
+      plan: UserPlan.ELITE,
+      status: SubscriptionStatus.ACTIVE,
+      startDate: subscriptionStartDate,
+      endDate: subscriptionEndDate,
+      hasPaid: true,
+      paidAt: subscriptionStartDate,
+      paymentNote: 'Seed - initial payment',
+      assignedBy: superAdminUser.id,
+    },
+  });
+
+  console.log('�📚 Creating modules and lessons...');
 
   // ====================
   // MODULE 1: Foundations & Goals
@@ -397,6 +484,117 @@ async function main() {
         type: ResourceType.PDF,
         size: '450 KB',
         lessonId: lesson4_1.id,
+      },
+    ],
+  });
+
+  // ====================
+  // MODULE 5: Interview Mastery (With multiple videos per lesson)
+  // ====================
+  const module5 = await prisma.module.create({
+    data: {
+      title: 'Interview Mastery',
+      description:
+        'Master the art of job interviews in English. This module includes multiple video perspectives for each topic to give you comprehensive preparation.',
+      image:
+        'https://images.unsplash.com/photo-1565688534245-05d6b5be184a?q=80&w=1000&auto=format&fit=crop',
+      order: 5,
+    },
+  });
+
+  // Lesson 5.1 with 2 videos
+  const lesson5_1 = await prisma.lesson.create({
+    data: {
+      title: 'Tell Me About Yourself - The Perfect Answer',
+      description:
+        'Learn how to craft and deliver the perfect answer to the most common interview question. Includes both theory and real-world examples.',
+      duration: '28 min',
+      contentUrl: 'https://www.youtube.com/embed/es7XtrloDIQ', // First video - Theory
+      order: 1,
+      moduleId: module5.id,
+    },
+  });
+
+  // Lesson 5.2 with 2 videos
+  const lesson5_2 = await prisma.lesson.create({
+    data: {
+      title: 'Handling Salary Negotiations',
+      description:
+        'Master the art of salary negotiation with confidence. Learn key phrases and strategies from two different expert perspectives.',
+      duration: '35 min',
+      contentUrl: 'https://www.youtube.com/embed/XCtOXJwPkC0', // First video - Basics
+      order: 2,
+      moduleId: module5.id,
+    },
+  });
+
+  // Lesson 5.3 with 2 videos
+  const lesson5_3 = await prisma.lesson.create({
+    data: {
+      title: 'Behavioral Interview Questions (STAR Method)',
+      description:
+        'Learn the STAR method for answering behavioral questions. Includes explanation video and practice examples video.',
+      duration: '32 min',
+      contentUrl: 'https://www.youtube.com/embed/qKBubKO-798', // First video - STAR Method explained
+      order: 3,
+      moduleId: module5.id,
+    },
+  });
+
+  // Resources for Module 5 - Including second videos and PDFs
+  await prisma.lessonResource.createMany({
+    data: [
+      // Lesson 5.1 resources
+      {
+        title: 'Part 2: Real Interview Examples',
+        fileUrl: 'https://www.youtube.com/embed/kayOhGRcNt4',
+        type: ResourceType.VIDEO,
+        size: '15 min',
+        lessonId: lesson5_1.id,
+      },
+      {
+        title: 'Personal Pitch Template.pdf',
+        fileUrl: 'https://example.com/resources/personal-pitch-template.pdf',
+        type: ResourceType.PDF,
+        size: '180 KB',
+        lessonId: lesson5_1.id,
+      },
+      // Lesson 5.2 resources
+      {
+        title: 'Part 2: Advanced Negotiation Tactics',
+        fileUrl: 'https://www.youtube.com/embed/wFjlq0vEJBw',
+        type: ResourceType.VIDEO,
+        size: '18 min',
+        lessonId: lesson5_2.id,
+      },
+      {
+        title: 'Salary Research Worksheet.pdf',
+        fileUrl: 'https://example.com/resources/salary-worksheet.pdf',
+        type: ResourceType.PDF,
+        size: '220 KB',
+        lessonId: lesson5_2.id,
+      },
+      // Lesson 5.3 resources
+      {
+        title: 'Part 2: Practice STAR Answers',
+        fileUrl: 'https://www.youtube.com/embed/GvJ9G2BKDGM',
+        type: ResourceType.VIDEO,
+        size: '20 min',
+        lessonId: lesson5_3.id,
+      },
+      {
+        title: 'STAR Method Cheatsheet.pdf',
+        fileUrl: 'https://example.com/resources/star-method-cheatsheet.pdf',
+        type: ResourceType.PDF,
+        size: '150 KB',
+        lessonId: lesson5_3.id,
+      },
+      {
+        title: '50 Common Behavioral Questions.pdf',
+        fileUrl: 'https://example.com/resources/behavioral-questions.pdf',
+        type: ResourceType.PDF,
+        size: '320 KB',
+        lessonId: lesson5_3.id,
       },
     ],
   });
@@ -1097,14 +1295,58 @@ async function main() {
     data: {
       userId: activeUser.id,
       jobOfferId: job6.id,
-      status: ApplicationStatus.OFFER,
-      notes: 'Offer: $52k/year - Need to respond by Friday',
+      status: ApplicationStatus.PENDING,
+      notes: 'Waiting for response - Applied 2 weeks ago',
       appliedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), // 14 days ago
     },
   });
 
   console.log('🔔 Creating notifications...');
 
+  // Create audio submissions PENDING review (for admin/superadmin to review)
+  // Second user submitted audio for yesterday's challenge - awaiting review
+  const pendingSubmission1 = await prisma.userDailyChallengeProgress.create({
+    data: {
+      userId: secondUser.id,
+      challengeId: yesterdayChallenge.id,
+      completed: true,
+      completedAt: new Date(Date.now() - 20 * 60 * 60 * 1000), // 20 hours ago
+      fileUrl: 'https://storage.example.com/audio/user2-hometown.webm',
+      status: SubmissionStatus.PENDING,
+      feedback: null,
+      score: null,
+    },
+  });
+
+  // Second user also submitted today's challenge - awaiting review
+  const pendingSubmission2 = await prisma.userDailyChallengeProgress.create({
+    data: {
+      userId: secondUser.id,
+      challengeId: todayChallenge.id,
+      completed: true,
+      completedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+      fileUrl: 'https://storage.example.com/audio/user2-morning-routine.webm',
+      status: SubmissionStatus.PENDING,
+      feedback: null,
+      score: null,
+    },
+  });
+
+  // Pending user also submitted (before getting approved) - for edge case testing
+  const pendingSubmission3 = await prisma.userDailyChallengeProgress.create({
+    data: {
+      userId: pendingUser.id,
+      challengeId: todayChallenge.id,
+      completed: true,
+      completedAt: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
+      fileUrl: 'https://storage.example.com/audio/pending-user-morning.webm',
+      status: SubmissionStatus.PENDING,
+      feedback: null,
+      score: null,
+    },
+  });
+
+  // Notifications for users
   await prisma.notification.createMany({
     data: [
       {
@@ -1131,6 +1373,251 @@ async function main() {
         isRead: false,
         data: { challengeId: yesterdayChallenge.id },
       },
+      // Notification for second user about pending challenge
+      {
+        userId: secondUser.id,
+        type: NotificationType.GENERAL,
+        title: 'Challenge Submitted',
+        message: 'Your audio submission for "Describe Your Morning Routine" is being reviewed.',
+        isRead: false,
+        data: { challengeId: todayChallenge.id },
+      },
+    ],
+  });
+
+  // Notifications for Admins/Superadmins about pending audio submissions to review
+  await prisma.notification.createMany({
+    data: [
+      // For Admin User
+      {
+        userId: adminUser.id,
+        type: NotificationType.GENERAL,
+        title: '🎤 New Audio Submission to Review',
+        message: `Diego Marzioni submitted an audio for "Tell Us About Your Hometown". Please review and provide feedback.`,
+        isRead: false,
+        data: { 
+          challengeId: yesterdayChallenge.id, 
+          submissionId: pendingSubmission1.id,
+          studentName: 'Diego Marzioni',
+          studentId: secondUser.id,
+        },
+      },
+      {
+        userId: adminUser.id,
+        type: NotificationType.GENERAL,
+        title: '🎤 New Audio Submission to Review',
+        message: `Diego Marzioni submitted an audio for "Describe Your Morning Routine". Please review and provide feedback.`,
+        isRead: false,
+        data: { 
+          challengeId: todayChallenge.id, 
+          submissionId: pendingSubmission2.id,
+          studentName: 'Diego Marzioni',
+          studentId: secondUser.id,
+        },
+      },
+      {
+        userId: adminUser.id,
+        type: NotificationType.GENERAL,
+        title: '🎤 New Audio Submission to Review',
+        message: `Pending User submitted an audio for "Describe Your Morning Routine". Please review and provide feedback.`,
+        isRead: false,
+        data: { 
+          challengeId: todayChallenge.id, 
+          submissionId: pendingSubmission3.id,
+          studentName: 'Pending User',
+          studentId: pendingUser.id,
+        },
+      },
+      // For Superadmin User
+      {
+        userId: superAdminUser.id,
+        type: NotificationType.GENERAL,
+        title: '🎤 New Audio Submission to Review',
+        message: `Diego Marzioni submitted an audio for "Tell Us About Your Hometown". Please review and provide feedback.`,
+        isRead: false,
+        data: { 
+          challengeId: yesterdayChallenge.id, 
+          submissionId: pendingSubmission1.id,
+          studentName: 'Diego Marzioni',
+          studentId: secondUser.id,
+        },
+      },
+      {
+        userId: superAdminUser.id,
+        type: NotificationType.GENERAL,
+        title: '🎤 New Audio Submission to Review',
+        message: `Diego Marzioni submitted an audio for "Describe Your Morning Routine". Please review and provide feedback.`,
+        isRead: false,
+        data: { 
+          challengeId: todayChallenge.id, 
+          submissionId: pendingSubmission2.id,
+          studentName: 'Diego Marzioni',
+          studentId: secondUser.id,
+        },
+      },
+      {
+        userId: superAdminUser.id,
+        type: NotificationType.GENERAL,
+        title: '🎤 New Audio Submission to Review',
+        message: `Pending User submitted an audio for "Describe Your Morning Routine". Please review and provide feedback.`,
+        isRead: false,
+        data: { 
+          challengeId: todayChallenge.id, 
+          submissionId: pendingSubmission3.id,
+          studentName: 'Pending User',
+          studentId: pendingUser.id,
+        },
+      },
+      // Also notify teacher (Sarah)
+      {
+        userId: teacherUser.id,
+        type: NotificationType.GENERAL,
+        title: '🎤 New Audio Submission to Review',
+        message: `Diego Marzioni submitted an audio for "Describe Your Morning Routine". Please review and provide feedback.`,
+        isRead: false,
+        data: { 
+          challengeId: todayChallenge.id, 
+          submissionId: pendingSubmission2.id,
+          studentName: 'Diego Marzioni',
+          studentId: secondUser.id,
+        },
+      },
+    ],
+  });
+
+  // Create sample audit logs (reusing 'now' variable from above)
+  await prisma.auditLog.createMany({
+    data: [
+      {
+        adminId: superAdminUser.id,
+        adminEmail: superAdminUser.email,
+        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        action: AuditAction.USER_APPROVED,
+        targetType: 'User',
+        targetId: String(activeUser.id),
+        targetName: `${activeUser.firstName} ${activeUser.lastName}`,
+        details: { previousStatus: 'PENDING', newStatus: 'ACTIVE' },
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        createdAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+      },
+      {
+        adminId: superAdminUser.id,
+        adminEmail: superAdminUser.email,
+        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        action: AuditAction.MODULE_CREATED,
+        targetType: 'Module',
+        targetId: String(module1.id),
+        targetName: module1.title,
+        details: { order: module1.order },
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        createdAt: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000), // 6 days ago
+      },
+      {
+        adminId: superAdminUser.id,
+        adminEmail: superAdminUser.email,
+        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        action: AuditAction.CLASS_CREATED,
+        targetType: 'ClassSession',
+        targetId: String(class1.id),
+        targetName: class1.title,
+        details: { type: class1.type, capacityMax: class1.capacityMax },
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        createdAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
+      },
+      {
+        adminId: superAdminUser.id,
+        adminEmail: superAdminUser.email,
+        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        action: AuditAction.SUBSCRIPTION_CREATED,
+        targetType: 'Subscription',
+        targetId: 'sub_001',
+        targetName: 'Premium Plan - Monthly',
+        details: { planType: 'PREMIUM', billingCycle: 'MONTHLY', userId: activeUser.id },
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        createdAt: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000), // 4 days ago
+      },
+      {
+        adminId: superAdminUser.id,
+        adminEmail: superAdminUser.email,
+        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        action: AuditAction.CHALLENGE_CREATED,
+        targetType: 'DailyChallenge',
+        targetId: String(todayChallenge.id),
+        targetName: 'Today Challenge',
+        details: { type: todayChallenge.type },
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        createdAt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+      },
+      {
+        adminId: superAdminUser.id,
+        adminEmail: superAdminUser.email,
+        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        action: AuditAction.JOB_CREATED,
+        targetType: 'JobOffer',
+        targetId: String(job1.id),
+        targetName: job1.title,
+        details: { company: job1.company, location: job1.location },
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        createdAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+      },
+      {
+        adminId: superAdminUser.id,
+        adminEmail: superAdminUser.email,
+        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        action: AuditAction.USER_STRIKE_ISSUED,
+        targetType: 'User',
+        targetId: String(activeUser.id),
+        targetName: `${activeUser.firstName} ${activeUser.lastName}`,
+        details: { reason: 'Inappropriate behavior in class', strikeNumber: 1 },
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        createdAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+      },
+      {
+        adminId: superAdminUser.id,
+        adminEmail: superAdminUser.email,
+        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        action: AuditAction.SYSTEM_CONFIG_UPDATED,
+        targetType: 'System',
+        targetId: 'system_settings',
+        targetName: 'Platform Settings',
+        details: { setting: 'registration_enabled', oldValue: false, newValue: true },
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        createdAt: new Date(now.getTime() - 12 * 60 * 60 * 1000), // 12 hours ago
+      },
+      {
+        adminId: superAdminUser.id,
+        adminEmail: superAdminUser.email,
+        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        action: AuditAction.LOGIN_SUCCESS,
+        targetType: 'Admin',
+        targetId: String(superAdminUser.id),
+        targetName: superAdminUser.email,
+        details: { loginMethod: 'password' },
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        createdAt: new Date(now.getTime() - 2 * 60 * 60 * 1000), // 2 hours ago
+      },
+      {
+        adminId: superAdminUser.id,
+        adminEmail: superAdminUser.email,
+        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        action: AuditAction.USER_UPDATED,
+        targetType: 'User',
+        targetId: String(activeUser.id),
+        targetName: `${activeUser.firstName} ${activeUser.lastName}`,
+        details: { field: 'email', oldValue: 'old@test.com', newValue: 'eugenia@test.com' },
+        ipAddress: '192.168.1.100',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
+        createdAt: new Date(now.getTime() - 30 * 60 * 1000), // 30 minutes ago
+      },
     ],
   });
 
@@ -1147,6 +1634,7 @@ async function main() {
   console.log(`- Job offers: ${await prisma.jobOffer.count()}`);
   console.log(`- Job applications: ${await prisma.jobApplication.count()}`);
   console.log(`- Notifications: ${await prisma.notification.count()}`);
+  console.log(`- Audit logs: ${await prisma.auditLog.count()}`);
   console.log('\n🔐 Test credentials:');
   console.log('Email: eugenia@test.com');
   console.log('Password: password123');

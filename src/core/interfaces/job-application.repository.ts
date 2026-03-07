@@ -7,8 +7,8 @@ export interface JobApplicationWithJob extends JobApplication {
 
 export interface ApplicationsByStatus {
   applied: JobApplicationWithJob[];
+  pending: JobApplicationWithJob[];
   interview: JobApplicationWithJob[];
-  offer: JobApplicationWithJob[];
   rejected: JobApplicationWithJob[];
 }
 

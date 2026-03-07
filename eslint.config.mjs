@@ -12,6 +12,7 @@ export default tseslint.config(
       '**/*.mjs',
       'test/**',
       'prisma/seed.ts',
+      'prisma/seed-sprint5.ts',
     ],
   },
   eslint.configs.recommended,

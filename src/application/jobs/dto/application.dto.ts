@@ -5,8 +5,8 @@ import { IsEnum, IsString, MaxLength } from 'class-validator';
 // Enum para validación
 export enum ApplicationStatusEnum {
   APPLIED = 'APPLIED',
+  PENDING = 'PENDING',
   INTERVIEW = 'INTERVIEW',
-  OFFER = 'OFFER',
   REJECTED = 'REJECTED',
 }
 
@@ -64,10 +64,10 @@ export class ApplicationsByStatusDto {
   applied!: ApplicationDto[];
 
   @ApiProperty({ type: [ApplicationDto] })
-  interview!: ApplicationDto[];
+  pending!: ApplicationDto[];
 
   @ApiProperty({ type: [ApplicationDto] })
-  offer!: ApplicationDto[];
+  interview!: ApplicationDto[];
 
   @ApiProperty({ type: [ApplicationDto] })
   rejected!: ApplicationDto[];
@@ -78,10 +78,10 @@ export class ApplicationStatsDto {
   applied!: number;
 
   @ApiProperty({ example: 1 })
-  interview!: number;
+  pending!: number;
 
   @ApiProperty({ example: 1 })
-  offer!: number;
+  interview!: number;
 
   @ApiProperty({ example: 1 })
   rejected!: number;
