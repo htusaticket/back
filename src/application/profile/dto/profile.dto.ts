@@ -148,15 +148,40 @@ export class ProfileStatsDto {
 
   @ApiProperty({
     example: 7,
-    description: 'Lecciones marcadas como completadas',
+    description: 'Cantidad de job applications realizadas',
   })
-  completedLessons!: number;
+  jobApplications!: number;
 
   @ApiProperty({
     example: 15,
     description: 'Challenges completados',
   })
   completedChallenges!: number;
+}
+
+export class PlanFeaturesDto {
+  @ApiProperty({ example: true, description: 'Acceso a Academy' })
+  academy!: boolean;
+
+  @ApiProperty({ example: true, description: 'Acceso a Challenges' })
+  challenges!: boolean;
+
+  @ApiProperty({ example: true, description: 'Acceso a Live Classes' })
+  liveClasses!: boolean;
+
+  @ApiProperty({ example: true, description: 'Acceso a Job Board' })
+  jobBoard!: boolean;
+}
+
+export class SystemSettingsDto {
+  @ApiProperty({ example: true, description: 'Si strikes está habilitado globalmente' })
+  strikesEnabled!: boolean;
+
+  @ApiProperty({ example: true, description: 'Si Job Board está habilitado globalmente' })
+  jobBoardEnabled!: boolean;
+
+  @ApiProperty({ example: true, description: 'Si Academy está habilitado globalmente' })
+  academyEnabled!: boolean;
 }
 
 export class ProfileResponseDto {
@@ -180,6 +205,12 @@ export class ProfileResponseDto {
     description: 'Fecha hasta la que está castigado',
   })
   punishedUntil?: Date | null;
+
+  @ApiProperty({ type: PlanFeaturesDto, description: 'Features disponibles para el plan del usuario' })
+  planFeatures!: PlanFeaturesDto;
+
+  @ApiProperty({ type: SystemSettingsDto, description: 'Configuración global del sistema' })
+  systemSettings!: SystemSettingsDto;
 }
 
 export class UpdateProfileResponseDto {

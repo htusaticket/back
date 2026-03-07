@@ -46,23 +46,26 @@ export class PrismaJobApplicationRepository implements IJobApplicationRepository
 
     const result: ApplicationsByStatus = {
       applied: [],
+      pending: [],
       interview: [],
-      offer: [],
       rejected: [],
     };
 
     for (const app of applications) {
-      switch (app.status) {
-        case ApplicationStatus.APPLIED:
+      // Using string comparison to support both old (OFFER) and new (PENDING) enum values
+      const status = app.status as string;
+      switch (status) {
+        case 'APPLIED':
           result.applied.push(app);
           break;
-        case ApplicationStatus.INTERVIEW:
+        case 'PENDING':
+        case 'OFFER': // Backwards compatibility until migration is run
+          result.pending.push(app);
+          break;
+        case 'INTERVIEW':
           result.interview.push(app);
           break;
-        case ApplicationStatus.OFFER:
-          result.offer.push(app);
-          break;
-        case ApplicationStatus.REJECTED:
+        case 'REJECTED':
           result.rejected.push(app);
           break;
       }

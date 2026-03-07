@@ -443,8 +443,9 @@ model Notification {
 
 enum ApplicationStatus {
   APPLIED
+  PENDING
   INTERVIEW
-  OFFER
+  OFFER      // Kept for backwards compatibility with existing data
   REJECTED
 }
 
@@ -498,6 +499,7 @@ model SystemConfig {
   id    String @id @default("default") // Solo habrá un registro
   
   // Configuración de Strikes y Punishment
+  strikesEnabled           Boolean @default(true) @map("strikes_enabled") // Si los strikes están habilitados globalmente
   maxStrikesForPunishment  Int @default(3) @map("max_strikes_for_punishment")
   punishmentDurationDays   Int @default(14) @map("punishment_duration_days") // Duración del castigo en días
   lateCancellationHours    Int @default(24) @map("late_cancellation_hours") // Horas antes de clase para cancelación sin strike

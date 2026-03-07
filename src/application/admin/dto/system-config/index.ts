@@ -3,6 +3,10 @@ import { IsInt, IsBoolean, IsOptional, Min, Max } from 'class-validator';
 
 export class UpdateSystemConfigDto {
   @IsOptional()
+  @IsBoolean()
+  strikesEnabled?: boolean;
+
+  @IsOptional()
   @IsInt()
   @Min(1)
   @Max(10)
@@ -31,6 +35,7 @@ export class UpdateSystemConfigDto {
 
 export interface SystemConfigDto {
   id: string;
+  strikesEnabled: boolean;
   maxStrikesForPunishment: number;
   punishmentDurationDays: number;
   lateCancellationHours: number;

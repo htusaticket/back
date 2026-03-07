@@ -55,9 +55,12 @@ async function main() {
   // Create system configuration
   await prisma.systemConfig.create({
     data: {
+      strikesEnabled: true,
       maxStrikesForPunishment: 3,
       punishmentDurationDays: 7,
       lateCancellationHours: 2,
+      jobBoardEnabled: true,
+      academyEnabled: true,
     },
   });
 
@@ -481,6 +484,117 @@ async function main() {
         type: ResourceType.PDF,
         size: '450 KB',
         lessonId: lesson4_1.id,
+      },
+    ],
+  });
+
+  // ====================
+  // MODULE 5: Interview Mastery (With multiple videos per lesson)
+  // ====================
+  const module5 = await prisma.module.create({
+    data: {
+      title: 'Interview Mastery',
+      description:
+        'Master the art of job interviews in English. This module includes multiple video perspectives for each topic to give you comprehensive preparation.',
+      image:
+        'https://images.unsplash.com/photo-1565688534245-05d6b5be184a?q=80&w=1000&auto=format&fit=crop',
+      order: 5,
+    },
+  });
+
+  // Lesson 5.1 with 2 videos
+  const lesson5_1 = await prisma.lesson.create({
+    data: {
+      title: 'Tell Me About Yourself - The Perfect Answer',
+      description:
+        'Learn how to craft and deliver the perfect answer to the most common interview question. Includes both theory and real-world examples.',
+      duration: '28 min',
+      contentUrl: 'https://www.youtube.com/embed/es7XtrloDIQ', // First video - Theory
+      order: 1,
+      moduleId: module5.id,
+    },
+  });
+
+  // Lesson 5.2 with 2 videos
+  const lesson5_2 = await prisma.lesson.create({
+    data: {
+      title: 'Handling Salary Negotiations',
+      description:
+        'Master the art of salary negotiation with confidence. Learn key phrases and strategies from two different expert perspectives.',
+      duration: '35 min',
+      contentUrl: 'https://www.youtube.com/embed/XCtOXJwPkC0', // First video - Basics
+      order: 2,
+      moduleId: module5.id,
+    },
+  });
+
+  // Lesson 5.3 with 2 videos
+  const lesson5_3 = await prisma.lesson.create({
+    data: {
+      title: 'Behavioral Interview Questions (STAR Method)',
+      description:
+        'Learn the STAR method for answering behavioral questions. Includes explanation video and practice examples video.',
+      duration: '32 min',
+      contentUrl: 'https://www.youtube.com/embed/qKBubKO-798', // First video - STAR Method explained
+      order: 3,
+      moduleId: module5.id,
+    },
+  });
+
+  // Resources for Module 5 - Including second videos and PDFs
+  await prisma.lessonResource.createMany({
+    data: [
+      // Lesson 5.1 resources
+      {
+        title: 'Part 2: Real Interview Examples',
+        fileUrl: 'https://www.youtube.com/embed/kayOhGRcNt4',
+        type: ResourceType.VIDEO,
+        size: '15 min',
+        lessonId: lesson5_1.id,
+      },
+      {
+        title: 'Personal Pitch Template.pdf',
+        fileUrl: 'https://example.com/resources/personal-pitch-template.pdf',
+        type: ResourceType.PDF,
+        size: '180 KB',
+        lessonId: lesson5_1.id,
+      },
+      // Lesson 5.2 resources
+      {
+        title: 'Part 2: Advanced Negotiation Tactics',
+        fileUrl: 'https://www.youtube.com/embed/wFjlq0vEJBw',
+        type: ResourceType.VIDEO,
+        size: '18 min',
+        lessonId: lesson5_2.id,
+      },
+      {
+        title: 'Salary Research Worksheet.pdf',
+        fileUrl: 'https://example.com/resources/salary-worksheet.pdf',
+        type: ResourceType.PDF,
+        size: '220 KB',
+        lessonId: lesson5_2.id,
+      },
+      // Lesson 5.3 resources
+      {
+        title: 'Part 2: Practice STAR Answers',
+        fileUrl: 'https://www.youtube.com/embed/GvJ9G2BKDGM',
+        type: ResourceType.VIDEO,
+        size: '20 min',
+        lessonId: lesson5_3.id,
+      },
+      {
+        title: 'STAR Method Cheatsheet.pdf',
+        fileUrl: 'https://example.com/resources/star-method-cheatsheet.pdf',
+        type: ResourceType.PDF,
+        size: '150 KB',
+        lessonId: lesson5_3.id,
+      },
+      {
+        title: '50 Common Behavioral Questions.pdf',
+        fileUrl: 'https://example.com/resources/behavioral-questions.pdf',
+        type: ResourceType.PDF,
+        size: '320 KB',
+        lessonId: lesson5_3.id,
       },
     ],
   });
@@ -1181,14 +1295,58 @@ async function main() {
     data: {
       userId: activeUser.id,
       jobOfferId: job6.id,
-      status: ApplicationStatus.OFFER,
-      notes: 'Offer: $52k/year - Need to respond by Friday',
+      status: ApplicationStatus.PENDING,
+      notes: 'Waiting for response - Applied 2 weeks ago',
       appliedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), // 14 days ago
     },
   });
 
   console.log('🔔 Creating notifications...');
 
+  // Create audio submissions PENDING review (for admin/superadmin to review)
+  // Second user submitted audio for yesterday's challenge - awaiting review
+  const pendingSubmission1 = await prisma.userDailyChallengeProgress.create({
+    data: {
+      userId: secondUser.id,
+      challengeId: yesterdayChallenge.id,
+      completed: true,
+      completedAt: new Date(Date.now() - 20 * 60 * 60 * 1000), // 20 hours ago
+      fileUrl: 'https://storage.example.com/audio/user2-hometown.webm',
+      status: SubmissionStatus.PENDING,
+      feedback: null,
+      score: null,
+    },
+  });
+
+  // Second user also submitted today's challenge - awaiting review
+  const pendingSubmission2 = await prisma.userDailyChallengeProgress.create({
+    data: {
+      userId: secondUser.id,
+      challengeId: todayChallenge.id,
+      completed: true,
+      completedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+      fileUrl: 'https://storage.example.com/audio/user2-morning-routine.webm',
+      status: SubmissionStatus.PENDING,
+      feedback: null,
+      score: null,
+    },
+  });
+
+  // Pending user also submitted (before getting approved) - for edge case testing
+  const pendingSubmission3 = await prisma.userDailyChallengeProgress.create({
+    data: {
+      userId: pendingUser.id,
+      challengeId: todayChallenge.id,
+      completed: true,
+      completedAt: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
+      fileUrl: 'https://storage.example.com/audio/pending-user-morning.webm',
+      status: SubmissionStatus.PENDING,
+      feedback: null,
+      score: null,
+    },
+  });
+
+  // Notifications for users
   await prisma.notification.createMany({
     data: [
       {
@@ -1214,6 +1372,115 @@ async function main() {
         message: 'Sarah Johnson has reviewed your "Tell Us About Your Hometown" submission.',
         isRead: false,
         data: { challengeId: yesterdayChallenge.id },
+      },
+      // Notification for second user about pending challenge
+      {
+        userId: secondUser.id,
+        type: NotificationType.GENERAL,
+        title: 'Challenge Submitted',
+        message: 'Your audio submission for "Describe Your Morning Routine" is being reviewed.',
+        isRead: false,
+        data: { challengeId: todayChallenge.id },
+      },
+    ],
+  });
+
+  // Notifications for Admins/Superadmins about pending audio submissions to review
+  await prisma.notification.createMany({
+    data: [
+      // For Admin User
+      {
+        userId: adminUser.id,
+        type: NotificationType.GENERAL,
+        title: '🎤 New Audio Submission to Review',
+        message: `Diego Marzioni submitted an audio for "Tell Us About Your Hometown". Please review and provide feedback.`,
+        isRead: false,
+        data: { 
+          challengeId: yesterdayChallenge.id, 
+          submissionId: pendingSubmission1.id,
+          studentName: 'Diego Marzioni',
+          studentId: secondUser.id,
+        },
+      },
+      {
+        userId: adminUser.id,
+        type: NotificationType.GENERAL,
+        title: '🎤 New Audio Submission to Review',
+        message: `Diego Marzioni submitted an audio for "Describe Your Morning Routine". Please review and provide feedback.`,
+        isRead: false,
+        data: { 
+          challengeId: todayChallenge.id, 
+          submissionId: pendingSubmission2.id,
+          studentName: 'Diego Marzioni',
+          studentId: secondUser.id,
+        },
+      },
+      {
+        userId: adminUser.id,
+        type: NotificationType.GENERAL,
+        title: '🎤 New Audio Submission to Review',
+        message: `Pending User submitted an audio for "Describe Your Morning Routine". Please review and provide feedback.`,
+        isRead: false,
+        data: { 
+          challengeId: todayChallenge.id, 
+          submissionId: pendingSubmission3.id,
+          studentName: 'Pending User',
+          studentId: pendingUser.id,
+        },
+      },
+      // For Superadmin User
+      {
+        userId: superAdminUser.id,
+        type: NotificationType.GENERAL,
+        title: '🎤 New Audio Submission to Review',
+        message: `Diego Marzioni submitted an audio for "Tell Us About Your Hometown". Please review and provide feedback.`,
+        isRead: false,
+        data: { 
+          challengeId: yesterdayChallenge.id, 
+          submissionId: pendingSubmission1.id,
+          studentName: 'Diego Marzioni',
+          studentId: secondUser.id,
+        },
+      },
+      {
+        userId: superAdminUser.id,
+        type: NotificationType.GENERAL,
+        title: '🎤 New Audio Submission to Review',
+        message: `Diego Marzioni submitted an audio for "Describe Your Morning Routine". Please review and provide feedback.`,
+        isRead: false,
+        data: { 
+          challengeId: todayChallenge.id, 
+          submissionId: pendingSubmission2.id,
+          studentName: 'Diego Marzioni',
+          studentId: secondUser.id,
+        },
+      },
+      {
+        userId: superAdminUser.id,
+        type: NotificationType.GENERAL,
+        title: '🎤 New Audio Submission to Review',
+        message: `Pending User submitted an audio for "Describe Your Morning Routine". Please review and provide feedback.`,
+        isRead: false,
+        data: { 
+          challengeId: todayChallenge.id, 
+          submissionId: pendingSubmission3.id,
+          studentName: 'Pending User',
+          studentId: pendingUser.id,
+        },
+      },
+      // Also notify teacher (Sarah)
+      {
+        userId: teacherUser.id,
+        type: NotificationType.GENERAL,
+        title: '🎤 New Audio Submission to Review',
+        message: `Diego Marzioni submitted an audio for "Describe Your Morning Routine". Please review and provide feedback.`,
+        isRead: false,
+        data: { 
+          challengeId: todayChallenge.id, 
+          submissionId: pendingSubmission2.id,
+          studentName: 'Diego Marzioni',
+          studentId: secondUser.id,
+        },
       },
     ],
   });

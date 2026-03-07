@@ -12,6 +12,7 @@ import {
 // Tipo para config del sistema
 interface SystemConfigEntity {
   id: string;
+  strikesEnabled: boolean;
   maxStrikesForPunishment: number;
   punishmentDurationDays: number;
   lateCancellationHours: number;
@@ -40,6 +41,7 @@ export class AdminSystemConfigService {
       config = await this.prisma.systemConfig.create({
         data: {
           id: 'default',
+          strikesEnabled: true,
           maxStrikesForPunishment: 3,
           punishmentDurationDays: 14,
           lateCancellationHours: 24,
@@ -65,6 +67,7 @@ export class AdminSystemConfigService {
     const config = await this.prisma.systemConfig.update({
       where: { id: 'default' },
       data: {
+        ...(dto.strikesEnabled !== undefined && { strikesEnabled: dto.strikesEnabled }),
         ...(dto.maxStrikesForPunishment !== undefined && {
           maxStrikesForPunishment: dto.maxStrikesForPunishment,
         }),
@@ -93,6 +96,7 @@ export class AdminSystemConfigService {
   private mapConfigToDto(config: SystemConfigEntity): SystemConfigDto {
     return {
       id: config.id,
+      strikesEnabled: config.strikesEnabled,
       maxStrikesForPunishment: config.maxStrikesForPunishment,
       punishmentDurationDays: config.punishmentDurationDays,
       lateCancellationHours: config.lateCancellationHours,

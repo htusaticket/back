@@ -1,6 +1,6 @@
 // src/application/profile/services/profile.service.ts
 import { Injectable, Inject, NotFoundException, Logger } from '@nestjs/common';
-import { SubscriptionStatus } from '@prisma/client';
+import { SubscriptionStatus, UserPlan } from '@prisma/client';
 import {
   IUserRepository,
   USER_REPOSITORY,
@@ -8,6 +8,7 @@ import {
   STRIKE_REPOSITORY,
 } from '@/core/interfaces';
 import { PrismaService } from '@/infrastructure/persistence/prisma/prisma.service';
+import { getPlanFeatures, PlanFeatures } from '@/config/plans.config';
 import {
   ProfileResponseDto,
   UpdateProfileDto,
@@ -45,10 +46,11 @@ export class ProfileService {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Obtener stats y strikes en paralelo
-    const [stats, strikeInfo] = await Promise.all([
+    // Obtener stats, strikes y config del sistema en paralelo
+    const [stats, strikeInfo, systemConfig] = await Promise.all([
       this.getProfileStats(userId),
       this.strikeRepository.getStrikeInfo(userId),
+      this.getSystemConfig(),
     ]);
 
     // Formatear fecha de membresía
@@ -61,6 +63,9 @@ export class ProfileService {
     const plan =
       activeSubscription?.plan ||
       (user.role === 'ADMIN' || user.role === 'SUPERADMIN' ? 'Staff' : null);
+
+    // Obtener features del plan
+    const planFeatures = this.getPlanFeaturesForUser(plan as UserPlan | 'Staff' | null);
 
     return {
       user: this.mapUserToDto(user),
@@ -75,7 +80,60 @@ export class ProfileService {
       strikes: strikeInfo,
       isPunished: user.isPunished,
       punishedUntil: user.punishedUntil,
+      planFeatures,
+      systemSettings: {
+        strikesEnabled: systemConfig.strikesEnabled,
+        jobBoardEnabled: systemConfig.jobBoardEnabled,
+        academyEnabled: systemConfig.academyEnabled,
+      },
     };
+  }
+
+  /**
+   * Obtener configuración del sistema
+   */
+  private async getSystemConfig() {
+    let config = await this.prisma.systemConfig.findUnique({
+      where: { id: 'default' },
+    });
+
+    // Si no existe, devolver valores por defecto
+    if (!config) {
+      return {
+        strikesEnabled: true,
+        jobBoardEnabled: true,
+        academyEnabled: true,
+      };
+    }
+
+    return config;
+  }
+
+  /**
+   * Obtener features del plan para el usuario
+   */
+  private getPlanFeaturesForUser(plan: UserPlan | 'Staff' | null): PlanFeatures {
+    // Staff (admin/superadmin) tiene acceso completo
+    if (plan === 'Staff') {
+      return {
+        academy: true,
+        challenges: true,
+        liveClasses: true,
+        jobBoard: true,
+      };
+    }
+
+    // Sin plan = sin acceso
+    if (!plan) {
+      return {
+        academy: false,
+        challenges: false,
+        liveClasses: false,
+        jobBoard: false,
+      };
+    }
+
+    return getPlanFeatures(plan);
   }
 
   /**
@@ -113,7 +171,7 @@ export class ProfileService {
    * Obtener estadísticas del perfil
    */
   private async getProfileStats(userId: string) {
-    const [completedClasses, completedLessons, completedChallenges] = await Promise.all([
+    const [completedClasses, jobApplications, completedChallenges] = await Promise.all([
       // Clases completadas: clases pasadas donde el usuario estuvo inscrito (CONFIRMED)
       this.prisma.classEnrollment.count({
         where: {
@@ -124,11 +182,10 @@ export class ProfileService {
           },
         },
       }),
-      // Lecciones completadas
-      this.prisma.userLessonProgress.count({
+      // Cantidad de job applications del usuario
+      this.prisma.jobApplication.count({
         where: {
           userId,
-          completed: true,
         },
       }),
       // Challenges completados (completed = true)
@@ -142,7 +199,7 @@ export class ProfileService {
 
     return {
       completedClasses,
-      completedLessons,
+      jobApplications,
       completedChallenges,
     };
   }
