@@ -31,6 +31,9 @@ const EnvSchema = z.object({
   RESEND_FROM_EMAIL: z.string().email().default('noreply@jfalcon.com'),
   RESEND_FROM_NAME: z.string().default('JFalcon'),
 
+  // Emails de Superadmins para notificaciones (separados por comas)
+  SUPERADMIN_EMAILS: z.string().default('luby.demidova@gmail.com,johnfalcon.va@gmail.com'),
+
   // Frontend URL para links en emails
   FRONTEND_URL: z.string().url().default('http://localhost:3000'),
 

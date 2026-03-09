@@ -112,16 +112,24 @@ async function main() {
     },
   });
 
-  // Create superadmin user
+  // Create superadmin users (real superadmins)
   const superAdminUser = await prisma.user.create({
     data: {
-      email: 'superadmin@test.com',
+      email: 'luby.demidova@gmail.com',
       password: hashedPassword,
-      firstName: 'Carlos',
-      lastName: 'Rodriguez',
-      phone: '+54 11 5555-1234',
-      city: 'Buenos Aires',
-      country: 'Argentina',
+      firstName: 'Luby',
+      lastName: 'Demidova',
+      role: UserRole.SUPERADMIN,
+      status: UserStatus.ACTIVE,
+    },
+  });
+
+  const superAdminUser2 = await prisma.user.create({
+    data: {
+      email: 'johnfalcon.va@gmail.com',
+      password: hashedPassword,
+      firstName: 'John',
+      lastName: 'Falcon',
       role: UserRole.SUPERADMIN,
       status: UserStatus.ACTIVE,
     },

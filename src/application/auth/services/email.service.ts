@@ -23,6 +23,13 @@ export class EmailService {
   }
 
   /**
+   * Obtiene los emails de los superadmins configurados
+   */
+  getSuperadminEmails(): string[] {
+    return this.env.SUPERADMIN_EMAILS.split(',').map(email => email.trim()).filter(email => email.length > 0);
+  }
+
+  /**
    * Envía email de recuperación de contraseña
    */
   async sendPasswordResetEmail(to: string, firstName: string, resetLink: string): Promise<void> {
