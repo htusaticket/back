@@ -41,7 +41,7 @@ export class AdminSystemConfigService {
       config = await this.prisma.systemConfig.create({
         data: {
           id: 'default',
-          strikesEnabled: true,
+          strikesEnabled: false,
           maxStrikesForPunishment: 3,
           punishmentDurationDays: 14,
           lateCancellationHours: 24,

@@ -206,7 +206,10 @@ export class ProfileResponseDto {
   })
   punishedUntil?: Date | null;
 
-  @ApiProperty({ type: PlanFeaturesDto, description: 'Features disponibles para el plan del usuario' })
+  @ApiProperty({
+    type: PlanFeaturesDto,
+    description: 'Features disponibles para el plan del usuario',
+  })
   planFeatures!: PlanFeaturesDto;
 
   @ApiProperty({ type: SystemSettingsDto, description: 'Configuración global del sistema' })

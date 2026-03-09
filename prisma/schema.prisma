@@ -107,6 +107,9 @@ model User {
   
   // Notas del admin
   adminNotes String?    @map("admin_notes") @db.Text // Notas del admin (JSON con formato)
+  
+  // Último inicio de sesión
+  lastLoginAt DateTime? @map("last_login_at")
 
   // Relaciones Base
   sessions       UserSession[]

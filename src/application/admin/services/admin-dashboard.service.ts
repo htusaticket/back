@@ -19,10 +19,13 @@ export class AdminDashboardService {
   /**
    * Obtener estadísticas y actividad reciente para el dashboard de admin
    */
-  async getDashboard(): Promise<AdminDashboardResponseDto> {
-    this.logger.debug('Fetching admin dashboard data');
+  async getDashboard(period?: 'today' | 'week'): Promise<AdminDashboardResponseDto> {
+    this.logger.debug(`Fetching admin dashboard data with period: ${period || 'today'}`);
 
-    const [stats, recentActivity] = await Promise.all([this.getStats(), this.getRecentActivity()]);
+    const [stats, recentActivity] = await Promise.all([
+      this.getStats(period || 'today'),
+      this.getRecentActivity(),
+    ]);
 
     return {
       stats,
@@ -33,18 +36,26 @@ export class AdminDashboardService {
   /**
    * Obtener estadísticas del sistema
    */
-  private async getStats(): Promise<DashboardStatsDto> {
+  private async getStats(period: 'today' | 'week'): Promise<DashboardStatsDto> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Calculate week start (7 days ago)
+    const weekStart = new Date(today);
+    weekStart.setDate(weekStart.getDate() - 7);
+
+    // Use week range for weekly stats, today for daily
+    const periodStart = period === 'week' ? weekStart : today;
+    const periodEnd = tomorrow;
 
     const [
       totalUsers,
       pendingUsers,
       activeUsers,
       activeJobs,
-      classesToday,
+      classesInPeriod,
       totalApplications,
       pendingApplications,
       activeModules,
@@ -66,12 +77,12 @@ export class AdminDashboardService {
       this.prisma.jobOffer.count({
         where: { isActive: true },
       }),
-      // Classes today (using startTime field)
+      // Classes in period (today or this week)
       this.prisma.classSession.count({
         where: {
           startTime: {
-            gte: today,
-            lt: tomorrow,
+            gte: periodStart,
+            lt: periodEnd,
           },
         },
       }),
@@ -94,7 +105,7 @@ export class AdminDashboardService {
       pendingUsers,
       activeUsers,
       activeJobs,
-      classesToday,
+      classesToday: classesInPeriod,
       totalApplications,
       pendingApplications,
       activeCourses: activeModules,

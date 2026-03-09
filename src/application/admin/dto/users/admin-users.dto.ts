@@ -81,9 +81,19 @@ export class UpdateUserStatusDto {
   reason?: string;
 }
 
-// DTO para aprobar un registro (PENDING → INACTIVE)
+// DTO para aprobar un registro con plan obligatorio (PENDING → ACTIVE)
 export class ApproveRegistrationDto {
-  // No se necesitan campos, solo la acción
+  @ApiProperty({ enum: UserPlan, description: 'Plan a asignar al usuario' })
+  @IsEnum(UserPlan)
+  plan!: UserPlan;
+
+  @ApiProperty({ description: 'Fecha de inicio del plan (formato ISO)' })
+  @IsString()
+  startDate!: string;
+
+  @ApiProperty({ description: 'Fecha de fin del plan (formato ISO)' })
+  @IsString()
+  endDate!: string;
 }
 
 // DTO para rechazar un registro (elimina de BD)
@@ -166,7 +176,7 @@ export interface UserListItemDto {
   status: UserStatus;
   plan: UserPlan | null;
   createdAt: Date;
-  lastLogin: string | null;
+  lastLoginAt: string | null;
   isPunished: boolean;
   punishedUntil: Date | null;
 }

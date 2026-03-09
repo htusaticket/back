@@ -57,8 +57,31 @@ export class AdminProfileService {
   async updateProfile(userId: string, data: UpdateAdminProfileDto): Promise<AdminProfileDto> {
     this.logger.debug(`Updating profile for admin: ${userId}`);
 
+    // Get current user to check role
+    const currentUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
+    if (!currentUser) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
     // Build update data only with defined fields
     const updateData: Record<string, string | undefined> = {};
+
+    // Only SUPERADMIN can change email
+    if (data.email !== undefined && currentUser.role === 'SUPERADMIN') {
+      // Check if email is already in use by another user
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email: data.email },
+      });
+      if (existingUser && existingUser.id !== userId) {
+        throw new BadRequestException('El email ya está en uso por otro usuario');
+      }
+      updateData.email = data.email;
+    }
+
     if (data.firstName !== undefined) updateData.firstName = data.firstName;
     if (data.lastName !== undefined) updateData.lastName = data.lastName;
     if (data.phone !== undefined) updateData.phone = data.phone;

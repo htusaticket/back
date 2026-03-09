@@ -1,6 +1,22 @@
 // src/infrastructure/http/controllers/admin/admin-dashboard.controller.ts
-import { Controller, Get, Post, Param, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Query,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 
 import { AdminDashboardService } from '@/application/admin/services/admin-dashboard.service';
@@ -32,9 +48,17 @@ export class AdminDashboardController {
     summary: 'Obtener dashboard de admin',
     description: 'Retorna estadísticas del sistema y actividad reciente',
   })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['today', 'week'],
+    description: 'Período de estadísticas',
+  })
   @ApiResponse({ status: 200, description: 'Dashboard data', type: AdminDashboardResponseDto })
-  async getDashboard(): Promise<AdminDashboardResponseDto> {
-    return this.dashboardService.getDashboard();
+  async getDashboard(
+    @Query('period') period?: 'today' | 'week',
+  ): Promise<AdminDashboardResponseDto> {
+    return this.dashboardService.getDashboard(period);
   }
 
   /**

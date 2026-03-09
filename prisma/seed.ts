@@ -1395,8 +1395,8 @@ async function main() {
         title: '🎤 New Audio Submission to Review',
         message: `Diego Marzioni submitted an audio for "Tell Us About Your Hometown". Please review and provide feedback.`,
         isRead: false,
-        data: { 
-          challengeId: yesterdayChallenge.id, 
+        data: {
+          challengeId: yesterdayChallenge.id,
           submissionId: pendingSubmission1.id,
           studentName: 'Diego Marzioni',
           studentId: secondUser.id,
@@ -1408,8 +1408,8 @@ async function main() {
         title: '🎤 New Audio Submission to Review',
         message: `Diego Marzioni submitted an audio for "Describe Your Morning Routine". Please review and provide feedback.`,
         isRead: false,
-        data: { 
-          challengeId: todayChallenge.id, 
+        data: {
+          challengeId: todayChallenge.id,
           submissionId: pendingSubmission2.id,
           studentName: 'Diego Marzioni',
           studentId: secondUser.id,
@@ -1421,8 +1421,8 @@ async function main() {
         title: '🎤 New Audio Submission to Review',
         message: `Pending User submitted an audio for "Describe Your Morning Routine". Please review and provide feedback.`,
         isRead: false,
-        data: { 
-          challengeId: todayChallenge.id, 
+        data: {
+          challengeId: todayChallenge.id,
           submissionId: pendingSubmission3.id,
           studentName: 'Pending User',
           studentId: pendingUser.id,
@@ -1435,8 +1435,8 @@ async function main() {
         title: '🎤 New Audio Submission to Review',
         message: `Diego Marzioni submitted an audio for "Tell Us About Your Hometown". Please review and provide feedback.`,
         isRead: false,
-        data: { 
-          challengeId: yesterdayChallenge.id, 
+        data: {
+          challengeId: yesterdayChallenge.id,
           submissionId: pendingSubmission1.id,
           studentName: 'Diego Marzioni',
           studentId: secondUser.id,
@@ -1448,8 +1448,8 @@ async function main() {
         title: '🎤 New Audio Submission to Review',
         message: `Diego Marzioni submitted an audio for "Describe Your Morning Routine". Please review and provide feedback.`,
         isRead: false,
-        data: { 
-          challengeId: todayChallenge.id, 
+        data: {
+          challengeId: todayChallenge.id,
           submissionId: pendingSubmission2.id,
           studentName: 'Diego Marzioni',
           studentId: secondUser.id,
@@ -1461,8 +1461,8 @@ async function main() {
         title: '🎤 New Audio Submission to Review',
         message: `Pending User submitted an audio for "Describe Your Morning Routine". Please review and provide feedback.`,
         isRead: false,
-        data: { 
-          challengeId: todayChallenge.id, 
+        data: {
+          challengeId: todayChallenge.id,
           submissionId: pendingSubmission3.id,
           studentName: 'Pending User',
           studentId: pendingUser.id,
@@ -1475,8 +1475,8 @@ async function main() {
         title: '🎤 New Audio Submission to Review',
         message: `Diego Marzioni submitted an audio for "Describe Your Morning Routine". Please review and provide feedback.`,
         isRead: false,
-        data: { 
-          challengeId: todayChallenge.id, 
+        data: {
+          challengeId: todayChallenge.id,
           submissionId: pendingSubmission2.id,
           studentName: 'Diego Marzioni',
           studentId: secondUser.id,

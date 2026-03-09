@@ -30,6 +30,7 @@ import {
   IssueStrikeDto,
   UpdateUserDto,
   RejectRegistrationDto,
+  ApproveRegistrationDto,
   PaginatedUsersResponseDto,
   UserDetailDto,
   CreateUserResponseDto,
@@ -181,22 +182,27 @@ export class AdminUsersController {
 
   /**
    * POST /api/admin/users/:id/approve
-   * Aprobar un registro pendiente (PENDING → INACTIVE)
+   * Aprobar un registro pendiente con plan obligatorio (PENDING → ACTIVE)
+   * Solo SUPERADMIN puede aprobar usuarios
    */
   @Post(':id/approve')
-  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.SUPERADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Aprobar registro',
+    summary: 'Aprobar registro con plan',
     description:
-      'Aprueba un registro pendiente. El usuario pasa a INACTIVE y puede loguear, pero sin acceso al contenido hasta que pague.',
+      'Aprueba un registro pendiente asignando un plan obligatorio. El usuario pasa a ACTIVE con acceso según su plan.',
   })
   @ApiParam({ name: 'id', description: 'ID del usuario' })
-  @ApiResponse({ status: 200, description: 'Registro aprobado' })
+  @ApiResponse({ status: 200, description: 'Registro aprobado con plan asignado' })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   @ApiResponse({ status: 409, description: 'El usuario no está en estado PENDING' })
-  async approveRegistration(@Param('id') userId: string): Promise<ApproveRegistrationResponseDto> {
-    return this.adminUsersService.approveRegistration(userId);
+  async approveRegistration(
+    @Param('id') userId: string,
+    @Body() dto: ApproveRegistrationDto,
+    @CurrentUser() admin: JwtPayload,
+  ): Promise<ApproveRegistrationResponseDto> {
+    return this.adminUsersService.approveRegistration(userId, dto, admin.userId);
   }
 
   /**
