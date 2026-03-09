@@ -65,7 +65,7 @@ export class ProfileService {
       (user.role === 'ADMIN' || user.role === 'SUPERADMIN' ? 'Staff' : null);
 
     // Obtener features del plan
-    const planFeatures = this.getPlanFeaturesForUser(plan as UserPlan | 'Staff' | null);
+    const planFeatures = this.getPlanFeaturesForUser(plan);
 
     return {
       user: this.mapUserToDto(user),
@@ -93,14 +93,14 @@ export class ProfileService {
    * Obtener configuración del sistema
    */
   private async getSystemConfig() {
-    let config = await this.prisma.systemConfig.findUnique({
+    const config = await this.prisma.systemConfig.findUnique({
       where: { id: 'default' },
     });
 
     // Si no existe, devolver valores por defecto
     if (!config) {
       return {
-        strikesEnabled: true,
+        strikesEnabled: false,
         jobBoardEnabled: true,
         academyEnabled: true,
       };

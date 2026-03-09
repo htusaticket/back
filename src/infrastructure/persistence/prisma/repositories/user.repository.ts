@@ -105,4 +105,11 @@ export class PrismaUserRepository implements IUserRepository {
       data: { adminNotes: notes },
     });
   }
+
+  async updateLastLogin(id: string): Promise<User> {
+    return this.prisma.user.update({
+      where: { id },
+      data: { lastLoginAt: new Date() },
+    });
+  }
 }

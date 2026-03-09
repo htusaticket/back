@@ -131,11 +131,15 @@ export class AdminAcademyService {
       _max: { order: true },
     });
 
+    // Default placeholder image if none provided
+    const defaultImage =
+      'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&auto=format&fit=crop';
+
     const module = await this.prisma.module.create({
       data: {
         title: data.title,
         description: data.description,
-        image: data.image,
+        image: data.image || defaultImage,
         order: data.order ?? (maxOrder._max.order ?? 0) + 1,
         visibleForSkillBuilder: data.visibleForSkillBuilder ?? false,
       },

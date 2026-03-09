@@ -40,6 +40,11 @@ export class AdminProfileDto {
 }
 
 export class UpdateAdminProfileDto {
+  @ApiPropertyOptional({ description: 'Email (only SUPERADMIN can change)' })
+  @IsOptional()
+  @IsString()
+  email?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

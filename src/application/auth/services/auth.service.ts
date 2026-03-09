@@ -189,6 +189,9 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload);
 
+    // Update lastLoginAt timestamp
+    await this.userRepository.updateLastLogin(user.id);
+
     this.logger.log(`Login exitoso para: ${dto.email}`);
 
     return {

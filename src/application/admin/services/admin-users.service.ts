@@ -7,7 +7,7 @@ import {
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
-import { UserStatus, UserRole, NotificationType } from '@prisma/client';
+import { UserStatus, UserRole, NotificationType, SubscriptionStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 import {
@@ -31,6 +31,7 @@ import {
   IssueStrikeDto,
   UpdateUserDto,
   RejectRegistrationDto,
+  ApproveRegistrationDto,
   PaginatedUsersResponseDto,
   UserDetailDto,
   CreateUserResponseDto,
@@ -96,7 +97,7 @@ export class AdminUsersService {
           status: user.status,
           plan: subscription?.plan || null,
           createdAt: user.createdAt,
-          lastLogin: null,
+          lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
           isPunished: user.isPunished,
           punishedUntil: user.punishedUntil,
         };
@@ -229,7 +230,7 @@ export class AdminUsersService {
         status: user.status,
         plan: null,
         createdAt: user.createdAt,
-        lastLogin: null,
+        lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
         isPunished: user.isPunished,
         punishedUntil: user.punishedUntil,
       },
@@ -382,12 +383,16 @@ export class AdminUsersService {
   }
 
   /**
-   * Aprobar un registro pendiente (PENDING → ACTIVE)
-   * El usuario puede ahora loguear. Si no tiene subscripción, verá overlay
-   * Admin y SuperAdmin pueden aprobar registros
+   * Aprobar un registro pendiente con plan obligatorio (PENDING → ACTIVE)
+   * El usuario pasa a ACTIVE y se le asigna el plan especificado
+   * Solo SUPERADMIN puede aprobar registros
    */
-  async approveRegistration(userId: string): Promise<ApproveRegistrationResponseDto> {
-    this.logger.log(`Approving registration for user ${userId}`);
+  async approveRegistration(
+    userId: string,
+    dto: ApproveRegistrationDto,
+    adminId: string,
+  ): Promise<ApproveRegistrationResponseDto> {
+    this.logger.log(`Approving registration for user ${userId} with plan ${dto.plan}`);
 
     const user = await this.userRepository.findById(userId);
     if (!user) {
@@ -400,8 +405,27 @@ export class AdminUsersService {
       );
     }
 
-    // Cambiar a ACTIVE (puede loguear, pero sin subscripción verá overlay)
-    await this.userRepository.updateStatus(userId, UserStatus.ACTIVE);
+    // Usar transacción para asegurar consistencia
+    await this.prisma.$transaction(async tx => {
+      // 1. Cambiar a ACTIVE
+      await tx.user.update({
+        where: { id: userId },
+        data: { status: UserStatus.ACTIVE },
+      });
+
+      // 2. Crear subscripción con el plan asignado
+      await tx.subscription.create({
+        data: {
+          userId,
+          plan: dto.plan,
+          status: SubscriptionStatus.ACTIVE,
+          startDate: new Date(dto.startDate),
+          endDate: new Date(dto.endDate),
+          hasPaid: false,
+          assignedBy: adminId,
+        },
+      });
+    });
 
     // Enviar email de aprobación al usuario
     await this.emailService.sendRegistrationApprovedEmail(user.email, user.firstName);
@@ -411,15 +435,15 @@ export class AdminUsersService {
       userId,
       type: NotificationType.REGISTRATION_APPROVED,
       title: '¡Registro Aprobado!',
-      message: 'Tu registro ha sido aprobado. Ya puedes iniciar sesión.',
-      data: {},
+      message: `Tu registro ha sido aprobado con el plan ${dto.plan.replace('_', ' ')}. Ya puedes iniciar sesión.`,
+      data: { plan: dto.plan },
     });
 
-    this.logger.log(`User ${userId} registration approved, status changed to ACTIVE`);
+    this.logger.log(`User ${userId} registration approved with plan ${dto.plan}`);
 
     return {
       success: true,
-      message: 'Registro aprobado exitosamente. El usuario puede iniciar sesión.',
+      message: `Registro aprobado exitosamente con plan ${dto.plan.replace('_', ' ')}.`,
     };
   }
 

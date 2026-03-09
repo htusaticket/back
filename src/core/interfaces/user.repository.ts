@@ -57,6 +57,7 @@ export interface IUserRepository {
   updatePassword(id: string, hashedPassword: string): Promise<User>;
   updateStatus(id: string, status: UserStatus): Promise<User>;
   updateNotes(id: string, notes: string): Promise<User>;
+  updateLastLogin(id: string): Promise<User>;
 }
 
 export const USER_REPOSITORY = Symbol('USER_REPOSITORY');

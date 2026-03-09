@@ -29,13 +29,16 @@ export class CreateModuleDto {
   @MaxLength(2000)
   description!: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Module cover image URL',
     example: 'https://images.unsplash.com/...',
   })
-  @IsString()
-  @IsUrl()
-  image!: string;
+  @Transform(({ value }: { value: unknown }) =>
+    value === '' || value === null ? undefined : value,
+  )
+  @IsOptional()
+  @IsUrl({}, { message: 'image must be a valid URL address' })
+  image?: string;
 
   @ApiPropertyOptional({ description: 'Display order', example: 1 })
   @IsOptional()
@@ -65,9 +68,11 @@ export class UpdateModuleDto {
   description?: string;
 
   @ApiPropertyOptional({ description: 'Module cover image URL' })
+  @Transform(({ value }: { value: unknown }) =>
+    value === '' || value === null ? undefined : value,
+  )
   @IsOptional()
-  @IsString()
-  @IsUrl()
+  @IsUrl({}, { message: 'image must be a valid URL address' })
   image?: string;
 
   @ApiPropertyOptional({ description: 'Display order' })
