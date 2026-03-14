@@ -4,6 +4,7 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import express from 'express';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './application/common/filters/http-exception.filter';
 import { LoggingInterceptor } from './application/common/interceptors/logging.interceptors';
@@ -60,6 +61,10 @@ async function bootstrap() {
 
   // Middlewares
   app.use(cookieParser());
+
+  // Increase body size limit for bulk uploads
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   // Interceptors globales
   app.useGlobalInterceptors(

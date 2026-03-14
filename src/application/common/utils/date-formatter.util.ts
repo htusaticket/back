@@ -11,10 +11,10 @@
  */
 export function formatDayString(date: Date): string {
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  today.setUTCHours(0, 0, 0, 0);
 
   const targetDate = new Date(date);
-  targetDate.setHours(0, 0, 0, 0);
+  targetDate.setUTCHours(0, 0, 0, 0);
 
   const diffTime = targetDate.getTime() - today.getTime();
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
@@ -25,12 +25,12 @@ export function formatDayString(date: Date): string {
   // Return day of week for dates within next 7 days
   if (diffDays > 1 && diffDays < 7) {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    return days[targetDate.getDay()]!;
+    return days[targetDate.getUTCDay()]!;
   }
 
   // For dates further out, return day of week
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  return days[targetDate.getDay()]!;
+  return days[targetDate.getUTCDay()]!;
 }
 
 /**
@@ -54,8 +54,8 @@ export function formatDateString(date: Date): string {
     'Dec',
   ];
 
-  const month = months[date.getMonth()]!;
-  const day = date.getDate();
+  const month = months[date.getUTCMonth()]!;
+  const day = date.getUTCDate();
 
   return `${month} ${day}`;
 }
@@ -68,8 +68,8 @@ export function formatDateString(date: Date): string {
  */
 export function formatTimeRange(startTime: Date, endTime: Date): string {
   const formatTime = (date: Date): string => {
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const hours = date.getUTCHours().toString().padStart(2, '0');
+    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes}`;
   };
 
@@ -79,7 +79,7 @@ export function formatTimeRange(startTime: Date, endTime: Date): string {
 /**
  * Formats ClassType enum to lowercase string for frontend
  * @param type ClassType enum value
- * @returns 'regular' | 'workshop'
+ * @returns 'regular' | 'workshop' | 'webinar' | 'qa' | 'masterclass'
  */
 export function formatClassType(type: string): string {
   return type.toLowerCase();

@@ -3,6 +3,8 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -23,10 +25,13 @@ import {
   GetClassesQueryDto,
   CreateClassDto,
   SaveAttendanceDto,
+  UpdateClassDto,
   PaginatedClassesResponseDto,
   ClassAttendeesResponseDto,
   CreateClassResponseDto,
   SaveAttendanceResponseDto,
+  UpdateClassResponseDto,
+  DeleteClassResponseDto,
 } from '@/application/admin/dto/classes';
 
 @ApiTags('Admin - Classes')
@@ -107,5 +112,43 @@ export class AdminClassesController {
     @Body() dto: SaveAttendanceDto,
   ): Promise<SaveAttendanceResponseDto> {
     return this.adminClassesService.saveAttendance(classId, dto);
+  }
+
+  /**
+   * PATCH /api/admin/classes/:id
+   * Actualizar una clase existente
+   */
+  @Patch(':id')
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({
+    summary: 'Actualizar clase',
+    description: 'Actualiza una sesión de clase existente',
+  })
+  @ApiParam({ name: 'id', description: 'ID de la clase' })
+  @ApiResponse({ status: 200, description: 'Clase actualizada' })
+  @ApiResponse({ status: 404, description: 'Clase no encontrada' })
+  async updateClass(
+    @Param('id', ParseIntPipe) classId: number,
+    @Body() dto: UpdateClassDto,
+  ): Promise<UpdateClassResponseDto> {
+    return this.adminClassesService.updateClass(classId, dto);
+  }
+
+  /**
+   * DELETE /api/admin/classes/:id
+   * Eliminar una clase
+   */
+  @Delete(':id')
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Eliminar clase',
+    description: 'Elimina una sesión de clase y sus inscripciones',
+  })
+  @ApiParam({ name: 'id', description: 'ID de la clase' })
+  @ApiResponse({ status: 200, description: 'Clase eliminada' })
+  @ApiResponse({ status: 404, description: 'Clase no encontrada' })
+  async deleteClass(@Param('id', ParseIntPipe) classId: number): Promise<DeleteClassResponseDto> {
+    return this.adminClassesService.deleteClass(classId);
   }
 }
