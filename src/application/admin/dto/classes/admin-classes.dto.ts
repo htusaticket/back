@@ -116,6 +116,50 @@ export class SaveAttendanceDto {
   autoStrike?: boolean = true;
 }
 
+export class UpdateClassDto {
+  @ApiPropertyOptional({ example: 'Updated Conversation Class' })
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @ApiPropertyOptional({ description: 'Descripción de la clase' })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional({ enum: ClassType })
+  @IsOptional()
+  @IsEnum(ClassType)
+  type?: ClassType;
+
+  @ApiPropertyOptional({ description: 'Fecha y hora de inicio (ISO 8601)' })
+  @IsOptional()
+  @IsDateString()
+  startTime?: string;
+
+  @ApiPropertyOptional({ description: 'Fecha y hora de fin (ISO 8601)' })
+  @IsOptional()
+  @IsDateString()
+  endTime?: string;
+
+  @ApiPropertyOptional({ description: 'Capacidad máxima' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  capacityMax?: number;
+
+  @ApiPropertyOptional({ description: 'Link de la reunión' })
+  @IsOptional()
+  @IsString()
+  meetLink?: string;
+
+  @ApiPropertyOptional({ description: 'Link de materiales / grabación' })
+  @IsOptional()
+  @IsString()
+  materialsLink?: string;
+}
+
 // ==================== RESPONSE INTERFACES ====================
 
 export interface ClassListItemDto {
@@ -166,4 +210,15 @@ export interface SaveAttendanceResponseDto {
   success: boolean;
   message: string;
   strikesIssued: number;
+}
+
+export interface UpdateClassResponseDto {
+  success: boolean;
+  message: string;
+  classSession: ClassListItemDto;
+}
+
+export interface DeleteClassResponseDto {
+  success: boolean;
+  message: string;
 }

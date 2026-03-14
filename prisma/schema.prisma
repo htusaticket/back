@@ -41,6 +41,9 @@ enum SubscriptionStatus {
 enum ClassType {
   REGULAR
   WORKSHOP
+  WEBINAR
+  QA
+  MASTERCLASS
 }
 
 enum ChallengeType {

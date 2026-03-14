@@ -26,7 +26,9 @@ export class EmailService {
    * Obtiene los emails de los superadmins configurados
    */
   getSuperadminEmails(): string[] {
-    return this.env.SUPERADMIN_EMAILS.split(',').map(email => email.trim()).filter(email => email.length > 0);
+    return this.env.SUPERADMIN_EMAILS.split(',')
+      .map(email => email.trim())
+      .filter(email => email.length > 0);
   }
 
   /**

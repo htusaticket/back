@@ -14,10 +14,13 @@ import {
   GetClassesQueryDto,
   CreateClassDto,
   SaveAttendanceDto,
+  UpdateClassDto,
   PaginatedClassesResponseDto,
   ClassAttendeesResponseDto,
   CreateClassResponseDto,
   SaveAttendanceResponseDto,
+  UpdateClassResponseDto,
+  DeleteClassResponseDto,
   ClassListItemDto,
   ClassAttendeeDto,
 } from '../dto/classes';
@@ -265,6 +268,80 @@ export class AdminClassesService {
       success: true,
       message: `Asistencia guardada. ${strikesIssued > 0 ? `Se emitieron ${strikesIssued} strikes por ausencias.` : ''}`,
       strikesIssued,
+    };
+  }
+
+  /**
+   * Actualizar una clase existente
+   */
+  async updateClass(classId: number, dto: UpdateClassDto): Promise<UpdateClassResponseDto> {
+    this.logger.log(`Updating class: ${classId}`);
+
+    const existing = await this.prisma.classSession.findUnique({ where: { id: classId } });
+    if (!existing) {
+      throw new NotFoundException('Clase no encontrada');
+    }
+
+    const data: Record<string, unknown> = {};
+    if (dto.title !== undefined) data.title = dto.title;
+    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.type !== undefined) data.type = dto.type;
+    if (dto.startTime !== undefined) data.startTime = new Date(dto.startTime);
+    if (dto.endTime !== undefined) data.endTime = new Date(dto.endTime);
+    if (dto.capacityMax !== undefined) data.capacityMax = dto.capacityMax;
+    if (dto.meetLink !== undefined) data.meetLink = dto.meetLink;
+    if (dto.materialsLink !== undefined) data.materialsLink = dto.materialsLink;
+
+    const startTime = (data.startTime as Date) || existing.startTime;
+    const endTime = (data.endTime as Date) || existing.endTime;
+    if (endTime <= startTime) {
+      throw new BadRequestException('La fecha de fin debe ser posterior a la de inicio');
+    }
+
+    const updated = await this.prisma.classSession.update({
+      where: { id: classId },
+      data,
+      include: {
+        _count: { select: { enrollments: { where: { status: 'CONFIRMED' } } } },
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Clase actualizada exitosamente',
+      classSession: {
+        id: updated.id,
+        title: updated.title,
+        type: updated.type,
+        startTime: updated.startTime,
+        endTime: updated.endTime,
+        capacityMax: updated.capacityMax,
+        enrolledCount: updated._count.enrollments,
+        meetLink: updated.meetLink,
+        description: updated.description,
+        createdAt: updated.createdAt,
+      },
+    };
+  }
+
+  /**
+   * Eliminar una clase y sus inscripciones
+   */
+  async deleteClass(classId: number): Promise<DeleteClassResponseDto> {
+    this.logger.log(`Deleting class: ${classId}`);
+
+    const existing = await this.prisma.classSession.findUnique({ where: { id: classId } });
+    if (!existing) {
+      throw new NotFoundException('Clase no encontrada');
+    }
+
+    // Delete enrollments first (foreign key constraint), then the class
+    await this.prisma.classEnrollment.deleteMany({ where: { classSessionId: classId } });
+    await this.prisma.classSession.delete({ where: { id: classId } });
+
+    return {
+      success: true,
+      message: 'Clase eliminada exitosamente',
     };
   }
 }
