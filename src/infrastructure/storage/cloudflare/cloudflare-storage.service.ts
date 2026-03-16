@@ -64,6 +64,14 @@ export class CloudflareStorageService implements OnModuleInit {
       this.bucketName = bucketName;
       this.publicUrl = publicUrl || '';
       this.isConfigured = true;
+
+      if (!this.publicUrl) {
+        this.logger.warn(
+          '⚠️ CLOUDFLARE_R2_PUBLIC_URL is not set. File uploads will fail because a valid public URL cannot be generated. ' +
+            'Set it to your R2 public bucket URL (e.g. https://pub-xxxxx.r2.dev)',
+        );
+      }
+
       this.logger.log('✅ Cloudflare R2 Storage initialized successfully');
     } catch (error) {
       this.logger.error('❌ Failed to initialize Cloudflare R2 Storage', error);
@@ -118,9 +126,17 @@ export class CloudflareStorageService implements OnModuleInit {
       await this.s3Client.send(new PutObjectCommand(params));
 
       // Construir URL pública
-      const publicUrl = this.publicUrl
-        ? `${this.publicUrl}/${filename}`
-        : `https://${this.bucketName}.r2.dev/${filename}`;
+      if (!this.publicUrl) {
+        this.logger.error(
+          '❌ CLOUDFLARE_R2_PUBLIC_URL is not configured. Cannot generate a valid public URL. ' +
+            'Set CLOUDFLARE_R2_PUBLIC_URL in .env (e.g. https://pub-xxxxx.r2.dev)',
+        );
+        throw new Error(
+          'CLOUDFLARE_R2_PUBLIC_URL is not configured. Cannot generate a valid public URL for uploaded files.',
+        );
+      }
+
+      const publicUrl = `${this.publicUrl}/${filename}`;
 
       this.logger.log(`✅ Audio uploaded successfully: ${publicUrl}`);
       return publicUrl;
@@ -181,9 +197,16 @@ export class CloudflareStorageService implements OnModuleInit {
     await this.s3Client.send(new PutObjectCommand(params));
 
     // Construir URL pública
-    const publicUrl = this.publicUrl
-      ? `${this.publicUrl}/${filename}`
-      : `https://${this.bucketName}.r2.dev/${filename}`;
+    if (!this.publicUrl) {
+      this.logger.error(
+        '❌ CLOUDFLARE_R2_PUBLIC_URL is not configured. Cannot generate a valid public URL.',
+      );
+      throw new Error(
+        'CLOUDFLARE_R2_PUBLIC_URL is not configured. Cannot generate a valid public URL for uploaded files.',
+      );
+    }
+
+    const publicUrl = `${this.publicUrl}/${filename}`;
 
     this.logger.log(`Lesson resource uploaded successfully: ${filename}`);
     return publicUrl;

@@ -1,5 +1,6 @@
 // src/application/admin/services/admin-submissions.service.ts
 import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ChallengeType, NotificationType, SubmissionStatus } from '@prisma/client';
 
 import { INotificationRepository, NOTIFICATION_REPOSITORY } from '@/core/interfaces';
@@ -17,12 +18,35 @@ import {
 @Injectable()
 export class AdminSubmissionsService {
   private readonly logger = new Logger(AdminSubmissionsService.name);
+  private readonly r2PublicUrl: string;
 
   constructor(
     @Inject(NOTIFICATION_REPOSITORY)
     private readonly notificationRepository: INotificationRepository,
     private readonly prisma: PrismaService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.r2PublicUrl = this.configService.get<string>('CLOUDFLARE_R2_PUBLIC_URL') || '';
+  }
+
+  /**
+   * Normaliza una URL de archivo R2, reemplazando el patrón incorrecto
+   * bucket-name.r2.dev por la URL pública correcta configurada en el env.
+   */
+  private normalizeFileUrl(fileUrl: string | null): string | null {
+    if (!fileUrl) return null;
+    if (!this.r2PublicUrl) return fileUrl;
+
+    // Reemplazar URLs con patrón incorrecto: https://{bucket}.r2.dev/...
+    // por la URL pública correcta: https://pub-xxx.r2.dev/...
+    const incorrectPattern = /^https:\/\/[a-z0-9-]+\.r2\.dev\//;
+    if (incorrectPattern.test(fileUrl) && !fileUrl.startsWith(this.r2PublicUrl)) {
+      const path = fileUrl.replace(incorrectPattern, '');
+      return `${this.r2PublicUrl}/${path}`;
+    }
+
+    return fileUrl;
+  }
 
   /**
    * Obtener lista de submissions de audio pendientes/historial
@@ -95,7 +119,7 @@ export class AdminSubmissionsService {
           studentEmail: s.user.email,
           studentAvatar: s.user.avatar,
           status: s.status,
-          fileUrl: s.fileUrl,
+          fileUrl: this.normalizeFileUrl(s.fileUrl),
           submittedAt: s.createdAt,
           feedback: s.feedback,
           score: s.score,
