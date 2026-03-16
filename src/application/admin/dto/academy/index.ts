@@ -11,7 +11,7 @@ import {
   IsUrl,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
-import { ResourceType } from '@prisma/client';
+import { ResourceType, ModuleStatus } from '@prisma/client';
 
 // ==================== Module DTOs ====================
 
@@ -52,6 +52,11 @@ export class CreateModuleDto {
   @IsBoolean()
   @Transform(({ value }: { value: unknown }) => value === 'true' || value === true)
   visibleForSkillBuilder?: boolean;
+
+  @ApiPropertyOptional({ description: 'Module status', enum: ModuleStatus, default: 'DRAFT' })
+  @IsOptional()
+  @IsEnum(ModuleStatus)
+  status?: ModuleStatus;
 }
 
 export class UpdateModuleDto {
@@ -87,6 +92,11 @@ export class UpdateModuleDto {
   @IsBoolean()
   @Transform(({ value }: { value: unknown }) => value === 'true' || value === true)
   visibleForSkillBuilder?: boolean;
+
+  @ApiPropertyOptional({ description: 'Module status', enum: ModuleStatus })
+  @IsOptional()
+  @IsEnum(ModuleStatus)
+  status?: ModuleStatus;
 }
 
 export class ModuleResponseDto {
@@ -107,6 +117,9 @@ export class ModuleResponseDto {
 
   @ApiProperty()
   visibleForSkillBuilder!: boolean;
+
+  @ApiProperty({ enum: ModuleStatus })
+  status!: ModuleStatus;
 
   @ApiProperty()
   lessonsCount!: number;
