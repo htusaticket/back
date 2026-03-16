@@ -29,6 +29,7 @@ export class AcademyRepository implements IAcademyRepository {
 
   async findModulesWithProgress(userId: string): Promise<ModuleWithProgress[]> {
     const modules = await this.prisma.module.findMany({
+      where: { status: 'PUBLISHED' },
       orderBy: { order: 'asc' },
       include: {
         lessons: {
@@ -215,8 +216,11 @@ export class AcademyRepository implements IAcademyRepository {
     totalLessons: number;
     totalTimeMinutes: number;
   }> {
-    // Obtener todas las lecciones con progreso del usuario
+    // Obtener todas las lecciones de módulos publicados con progreso del usuario
     const lessons = await this.prisma.lesson.findMany({
+      where: {
+        module: { status: 'PUBLISHED' },
+      },
       include: {
         userProgress: {
           where: { userId },

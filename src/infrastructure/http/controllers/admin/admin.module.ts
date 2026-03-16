@@ -28,6 +28,7 @@ import { AdminChallengesService } from '@/application/admin/services/admin-chall
 import { EmailService } from '@/application/auth/services/email.service';
 
 import { PrismaModule } from '@/infrastructure/persistence/prisma/prisma.module';
+import { CloudflareStorageModule } from '@/infrastructure/storage/cloudflare/cloudflare-storage.module';
 import { PrismaUserRepository } from '@/infrastructure/persistence/prisma/repositories/user.repository';
 import { PrismaStrikeRepository } from '@/infrastructure/persistence/prisma/repositories/strike.repository';
 import { PrismaClassSessionRepository } from '@/infrastructure/persistence/prisma/repositories/class-session.repository';
@@ -45,6 +46,7 @@ const env = getEnvConfig();
 @Module({
   imports: [
     PrismaModule,
+    CloudflareStorageModule,
     JwtModule.register({
       secret: env.JWT_SECRET,
       signOptions: { expiresIn: env.JWT_EXPIRES_IN },

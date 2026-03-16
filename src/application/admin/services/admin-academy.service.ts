@@ -1,6 +1,7 @@
 // Admin Academy Service
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@/infrastructure/persistence/prisma/prisma.service';
+import { CloudflareStorageService } from '@/infrastructure/storage/cloudflare/cloudflare-storage.service';
 import { AuditLogService } from './audit-log.service';
 import { Prisma } from '@prisma/client';
 import {
@@ -24,6 +25,7 @@ export class AdminAcademyService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditLogService,
+    private readonly storageService: CloudflareStorageService,
   ) {}
 
   // ==================== MODULES ====================
@@ -61,6 +63,7 @@ export class AdminAcademyService {
         description: m.description,
         image: m.image,
         order: m.order,
+        status: m.status,
         visibleForSkillBuilder: m.visibleForSkillBuilder,
         lessonsCount: m._count.lessons,
         createdAt: m.createdAt,
@@ -99,6 +102,7 @@ export class AdminAcademyService {
       description: module.description,
       image: module.image,
       order: module.order,
+      status: module.status,
       visibleForSkillBuilder: module.visibleForSkillBuilder,
       lessonsCount: module._count.lessons,
       createdAt: module.createdAt,
@@ -141,6 +145,7 @@ export class AdminAcademyService {
         description: data.description,
         image: data.image || defaultImage,
         order: data.order ?? (maxOrder._max.order ?? 0) + 1,
+        status: data.status ?? 'DRAFT',
         visibleForSkillBuilder: data.visibleForSkillBuilder ?? false,
       },
       include: {
@@ -169,6 +174,7 @@ export class AdminAcademyService {
       description: module.description,
       image: module.image,
       order: module.order,
+      status: module.status,
       visibleForSkillBuilder: module.visibleForSkillBuilder,
       lessonsCount: module._count.lessons,
       createdAt: module.createdAt,
@@ -193,6 +199,7 @@ export class AdminAcademyService {
     if (data.order !== undefined) updateData.order = data.order;
     if (data.visibleForSkillBuilder !== undefined)
       updateData.visibleForSkillBuilder = data.visibleForSkillBuilder;
+    if (data.status !== undefined) updateData.status = data.status;
 
     const module = await this.prisma.module.update({
       where: { id },
@@ -223,6 +230,7 @@ export class AdminAcademyService {
       description: module.description,
       image: module.image,
       order: module.order,
+      status: module.status,
       visibleForSkillBuilder: module.visibleForSkillBuilder,
       lessonsCount: module._count.lessons,
       createdAt: module.createdAt,
@@ -274,13 +282,26 @@ export class AdminAcademyService {
       _max: { order: true },
     });
 
+    const targetOrder = data.order ?? (maxOrder._max.order ?? 0) + 1;
+
+    // If a lesson already exists with this order, shift subsequent lessons up
+    const existingWithOrder = await this.prisma.lesson.findFirst({
+      where: { moduleId, order: targetOrder },
+    });
+    if (existingWithOrder) {
+      await this.prisma.lesson.updateMany({
+        where: { moduleId, order: { gte: targetOrder } },
+        data: { order: { increment: 1 } },
+      });
+    }
+
     const lesson = await this.prisma.lesson.create({
       data: {
         title: data.title,
         description: data.description ?? null,
         duration: data.duration,
         contentUrl: data.contentUrl ?? null,
-        order: data.order ?? (maxOrder._max.order ?? 0) + 1,
+        order: targetOrder,
         moduleId,
       },
       include: {
@@ -444,5 +465,124 @@ export class AdminAcademyService {
     await this.prisma.lessonResource.delete({ where: { id: resourceId } });
 
     return { success: true, message: 'Recurso eliminado correctamente' };
+  }
+
+  async uploadLessonResource(
+    lessonId: number,
+    file: Express.Multer.File,
+    _adminInfo: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<LessonResourceDto> {
+    const lesson = await this.prisma.lesson.findUnique({ where: { id: lessonId } });
+    if (!lesson) {
+      throw new NotFoundException(`Lección con ID ${lessonId} no encontrada`);
+    }
+
+    if (!this.storageService.isReady()) {
+      throw new BadRequestException('El servicio de almacenamiento no está configurado');
+    }
+
+    // Upload file to Cloudflare R2
+    const fileUrl = await this.storageService.uploadLessonResource(
+      file.buffer,
+      lessonId,
+      file.originalname,
+      file.mimetype,
+    );
+
+    // Determine resource type from mime
+    let resourceType: 'PDF' | 'LINK' | 'VIDEO' | 'DOCUMENT' = 'DOCUMENT';
+    if (file.mimetype === 'application/pdf') {
+      resourceType = 'PDF';
+    } else if (file.mimetype.startsWith('video/')) {
+      resourceType = 'VIDEO';
+    }
+
+    // Format file size
+    const sizeInKB = file.size / 1024;
+    const sizeStr =
+      sizeInKB >= 1024 ? `${(sizeInKB / 1024).toFixed(1)} MB` : `${Math.round(sizeInKB)} KB`;
+
+    const resource = await this.prisma.lessonResource.create({
+      data: {
+        title: file.originalname,
+        fileUrl,
+        type: resourceType,
+        size: sizeStr,
+        lessonId,
+      },
+    });
+
+    this.logger.log(`Resource uploaded for lesson ${lessonId}: ${file.originalname}`);
+
+    return {
+      id: resource.id,
+      title: resource.title,
+      fileUrl: resource.fileUrl,
+      type: resource.type,
+      size: resource.size ?? undefined,
+    };
+  }
+
+  async reorderModules(
+    orderedIds: number[],
+    adminInfo: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<{ success: boolean }> {
+    // Update each module's order based on array position
+    await this.prisma.$transaction(
+      orderedIds.map((id, index) =>
+        this.prisma.module.update({
+          where: { id },
+          data: { order: index + 1 },
+        }),
+      ),
+    );
+
+    await this.auditService.createLog({
+      adminId: adminInfo.adminId,
+      adminEmail: adminInfo.adminEmail,
+      adminName: adminInfo.adminName,
+      action: 'MODULES_REORDERED',
+      targetType: 'MODULE',
+      targetId: 'bulk',
+      targetName: 'Reorder modules',
+      details: { orderedIds },
+      ipAddress: adminInfo.ip,
+    });
+
+    return { success: true };
+  }
+
+  async reorderLessons(
+    moduleId: number,
+    orderedIds: number[],
+    adminInfo: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<{ success: boolean }> {
+    const module = await this.prisma.module.findUnique({ where: { id: moduleId } });
+    if (!module) {
+      throw new NotFoundException(`Módulo con ID ${moduleId} no encontrado`);
+    }
+
+    await this.prisma.$transaction(
+      orderedIds.map((id, index) =>
+        this.prisma.lesson.update({
+          where: { id },
+          data: { order: index + 1 },
+        }),
+      ),
+    );
+
+    await this.auditService.createLog({
+      adminId: adminInfo.adminId,
+      adminEmail: adminInfo.adminEmail,
+      adminName: adminInfo.adminName,
+      action: 'LESSONS_REORDERED',
+      targetType: 'LESSON',
+      targetId: moduleId.toString(),
+      targetName: `Reorder lessons in module ${moduleId}`,
+      details: { moduleId, orderedIds },
+      ipAddress: adminInfo.ip,
+    });
+
+    return { success: true };
   }
 }

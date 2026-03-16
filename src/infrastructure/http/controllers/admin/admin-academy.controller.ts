@@ -9,10 +9,22 @@ import {
   Param,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
   ParseIntPipe,
   Req,
+  BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+  ApiParam,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Request } from 'express';
 import { JwtAuthGuard } from '@/application/auth/guards/jwt-auth.guard';
@@ -50,6 +62,56 @@ export class AdminAcademyController {
   @ApiResponse({ status: 200, type: ModulesListResponseDto })
   async getModules(@Query() query: GetModulesQueryDto): Promise<ModulesListResponseDto> {
     return this.academyService.getModules(query);
+  }
+
+  @Put('modules/reorder')
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Reorder modules' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { orderedIds: { type: 'array', items: { type: 'number' } } },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Modules reordered successfully' })
+  async reorderModules(
+    @Body() body: { orderedIds: number[] },
+    @CurrentUser() user: JwtPayload,
+    @Req() req: Request,
+  ) {
+    const adminInfo = {
+      adminId: user.userId,
+      adminEmail: user.email,
+      adminName: user.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.academyService.reorderModules(body.orderedIds, adminInfo);
+  }
+
+  @Put('modules/:moduleId/lessons/reorder')
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Reorder lessons within a module' })
+  @ApiParam({ name: 'moduleId', type: Number })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { orderedIds: { type: 'array', items: { type: 'number' } } },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Lessons reordered successfully' })
+  async reorderLessons(
+    @Param('moduleId', ParseIntPipe) moduleId: number,
+    @Body() body: { orderedIds: number[] },
+    @CurrentUser() user: JwtPayload,
+    @Req() req: Request,
+  ) {
+    const adminInfo = {
+      adminId: user.userId,
+      adminEmail: user.email,
+      adminName: user.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.academyService.reorderLessons(moduleId, body.orderedIds, adminInfo);
   }
 
   @Get('modules/:id')
@@ -218,5 +280,76 @@ export class AdminAcademyController {
       ip: req.ip ?? 'unknown',
     };
     return this.academyService.deleteLessonResource(id, adminInfo);
+  }
+
+  @Post('lessons/:lessonId/resources/upload')
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: 20 * 1024 * 1024, // 20MB max
+      },
+      fileFilter: (
+        _req: Request,
+        file: Express.Multer.File,
+        callback: (error: Error | null, acceptFile: boolean) => void,
+      ) => {
+        const allowedMimes = [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'application/vnd.ms-powerpoint',
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          'image/jpeg',
+          'image/png',
+          'image/gif',
+          'image/webp',
+          'video/mp4',
+          'video/webm',
+          'audio/mpeg',
+          'audio/mp3',
+          'text/plain',
+        ];
+        if (allowedMimes.includes(file.mimetype)) {
+          callback(null, true);
+        } else {
+          callback(
+            new BadRequestException(`Tipo de archivo no permitido: ${file.mimetype}`),
+            false,
+          );
+        }
+      },
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload a resource file for a lesson' })
+  @ApiParam({ name: 'lessonId', type: Number })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary', description: 'Resource file' },
+      },
+    },
+  })
+  @ApiResponse({ status: 201, type: LessonResourceDto })
+  async uploadLessonResource(
+    @Param('lessonId', ParseIntPipe) lessonId: number,
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: JwtPayload,
+    @Req() req: Request,
+  ): Promise<LessonResourceDto> {
+    if (!file) {
+      throw new BadRequestException('No se proporcionó ningún archivo');
+    }
+    const adminInfo = {
+      adminId: user.userId,
+      adminEmail: user.email,
+      adminName: user.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.academyService.uploadLessonResource(lessonId, file, adminInfo);
   }
 }

@@ -77,6 +77,12 @@ enum ResourceType {
   DOCUMENT
 }
 
+enum ModuleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 enum NotificationType {
   STRIKE_APPLIED
   CLASS_REMINDER
@@ -229,6 +235,7 @@ model Module {
   description String
   image       String // URL
   order       Int    @default(0)
+  status      ModuleStatus @default(PUBLISHED)
   visibleForSkillBuilder Boolean @default(false) @map("visible_for_skill_builder") // Si es visible para plan SKILL_BUILDER
 
   lessons      Lesson[]
@@ -556,9 +563,11 @@ enum AuditAction {
   MODULE_CREATED
   MODULE_UPDATED
   MODULE_DELETED
+  MODULES_REORDERED
   LESSON_CREATED
   LESSON_UPDATED
   LESSON_DELETED
+  LESSONS_REORDERED
   
   // Challenge actions
   CHALLENGE_CREATED
