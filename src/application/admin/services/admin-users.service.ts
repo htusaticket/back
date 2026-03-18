@@ -296,17 +296,61 @@ export class AdminUsersService {
   }
 
   /**
-   * Actualizar notas del administrador
+   * Actualizar notas del administrador (scoped per admin)
+   * Stores notes as JSON: { "adminId": { "note": "text", "updatedAt": "ISO", "adminName": "Name" }, ... }
    */
-  async updateUserNotes(userId: string, dto: UpdateUserNotesDto): Promise<UpdateStatusResponseDto> {
-    this.logger.log(`Updating notes for user ${userId}`);
+  async updateUserNotes(
+    userId: string,
+    dto: UpdateUserNotesDto,
+    adminId?: string,
+  ): Promise<UpdateStatusResponseDto> {
+    this.logger.log(`Updating notes for user ${userId} by admin ${adminId}`);
 
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new NotFoundException('Usuario no encontrado');
     }
 
-    await this.userRepository.updateNotes(userId, dto.notes);
+    // If adminId provided, store per-admin notes as JSON
+    if (adminId) {
+      let notesObj: Record<string, { note: string; updatedAt: string; adminName?: string }> = {};
+
+      // Try to parse existing notes as JSON
+      if (user.adminNotes) {
+        try {
+          notesObj = JSON.parse(user.adminNotes) as Record<
+            string,
+            { note: string; updatedAt: string; adminName?: string }
+          >;
+        } catch {
+          // Legacy plain text notes - migrate to JSON under 'legacy' key
+          notesObj = { legacy: { note: user.adminNotes, updatedAt: new Date().toISOString() } };
+        }
+      }
+
+      // Fetch admin name
+      let adminName = 'Admin';
+      try {
+        const admin = await this.userRepository.findById(adminId);
+        if (admin) {
+          adminName = [admin.firstName, admin.lastName].filter(Boolean).join(' ') || admin.email;
+        }
+      } catch {
+        // If lookup fails, use fallback
+      }
+
+      // Update this admin's note
+      notesObj[adminId] = {
+        note: dto.notes,
+        updatedAt: new Date().toISOString(),
+        adminName,
+      };
+
+      await this.userRepository.updateNotes(userId, JSON.stringify(notesObj));
+    } else {
+      // Fallback: store as plain text
+      await this.userRepository.updateNotes(userId, dto.notes);
+    }
 
     return {
       success: true,
@@ -597,6 +641,50 @@ export class AdminUsersService {
   }
 
   /**
+   * Eliminar permanentemente un usuario/admin y todas sus relaciones
+   * Solo SUPERADMIN puede ejecutar esta acción
+   * No se puede eliminar al propio usuario ni a otro SUPERADMIN
+   */
+  async deleteUser(
+    userId: string,
+    currentUserId: string,
+    currentRole: string,
+  ): Promise<UpdateStatusResponseDto> {
+    this.logger.log(`Permanently deleting user ${userId}`);
+
+    if (userId === currentUserId) {
+      throw new ForbiddenException('No puedes eliminar tu propia cuenta');
+    }
+
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    // Don't allow deleting other SUPERADMINs
+    if (user.role === 'SUPERADMIN' && currentRole !== 'SUPERADMIN') {
+      throw new ForbiddenException('No se puede eliminar a un Super Admin');
+    }
+    if (user.role === 'SUPERADMIN') {
+      throw new ForbiddenException(
+        'No se puede eliminar a otro Super Admin. Primero cambia su rol.',
+      );
+    }
+
+    // Delete user and all relations (cascaded by Prisma schema)
+    await this.prisma.user.delete({
+      where: { id: userId },
+    });
+
+    this.logger.warn(`User ${userId} (${user.email}) permanently deleted by ${currentUserId}`);
+
+    return {
+      success: true,
+      message: `Usuario ${user.email} eliminado permanentemente.`,
+    };
+  }
+
+  /**
    * Obtener estadísticas de un usuario
    */
   private async getUserStats(userId: string): Promise<UserStatsDto> {
@@ -634,6 +722,10 @@ export class AdminUsersService {
       },
     });
 
+    const jobApplicationsCount = await this.prisma.jobApplication.count({
+      where: { userId },
+    });
+
     return {
       attendancePercentage,
       totalClassesEnrolled,
@@ -641,6 +733,7 @@ export class AdminUsersService {
       modulesCompleted,
       totalModules,
       challengesCompleted,
+      jobApplicationsCount,
     };
   }
 

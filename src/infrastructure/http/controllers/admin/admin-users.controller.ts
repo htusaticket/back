@@ -154,8 +154,9 @@ export class AdminUsersController {
   async updateUserNotes(
     @Param('id') userId: string,
     @Body() dto: UpdateUserNotesDto,
+    @CurrentUser() admin: JwtPayload,
   ): Promise<UpdateStatusResponseDto> {
-    return this.adminUsersService.updateUserNotes(userId, dto);
+    return this.adminUsersService.updateUserNotes(userId, dto, admin.userId);
   }
 
   /**
@@ -275,6 +276,36 @@ export class AdminUsersController {
     @CurrentUser() currentUser: JwtPayload,
   ): Promise<UpdateStatusResponseDto> {
     return this.adminUsersService.unsuspendUser(userId, currentUser.role as UserRole);
+  }
+
+  /**
+   * DELETE /api/admin/users/:id
+   * Eliminar permanentemente un usuario/admin y todas sus relaciones - Solo SUPERADMIN
+   */
+  @Delete(':id')
+  @Roles(UserRole.SUPERADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Eliminar usuario permanentemente',
+    description:
+      'Elimina un usuario/admin completamente de la BD junto con todas sus relaciones. Solo SUPERADMIN. Esta acción es irreversible.',
+  })
+  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiResponse({ status: 200, description: 'Usuario eliminado permanentemente' })
+  @ApiResponse({
+    status: 403,
+    description: 'No se puede eliminar al propio usuario o a otro SUPERADMIN',
+  })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async deleteUser(
+    @Param('id') userId: string,
+    @CurrentUser() currentUser: JwtPayload,
+  ): Promise<UpdateStatusResponseDto> {
+    return this.adminUsersService.deleteUser(
+      userId,
+      currentUser.userId,
+      currentUser.role as UserRole,
+    );
   }
 
   /**

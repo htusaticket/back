@@ -1,6 +1,6 @@
 // src/application/admin/services/admin-classes.service.ts
 import { Injectable, Inject, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
-import { AttendanceStatus, UserStatus, NotificationType } from '@prisma/client';
+import { AttendanceStatus, NotificationType } from '@prisma/client';
 
 import {
   IStrikeRepository,
@@ -235,16 +235,27 @@ export class AdminClassesService {
 
           const strikeInfo = await this.strikeRepository.getStrikeInfo(record.userId);
           if (strikeInfo.strikesCount >= strikeInfo.maxStrikes) {
+            // Apply punishment (block live classes), NOT suspension/ban
+            const config = (await this.prisma.systemConfig.findUnique({
+              where: { id: 'default' },
+            })) || { punishmentDurationDays: 14 };
+
+            const punishedUntil = new Date();
+            punishedUntil.setDate(punishedUntil.getDate() + config.punishmentDurationDays);
+
             await this.prisma.user.update({
               where: { id: record.userId },
-              data: { status: UserStatus.SUSPENDED },
+              data: {
+                isPunished: true,
+                punishedUntil,
+              },
             });
 
             await this.notificationRepository.create({
               userId: record.userId,
               type: NotificationType.STRIKE_APPLIED,
-              title: 'Cuenta Suspendida',
-              message: `Tu cuenta ha sido suspendida por acumular ${strikeInfo.maxStrikes} strikes.`,
+              title: 'Acceso a Clases Restringido',
+              message: `Tu acceso a clases en vivo ha sido restringido por acumular ${strikeInfo.maxStrikes} strikes. Podrás volver a inscribirte después del ${punishedUntil.toLocaleDateString()}.`,
               data: { classSessionId: classId },
             });
           } else {

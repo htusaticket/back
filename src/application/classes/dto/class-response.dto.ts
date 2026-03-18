@@ -41,6 +41,9 @@ export class ClassResponseDto {
   meetLink!: string | null;
 
   @ApiProperty({ nullable: true })
+  materialsLink!: string | null;
+
+  @ApiProperty({ nullable: true })
   description!: string | null;
 }
 
