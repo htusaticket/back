@@ -211,6 +211,7 @@ export interface UserStatsDto {
   modulesCompleted: number;
   totalModules: number;
   challengesCompleted: number;
+  jobApplicationsCount: number;
 }
 
 export interface ModuleProgressDto {

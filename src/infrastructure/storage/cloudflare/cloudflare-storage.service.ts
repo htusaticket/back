@@ -157,6 +157,20 @@ export class CloudflareStorageService implements OnModuleInit {
         code: errorCode,
         statusCode: statusCode,
       });
+
+      // Provide more helpful error message for common issues
+      if (errorCode === 'SignatureDoesNotMatch' || errorMessage.includes('SignatureDoesNotMatch')) {
+        this.logger.error(
+          '⚠️ SignatureDoesNotMatch: This usually means the CLOUDFLARE_R2_ACCESS_KEY_ID or ' +
+            'CLOUDFLARE_R2_SECRET_ACCESS_KEY in your .env file is incorrect. ' +
+            'Please verify your Cloudflare R2 API token credentials.',
+        );
+        throw new Error(
+          'Storage authentication failed. Please verify the Cloudflare R2 credentials ' +
+            '(CLOUDFLARE_R2_ACCESS_KEY_ID and CLOUDFLARE_R2_SECRET_ACCESS_KEY) in your .env file.',
+        );
+      }
+
       throw new Error(`Failed to upload file to storage: ${errorMessage}`);
     }
   }

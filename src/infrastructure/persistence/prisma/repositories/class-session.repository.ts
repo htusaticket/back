@@ -76,6 +76,7 @@ export class PrismaClassSessionRepository implements IClassSessionRepository {
           classSession.capacityMax !== null &&
           classSession._count.enrollments >= classSession.capacityMax,
         meetLink: classSession.meetLink,
+        materialsLink: classSession.materialsLink,
         description: classSession.description,
       };
     });
@@ -128,6 +129,7 @@ export class PrismaClassSessionRepository implements IClassSessionRepository {
         enrollment.classSession.capacityMax !== null &&
         enrollment.classSession._count.enrollments >= enrollment.classSession.capacityMax,
       meetLink: enrollment.classSession.meetLink,
+      materialsLink: enrollment.classSession.materialsLink,
       description: enrollment.classSession.description,
     }));
   }

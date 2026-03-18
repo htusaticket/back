@@ -42,13 +42,19 @@ export class AdminDashboardService {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Calculate week start (7 days ago)
+    // Calculate week start (Monday of current week)
     const weekStart = new Date(today);
-    weekStart.setDate(weekStart.getDate() - 7);
+    const dayOfWeek = weekStart.getDay(); // 0=Sunday, 1=Monday, ...
+    const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    weekStart.setDate(weekStart.getDate() - diffToMonday);
+
+    // Calculate week end (Sunday end of current week)
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
 
     // Use week range for weekly stats, today for daily
     const periodStart = period === 'week' ? weekStart : today;
-    const periodEnd = tomorrow;
+    const periodEnd = period === 'week' ? weekEnd : tomorrow;
 
     const [
       totalUsers,
@@ -77,12 +83,15 @@ export class AdminDashboardService {
       this.prisma.jobOffer.count({
         where: { isActive: true },
       }),
-      // Classes in period (today or this week)
+      // Classes in period (today or this week) - only upcoming/ongoing, not finished
       this.prisma.classSession.count({
         where: {
           startTime: {
             gte: periodStart,
             lt: periodEnd,
+          },
+          endTime: {
+            gt: new Date(), // Only count classes that haven't ended yet
           },
         },
       }),
