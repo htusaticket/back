@@ -140,6 +140,29 @@ export class AdminUsersService {
     // Obtener progreso de módulos
     const moduleProgress = await this.getModuleProgress(userId);
 
+    // Obtener enrollments de clases
+    const classEnrollments = await this.prisma.classEnrollment.findMany({
+      where: {
+        userId,
+        status: 'CONFIRMED',
+      },
+      include: {
+        classSession: {
+          select: {
+            id: true,
+            title: true,
+            startTime: true,
+            type: true,
+          },
+        },
+      },
+      orderBy: {
+        classSession: {
+          startTime: 'desc',
+        },
+      },
+    });
+
     return {
       id: user.id,
       email: user.email,
@@ -175,6 +198,17 @@ export class AdminUsersService {
         ),
       },
       moduleProgress,
+      enrollments: classEnrollments.map(e => ({
+        id: e.id,
+        attendanceStatus: e.attendanceStatus,
+        attendanceMarkedAt: e.attendanceMarkedAt,
+        classSession: {
+          id: e.classSession.id,
+          title: e.classSession.title,
+          startTime: e.classSession.startTime,
+          type: e.classSession.type,
+        },
+      })),
       subscription: activeSubscription
         ? {
             id: activeSubscription.id,
@@ -286,6 +320,12 @@ export class AdminUsersService {
     if (dto.city !== undefined) updateData.city = dto.city;
     if (dto.country !== undefined) updateData.country = dto.country;
     if (dto.role !== undefined) updateData.role = dto.role;
+
+    // Hash and update password if provided (SUPERADMIN only, enforced by controller guard)
+    if (dto.password) {
+      updateData.password = await bcrypt.hash(dto.password, this.env.BCRYPT_SALT_ROUNDS);
+      this.logger.log(`Password updated for user ${userId} by superadmin`);
+    }
 
     await this.userRepository.update(userId, updateData);
 
