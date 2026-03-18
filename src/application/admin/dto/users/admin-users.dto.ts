@@ -163,6 +163,15 @@ export class UpdateUserDto {
   @IsOptional()
   @IsEnum(UserRole)
   role?: UserRole;
+
+  @ApiPropertyOptional({
+    example: 'NewSecurePass123!',
+    description: 'Nueva contraseña (solo SUPERADMIN puede cambiarla)',
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(6)
+  password?: string;
 }
 
 // ==================== RESPONSE INTERFACES ====================
@@ -221,6 +230,18 @@ export interface ModuleProgressDto {
   status: 'Completed' | 'In Progress' | 'Not Started';
 }
 
+export interface UserEnrollmentDto {
+  id: string;
+  attendanceStatus: string;
+  attendanceMarkedAt: Date | null;
+  classSession: {
+    id: number;
+    title: string;
+    startTime: Date;
+    type: string;
+  };
+}
+
 export interface UserSubscriptionDto {
   id: string;
   plan: UserPlan;
@@ -252,6 +273,7 @@ export interface UserDetailDto {
   stats: UserStatsDto;
   strikes: UserStrikesDto;
   moduleProgress: ModuleProgressDto[];
+  enrollments: UserEnrollmentDto[];
   subscription: UserSubscriptionDto | null;
 }
 
