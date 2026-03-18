@@ -12,14 +12,18 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
+  Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
+import { Request } from 'express';
 
 import { AdminClassesService } from '@/application/admin/services/admin-classes.service';
 import { JwtAuthGuard } from '@/application/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/application/auth/guards/roles.guard';
 import { Roles } from '@/application/auth/decorators/roles.decorator';
+import { CurrentUser } from '@/application/auth/decorators/current-user.decorator';
+import { JwtPayload } from '@/application/auth/services/auth.service';
 
 import {
   GetClassesQueryDto,
@@ -69,8 +73,13 @@ export class AdminClassesController {
   })
   @ApiResponse({ status: 201, description: 'Clase creada' })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
-  async createClass(@Body() dto: CreateClassDto): Promise<CreateClassResponseDto> {
-    return this.adminClassesService.createClass(dto);
+  async createClass(
+    @Body() dto: CreateClassDto,
+    @CurrentUser() admin: JwtPayload,
+    @Req() req: Request,
+  ): Promise<CreateClassResponseDto> {
+    const adminInfo = { adminId: admin.userId, adminEmail: admin.email, adminName: admin.email, ip: req.ip ?? 'unknown' };
+    return this.adminClassesService.createClass(dto, adminInfo);
   }
 
   /**
@@ -110,8 +119,11 @@ export class AdminClassesController {
   async saveAttendance(
     @Param('id', ParseIntPipe) classId: number,
     @Body() dto: SaveAttendanceDto,
+    @CurrentUser() admin: JwtPayload,
+    @Req() req: Request,
   ): Promise<SaveAttendanceResponseDto> {
-    return this.adminClassesService.saveAttendance(classId, dto);
+    const adminInfo = { adminId: admin.userId, adminEmail: admin.email, adminName: admin.email, ip: req.ip ?? 'unknown' };
+    return this.adminClassesService.saveAttendance(classId, dto, adminInfo);
   }
 
   /**
@@ -130,8 +142,11 @@ export class AdminClassesController {
   async updateClass(
     @Param('id', ParseIntPipe) classId: number,
     @Body() dto: UpdateClassDto,
+    @CurrentUser() admin: JwtPayload,
+    @Req() req: Request,
   ): Promise<UpdateClassResponseDto> {
-    return this.adminClassesService.updateClass(classId, dto);
+    const adminInfo = { adminId: admin.userId, adminEmail: admin.email, adminName: admin.email, ip: req.ip ?? 'unknown' };
+    return this.adminClassesService.updateClass(classId, dto, adminInfo);
   }
 
   /**
@@ -148,7 +163,12 @@ export class AdminClassesController {
   @ApiParam({ name: 'id', description: 'ID de la clase' })
   @ApiResponse({ status: 200, description: 'Clase eliminada' })
   @ApiResponse({ status: 404, description: 'Clase no encontrada' })
-  async deleteClass(@Param('id', ParseIntPipe) classId: number): Promise<DeleteClassResponseDto> {
-    return this.adminClassesService.deleteClass(classId);
+  async deleteClass(
+    @Param('id', ParseIntPipe) classId: number,
+    @CurrentUser() admin: JwtPayload,
+    @Req() req: Request,
+  ): Promise<DeleteClassResponseDto> {
+    const adminInfo = { adminId: admin.userId, adminEmail: admin.email, adminName: admin.email, ip: req.ip ?? 'unknown' };
+    return this.adminClassesService.deleteClass(classId, adminInfo);
   }
 }

@@ -66,7 +66,7 @@ export class AdminDashboardController {
    * Obtener notificaciones para admin
    */
   @Get('notifications')
-  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN, UserRole.JOB_UPLOADER)
   @ApiOperation({
     summary: 'Obtener notificaciones de admin',
     description: 'Retorna notificaciones relevantes para administradores',
@@ -81,7 +81,7 @@ export class AdminDashboardController {
    * Marcar notificación como leída
    */
   @Post('notifications/:id/read')
-  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN, UserRole.JOB_UPLOADER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Marcar notificación como leída',
@@ -98,7 +98,7 @@ export class AdminDashboardController {
    * Marcar todas las notificaciones como leídas
    */
   @Post('notifications/read-all')
-  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN, UserRole.JOB_UPLOADER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Marcar todas las notificaciones como leídas',
