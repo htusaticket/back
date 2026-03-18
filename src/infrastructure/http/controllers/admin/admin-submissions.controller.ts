@@ -9,14 +9,18 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
+import { Request } from 'express';
 
 import { AdminSubmissionsService } from '@/application/admin/services/admin-submissions.service';
 import { JwtAuthGuard } from '@/application/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/application/auth/guards/roles.guard';
 import { Roles } from '@/application/auth/decorators/roles.decorator';
+import { CurrentUser } from '@/application/auth/decorators/current-user.decorator';
+import { JwtPayload } from '@/application/auth/services/auth.service';
 
 import {
   GetSubmissionsQueryDto,
@@ -66,7 +70,15 @@ export class AdminSubmissionsController {
   async reviewSubmission(
     @Param('id') submissionId: string,
     @Body() dto: ReviewSubmissionDto,
+    @CurrentUser() admin: JwtPayload,
+    @Req() req: Request,
   ): Promise<ReviewSubmissionResponseDto> {
-    return this.adminSubmissionsService.reviewSubmission(submissionId, dto);
+    const adminInfo = {
+      adminId: admin.userId,
+      adminEmail: admin.email,
+      adminName: admin.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.adminSubmissionsService.reviewSubmission(submissionId, dto, adminInfo);
   }
 }

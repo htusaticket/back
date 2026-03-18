@@ -196,13 +196,16 @@ export class CloudflareStorageService implements OnModuleInit {
     const extension = originalName.split('.').pop() || 'pdf';
     const filename = `lessons/${lessonId}/resources/${uuidv4()}.${extension}`;
 
+    // Sanitize originalName for S3 Metadata (only ASCII allowed in HTTP headers)
+    const safeOriginalName = originalName.replace(/[^\x20-\x7E]/g, '_');
+
     const params: PutObjectCommandInput = {
       Bucket: this.bucketName,
       Key: filename,
       Body: file,
       ContentType: mimeType,
       Metadata: {
-        originalName,
+        originalName: safeOriginalName,
         lessonId: String(lessonId),
         uploadedAt: new Date().toISOString(),
       },

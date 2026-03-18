@@ -2,6 +2,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 import { PrismaService } from '@/infrastructure/persistence/prisma/prisma.service';
+import { AuditLogService } from './audit-log.service';
 
 import {
   UpdateSystemConfigDto,
@@ -25,7 +26,10 @@ interface SystemConfigEntity {
 export class AdminSystemConfigService {
   private readonly logger = new Logger(AdminSystemConfigService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditLogService,
+  ) {}
 
   /**
    * Obtener configuración del sistema
@@ -58,7 +62,10 @@ export class AdminSystemConfigService {
   /**
    * Actualizar configuración del sistema (Solo SUPERADMIN)
    */
-  async updateConfig(dto: UpdateSystemConfigDto): Promise<UpdateSystemConfigResponseDto> {
+  async updateConfig(
+    dto: UpdateSystemConfigDto,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<UpdateSystemConfigResponseDto> {
     this.logger.log(`Updating system config: ${JSON.stringify(dto)}`);
 
     // Asegurar que existe
@@ -83,6 +90,20 @@ export class AdminSystemConfigService {
     });
 
     this.logger.log('System config updated successfully');
+
+    if (adminInfo) {
+      await this.auditService.createLog({
+        adminId: adminInfo.adminId,
+        adminEmail: adminInfo.adminEmail,
+        adminName: adminInfo.adminName,
+        action: 'SYSTEM_CONFIG_UPDATED',
+        targetType: 'SYSTEM_CONFIG',
+        targetId: 'default',
+        targetName: 'System Configuration',
+        details: { updatedFields: Object.keys(dto) },
+        ipAddress: adminInfo.ip,
+      });
+    }
 
     return {
       config: this.mapConfigToDto(config),

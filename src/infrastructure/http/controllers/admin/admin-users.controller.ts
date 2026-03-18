@@ -11,9 +11,11 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
+import { Request } from 'express';
 
 import { AdminUsersService } from '@/application/admin/services/admin-users.service';
 import { JwtAuthGuard } from '@/application/auth/guards/jwt-auth.guard';
@@ -93,8 +95,18 @@ export class AdminUsersController {
   })
   @ApiResponse({ status: 201, description: 'Usuario creado' })
   @ApiResponse({ status: 409, description: 'El email ya está registrado' })
-  async createUser(@Body() dto: CreateUserDto): Promise<CreateUserResponseDto> {
-    return this.adminUsersService.createUser(dto);
+  async createUser(
+    @Body() dto: CreateUserDto,
+    @CurrentUser() admin: JwtPayload,
+    @Req() req: Request,
+  ): Promise<CreateUserResponseDto> {
+    const adminInfo = {
+      adminId: admin.userId,
+      adminEmail: admin.email,
+      adminName: admin.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.adminUsersService.createUser(dto, adminInfo);
   }
 
   /**
@@ -113,8 +125,16 @@ export class AdminUsersController {
   async updateUserStatus(
     @Param('id') userId: string,
     @Body() dto: UpdateUserStatusDto,
+    @CurrentUser() admin: JwtPayload,
+    @Req() req: Request,
   ): Promise<UpdateStatusResponseDto> {
-    return this.adminUsersService.updateUserStatus(userId, dto);
+    const adminInfo = {
+      adminId: admin.userId,
+      adminEmail: admin.email,
+      adminName: admin.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.adminUsersService.updateUserStatus(userId, dto, adminInfo);
   }
 
   /**
@@ -133,8 +153,16 @@ export class AdminUsersController {
   async updateUser(
     @Param('id') userId: string,
     @Body() dto: UpdateUserDto,
+    @CurrentUser() admin: JwtPayload,
+    @Req() req: Request,
   ): Promise<UpdateStatusResponseDto> {
-    return this.adminUsersService.updateUser(userId, dto);
+    const adminInfo = {
+      adminId: admin.userId,
+      adminEmail: admin.email,
+      adminName: admin.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.adminUsersService.updateUser(userId, dto, adminInfo);
   }
 
   /**
@@ -177,8 +205,16 @@ export class AdminUsersController {
   async issueStrike(
     @Param('id') userId: string,
     @Body() dto: IssueStrikeDto,
+    @CurrentUser() admin: JwtPayload,
+    @Req() req: Request,
   ): Promise<IssueStrikeResponseDto> {
-    return this.adminUsersService.issueStrike(userId, dto);
+    const adminInfo = {
+      adminId: admin.userId,
+      adminEmail: admin.email,
+      adminName: admin.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.adminUsersService.issueStrike(userId, dto, adminInfo);
   }
 
   /**
@@ -225,8 +261,16 @@ export class AdminUsersController {
   async rejectRegistration(
     @Param('id') userId: string,
     @Body() dto: RejectRegistrationDto,
+    @CurrentUser() admin: JwtPayload,
+    @Req() req: Request,
   ): Promise<RejectRegistrationResponseDto> {
-    return this.adminUsersService.rejectRegistration(userId, dto);
+    const adminInfo = {
+      adminId: admin.userId,
+      adminEmail: admin.email,
+      adminName: admin.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.adminUsersService.rejectRegistration(userId, dto, adminInfo);
   }
 
   /**
@@ -250,8 +294,20 @@ export class AdminUsersController {
     @Param('id') userId: string,
     @Body() dto: { reason?: string },
     @CurrentUser() currentUser: JwtPayload,
+    @Req() req: Request,
   ): Promise<UpdateStatusResponseDto> {
-    return this.adminUsersService.suspendUser(userId, currentUser.role as UserRole, dto?.reason);
+    const adminInfo = {
+      adminId: currentUser.userId,
+      adminEmail: currentUser.email,
+      adminName: currentUser.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.adminUsersService.suspendUser(
+      userId,
+      currentUser.role as UserRole,
+      dto?.reason,
+      adminInfo,
+    );
   }
 
   /**
@@ -274,8 +330,15 @@ export class AdminUsersController {
   async unsuspendUser(
     @Param('id') userId: string,
     @CurrentUser() currentUser: JwtPayload,
+    @Req() req: Request,
   ): Promise<UpdateStatusResponseDto> {
-    return this.adminUsersService.unsuspendUser(userId, currentUser.role as UserRole);
+    const adminInfo = {
+      adminId: currentUser.userId,
+      adminEmail: currentUser.email,
+      adminName: currentUser.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.adminUsersService.unsuspendUser(userId, currentUser.role as UserRole, adminInfo);
   }
 
   /**
@@ -300,11 +363,19 @@ export class AdminUsersController {
   async deleteUser(
     @Param('id') userId: string,
     @CurrentUser() currentUser: JwtPayload,
+    @Req() req: Request,
   ): Promise<UpdateStatusResponseDto> {
+    const adminInfo = {
+      adminId: currentUser.userId,
+      adminEmail: currentUser.email,
+      adminName: currentUser.email,
+      ip: req.ip ?? 'unknown',
+    };
     return this.adminUsersService.deleteUser(
       userId,
       currentUser.userId,
       currentUser.role as UserRole,
+      adminInfo,
     );
   }
 

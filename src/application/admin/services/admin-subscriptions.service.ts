@@ -3,6 +3,7 @@ import { Injectable, Logger, NotFoundException, BadRequestException } from '@nes
 import { Prisma, UserPlan, SubscriptionStatus, UserStatus } from '@prisma/client';
 
 import { PrismaService } from '@/infrastructure/persistence/prisma/prisma.service';
+import { AuditLogService } from './audit-log.service';
 
 import {
   GetSubscriptionsQueryDto,
@@ -43,7 +44,10 @@ interface SubscriptionWithUser {
 export class AdminSubscriptionsService {
   private readonly logger = new Logger(AdminSubscriptionsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditLogService,
+  ) {}
 
   /**
    * Obtener lista paginada de subscripciones con filtros
@@ -174,6 +178,7 @@ export class AdminSubscriptionsService {
   async createSubscription(
     dto: CreateSubscriptionDto,
     adminId: string,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
   ): Promise<CreateSubscriptionResponseDto> {
     this.logger.log(`Creating subscription for user ${dto.userId}`);
 
@@ -235,6 +240,20 @@ export class AdminSubscriptionsService {
 
     this.logger.log(`Subscription created: ${subscription.id} for user ${dto.userId}`);
 
+    if (adminInfo) {
+      await this.auditService.createLog({
+        adminId: adminInfo.adminId,
+        adminEmail: adminInfo.adminEmail,
+        adminName: adminInfo.adminName,
+        action: 'SUBSCRIPTION_CREATED',
+        targetType: 'SUBSCRIPTION',
+        targetId: subscription.id,
+        targetName: `${subscription.user?.firstName} ${subscription.user?.lastName} - ${dto.plan}`,
+        details: { userId: dto.userId, plan: dto.plan },
+        ipAddress: adminInfo.ip,
+      });
+    }
+
     return {
       subscription: this.mapSubscriptionToDto(subscription),
       message: 'Subscripción creada exitosamente',
@@ -247,6 +266,7 @@ export class AdminSubscriptionsService {
   async updateSubscription(
     id: string,
     dto: UpdateSubscriptionDto,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
   ): Promise<UpdateSubscriptionResponseDto> {
     this.logger.log(`Updating subscription ${id}`);
 
@@ -293,6 +313,20 @@ export class AdminSubscriptionsService {
 
     this.logger.log(`Subscription updated: ${id}`);
 
+    if (adminInfo) {
+      await this.auditService.createLog({
+        adminId: adminInfo.adminId,
+        adminEmail: adminInfo.adminEmail,
+        adminName: adminInfo.adminName,
+        action: 'SUBSCRIPTION_UPDATED',
+        targetType: 'SUBSCRIPTION',
+        targetId: id,
+        targetName: `${subscription.user?.firstName} ${subscription.user?.lastName}`,
+        details: { updatedFields: Object.keys(dto) },
+        ipAddress: adminInfo.ip,
+      });
+    }
+
     return {
       subscription: this.mapSubscriptionToDto(subscription),
       message: 'Subscripción actualizada exitosamente',
@@ -302,7 +336,10 @@ export class AdminSubscriptionsService {
   /**
    * Eliminar subscripción (Solo SUPERADMIN)
    */
-  async deleteSubscription(id: string): Promise<DeleteSubscriptionResponseDto> {
+  async deleteSubscription(
+    id: string,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<DeleteSubscriptionResponseDto> {
     this.logger.log(`Deleting subscription ${id}`);
 
     const existing = await this.prisma.subscription.findUnique({
@@ -319,6 +356,20 @@ export class AdminSubscriptionsService {
 
     this.logger.log(`Subscription deleted: ${id}`);
 
+    if (adminInfo) {
+      await this.auditService.createLog({
+        adminId: adminInfo.adminId,
+        adminEmail: adminInfo.adminEmail,
+        adminName: adminInfo.adminName,
+        action: 'SUBSCRIPTION_DELETED',
+        targetType: 'SUBSCRIPTION',
+        targetId: id,
+        targetName: `Subscription ${id}`,
+        details: { userId: existing.userId },
+        ipAddress: adminInfo.ip,
+      });
+    }
+
     return {
       success: true,
       message: 'Subscripción eliminada exitosamente',
@@ -328,7 +379,10 @@ export class AdminSubscriptionsService {
   /**
    * Cancelar subscripción de un usuario
    */
-  async cancelSubscription(id: string): Promise<UpdateSubscriptionResponseDto> {
+  async cancelSubscription(
+    id: string,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<UpdateSubscriptionResponseDto> {
     this.logger.log(`Cancelling subscription ${id}`);
 
     const existing = await this.prisma.subscription.findUnique({
@@ -354,6 +408,20 @@ export class AdminSubscriptionsService {
         },
       },
     });
+
+    if (adminInfo) {
+      await this.auditService.createLog({
+        adminId: adminInfo.adminId,
+        adminEmail: adminInfo.adminEmail,
+        adminName: adminInfo.adminName,
+        action: 'SUBSCRIPTION_CANCELLED',
+        targetType: 'SUBSCRIPTION',
+        targetId: id,
+        targetName: `${subscription.user?.firstName} ${subscription.user?.lastName}`,
+        details: { userId: existing.userId },
+        ipAddress: adminInfo.ip,
+      });
+    }
 
     return {
       subscription: this.mapSubscriptionToDto(subscription),

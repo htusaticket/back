@@ -1,12 +1,15 @@
 // src/infrastructure/http/controllers/admin/admin-system-config.controller.ts
-import { Controller, Get, Patch, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Body, UseGuards, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
+import { Request } from 'express';
 
 import { AdminSystemConfigService } from '@/application/admin/services/admin-system-config.service';
 import { JwtAuthGuard } from '@/application/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/application/auth/guards/roles.guard';
 import { Roles } from '@/application/auth/decorators/roles.decorator';
+import { CurrentUser } from '@/application/auth/decorators/current-user.decorator';
+import { JwtPayload } from '@/application/auth/services/auth.service';
 
 import {
   UpdateSystemConfigDto,
@@ -26,14 +29,14 @@ export class AdminSystemConfigController {
    * Obtener configuración del sistema
    */
   @Get()
-  @Roles(UserRole.SUPERADMIN)
+  @Roles(UserRole.SUPERADMIN, UserRole.JOB_UPLOADER)
   @ApiOperation({
     summary: 'Obtener configuración del sistema',
     description:
-      'Obtiene la configuración actual del sistema (strikes, castigos, etc). Solo SUPERADMIN.',
+      'Obtiene la configuración actual del sistema (strikes, castigos, etc). Solo SUPERADMIN y JOB_UPLOADER (lectura).',
   })
   @ApiResponse({ status: 200, description: 'Configuración del sistema' })
-  @ApiResponse({ status: 403, description: 'Solo SUPERADMIN puede ver la configuración' })
+  @ApiResponse({ status: 403, description: 'No tiene permisos para ver la configuración' })
   async getConfig(): Promise<SystemConfigDto> {
     return this.systemConfigService.getConfig();
   }
@@ -50,7 +53,17 @@ export class AdminSystemConfigController {
   })
   @ApiResponse({ status: 200, description: 'Configuración actualizada' })
   @ApiResponse({ status: 403, description: 'Solo SUPERADMIN puede actualizar la configuración' })
-  async updateConfig(@Body() dto: UpdateSystemConfigDto): Promise<UpdateSystemConfigResponseDto> {
-    return this.systemConfigService.updateConfig(dto);
+  async updateConfig(
+    @Body() dto: UpdateSystemConfigDto,
+    @CurrentUser() admin: JwtPayload,
+    @Req() req: Request,
+  ): Promise<UpdateSystemConfigResponseDto> {
+    const adminInfo = {
+      adminId: admin.userId,
+      adminEmail: admin.email,
+      adminName: admin.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.systemConfigService.updateConfig(dto, adminInfo);
   }
 }

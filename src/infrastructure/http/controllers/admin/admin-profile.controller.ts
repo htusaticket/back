@@ -23,7 +23,7 @@ export class AdminProfileController {
   constructor(private readonly profileService: AdminProfileService) {}
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN, UserRole.JOB_UPLOADER)
   @ApiOperation({ summary: 'Get current admin profile' })
   @ApiResponse({ status: 200, type: AdminProfileDto })
   async getProfile(@CurrentUser() user: JwtPayload): Promise<AdminProfileDto> {
@@ -32,7 +32,7 @@ export class AdminProfileController {
   }
 
   @Put()
-  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN, UserRole.JOB_UPLOADER)
   @ApiOperation({ summary: 'Update admin profile' })
   @ApiResponse({ status: 200, type: AdminProfileDto })
   async updateProfile(
@@ -44,7 +44,7 @@ export class AdminProfileController {
   }
 
   @Put('password')
-  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN, UserRole.JOB_UPLOADER)
   @ApiOperation({ summary: 'Change admin password' })
   @ApiResponse({ status: 200, description: 'Password changed successfully' })
   async changePassword(

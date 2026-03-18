@@ -9,6 +9,7 @@ import {
   NOTIFICATION_REPOSITORY,
 } from '@/core/interfaces';
 import { PrismaService } from '@/infrastructure/persistence/prisma/prisma.service';
+import { AuditLogService } from './audit-log.service';
 
 import {
   GetClassesQueryDto,
@@ -35,6 +36,7 @@ export class AdminClassesService {
     @Inject(NOTIFICATION_REPOSITORY)
     private readonly notificationRepository: INotificationRepository,
     private readonly prisma: PrismaService,
+    private readonly auditService: AuditLogService,
   ) {}
 
   /**
@@ -103,7 +105,10 @@ export class AdminClassesService {
   /**
    * Crear una nueva clase
    */
-  async createClass(dto: CreateClassDto): Promise<CreateClassResponseDto> {
+  async createClass(
+    dto: CreateClassDto,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<CreateClassResponseDto> {
     this.logger.log(`Creating class: ${dto.title}`);
 
     const startTime = new Date(dto.startTime);
@@ -127,6 +132,20 @@ export class AdminClassesService {
     });
 
     this.logger.log(`Class created successfully: ${classSession.id}`);
+
+    if (adminInfo) {
+      await this.auditService.createLog({
+        adminId: adminInfo.adminId,
+        adminEmail: adminInfo.adminEmail,
+        adminName: adminInfo.adminName,
+        action: 'CLASS_CREATED',
+        targetType: 'CLASS',
+        targetId: classSession.id.toString(),
+        targetName: classSession.title,
+        details: { type: dto.type, startTime: dto.startTime },
+        ipAddress: adminInfo.ip,
+      });
+    }
 
     return {
       success: true,
@@ -201,6 +220,7 @@ export class AdminClassesService {
   async saveAttendance(
     classId: number,
     dto: SaveAttendanceDto,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
   ): Promise<SaveAttendanceResponseDto> {
     this.logger.log(`Saving attendance for class: ${classId}`);
 
@@ -275,6 +295,20 @@ export class AdminClassesService {
 
     this.logger.log(`Attendance saved for class ${classId}. Strikes issued: ${strikesIssued}`);
 
+    if (adminInfo) {
+      await this.auditService.createLog({
+        adminId: adminInfo.adminId,
+        adminEmail: adminInfo.adminEmail,
+        adminName: adminInfo.adminName,
+        action: 'CLASS_ATTENDANCE_MARKED',
+        targetType: 'CLASS',
+        targetId: classId.toString(),
+        targetName: classSession.title,
+        details: { attendeesCount: dto.attendance.length, strikesIssued },
+        ipAddress: adminInfo.ip,
+      });
+    }
+
     return {
       success: true,
       message: `Asistencia guardada. ${strikesIssued > 0 ? `Se emitieron ${strikesIssued} strikes por ausencias.` : ''}`,
@@ -285,7 +319,11 @@ export class AdminClassesService {
   /**
    * Actualizar una clase existente
    */
-  async updateClass(classId: number, dto: UpdateClassDto): Promise<UpdateClassResponseDto> {
+  async updateClass(
+    classId: number,
+    dto: UpdateClassDto,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<UpdateClassResponseDto> {
     this.logger.log(`Updating class: ${classId}`);
 
     const existing = await this.prisma.classSession.findUnique({ where: { id: classId } });
@@ -317,6 +355,20 @@ export class AdminClassesService {
       },
     });
 
+    if (adminInfo) {
+      await this.auditService.createLog({
+        adminId: adminInfo.adminId,
+        adminEmail: adminInfo.adminEmail,
+        adminName: adminInfo.adminName,
+        action: 'CLASS_UPDATED',
+        targetType: 'CLASS',
+        targetId: classId.toString(),
+        targetName: updated.title,
+        details: { updatedFields: Object.keys(data) },
+        ipAddress: adminInfo.ip,
+      });
+    }
+
     return {
       success: true,
       message: 'Clase actualizada exitosamente',
@@ -338,7 +390,10 @@ export class AdminClassesService {
   /**
    * Eliminar una clase y sus inscripciones
    */
-  async deleteClass(classId: number): Promise<DeleteClassResponseDto> {
+  async deleteClass(
+    classId: number,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<DeleteClassResponseDto> {
     this.logger.log(`Deleting class: ${classId}`);
 
     const existing = await this.prisma.classSession.findUnique({ where: { id: classId } });
@@ -349,6 +404,19 @@ export class AdminClassesService {
     // Delete enrollments first (foreign key constraint), then the class
     await this.prisma.classEnrollment.deleteMany({ where: { classSessionId: classId } });
     await this.prisma.classSession.delete({ where: { id: classId } });
+
+    if (adminInfo) {
+      await this.auditService.createLog({
+        adminId: adminInfo.adminId,
+        adminEmail: adminInfo.adminEmail,
+        adminName: adminInfo.adminName,
+        action: 'CLASS_DELETED',
+        targetType: 'CLASS',
+        targetId: classId.toString(),
+        targetName: existing.title,
+        ipAddress: adminInfo.ip,
+      });
+    }
 
     return {
       success: true,

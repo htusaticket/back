@@ -11,9 +11,11 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
+import { Request } from 'express';
 
 import { AdminSubscriptionsService } from '@/application/admin/services/admin-subscriptions.service';
 import { JwtAuthGuard } from '@/application/auth/guards/jwt-auth.guard';
@@ -112,8 +114,15 @@ export class AdminSubscriptionsController {
   async createSubscription(
     @Body() dto: CreateSubscriptionDto,
     @CurrentUser() currentUser: JwtPayload,
+    @Req() req: Request,
   ): Promise<CreateSubscriptionResponseDto> {
-    return this.subscriptionsService.createSubscription(dto, currentUser.userId);
+    const adminInfo = {
+      adminId: currentUser.userId,
+      adminEmail: currentUser.email,
+      adminName: currentUser.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.subscriptionsService.createSubscription(dto, currentUser.userId, adminInfo);
   }
 
   /**
@@ -132,8 +141,16 @@ export class AdminSubscriptionsController {
   async updateSubscription(
     @Param('id') id: string,
     @Body() dto: UpdateSubscriptionDto,
+    @CurrentUser() currentUser: JwtPayload,
+    @Req() req: Request,
   ): Promise<UpdateSubscriptionResponseDto> {
-    return this.subscriptionsService.updateSubscription(id, dto);
+    const adminInfo = {
+      adminId: currentUser.userId,
+      adminEmail: currentUser.email,
+      adminName: currentUser.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.subscriptionsService.updateSubscription(id, dto, adminInfo);
   }
 
   /**
@@ -150,8 +167,18 @@ export class AdminSubscriptionsController {
   @ApiParam({ name: 'id', description: 'ID de la subscripción' })
   @ApiResponse({ status: 200, description: 'Subscripción eliminada' })
   @ApiResponse({ status: 404, description: 'Subscripción no encontrada' })
-  async deleteSubscription(@Param('id') id: string): Promise<DeleteSubscriptionResponseDto> {
-    return this.subscriptionsService.deleteSubscription(id);
+  async deleteSubscription(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: JwtPayload,
+    @Req() req: Request,
+  ): Promise<DeleteSubscriptionResponseDto> {
+    const adminInfo = {
+      adminId: currentUser.userId,
+      adminEmail: currentUser.email,
+      adminName: currentUser.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.subscriptionsService.deleteSubscription(id, adminInfo);
   }
 
   /**
@@ -169,7 +196,17 @@ export class AdminSubscriptionsController {
   @ApiResponse({ status: 200, description: 'Subscripción cancelada' })
   @ApiResponse({ status: 404, description: 'Subscripción no encontrada' })
   @ApiResponse({ status: 409, description: 'La subscripción ya está cancelada' })
-  async cancelSubscription(@Param('id') id: string): Promise<UpdateSubscriptionResponseDto> {
-    return this.subscriptionsService.cancelSubscription(id);
+  async cancelSubscription(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: JwtPayload,
+    @Req() req: Request,
+  ): Promise<UpdateSubscriptionResponseDto> {
+    const adminInfo = {
+      adminId: currentUser.userId,
+      adminEmail: currentUser.email,
+      adminName: currentUser.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.subscriptionsService.cancelSubscription(id, adminInfo);
   }
 }

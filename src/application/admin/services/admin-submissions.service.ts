@@ -5,6 +5,7 @@ import { ChallengeType, NotificationType, SubmissionStatus } from '@prisma/clien
 
 import { INotificationRepository, NOTIFICATION_REPOSITORY } from '@/core/interfaces';
 import { PrismaService } from '@/infrastructure/persistence/prisma/prisma.service';
+import { AuditLogService } from './audit-log.service';
 
 import {
   GetSubmissionsQueryDto,
@@ -25,6 +26,7 @@ export class AdminSubmissionsService {
     private readonly notificationRepository: INotificationRepository,
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly auditService: AuditLogService,
   ) {
     this.r2PublicUrl = this.configService.get<string>('CLOUDFLARE_R2_PUBLIC_URL') || '';
   }
@@ -139,6 +141,7 @@ export class AdminSubmissionsService {
   async reviewSubmission(
     submissionId: string,
     dto: ReviewSubmissionDto,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
   ): Promise<ReviewSubmissionResponseDto> {
     this.logger.log(`Reviewing submission: ${submissionId}`);
 
@@ -180,6 +183,20 @@ export class AdminSubmissionsService {
     });
 
     this.logger.log(`Submission ${submissionId} reviewed with status: ${dto.status}`);
+
+    if (adminInfo) {
+      await this.auditService.createLog({
+        adminId: adminInfo.adminId,
+        adminEmail: adminInfo.adminEmail,
+        adminName: adminInfo.adminName,
+        action: 'SUBMISSION_REVIEWED',
+        targetType: 'SUBMISSION',
+        targetId: submissionId,
+        targetName: `${submission.user.firstName} ${submission.user.lastName} - ${submission.challenge.title}`,
+        details: { status: dto.status, challengeTitle: submission.challenge.title },
+        ipAddress: adminInfo.ip,
+      });
+    }
 
     return {
       success: true,

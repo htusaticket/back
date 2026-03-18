@@ -22,6 +22,7 @@ import {
 import { PrismaService } from '@/infrastructure/persistence/prisma/prisma.service';
 import { getEnvConfig } from '@/config/env.config';
 import { EmailService } from '@/application/auth/services/email.service';
+import { AuditLogService } from './audit-log.service';
 
 import {
   GetUsersQueryDto,
@@ -58,6 +59,7 @@ export class AdminUsersService {
     private readonly notificationRepository: INotificationRepository,
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
+    private readonly auditService: AuditLogService,
   ) {}
 
   /**
@@ -226,7 +228,10 @@ export class AdminUsersService {
    * Crear un nuevo usuario (invitación manual)
    * El plan se asigna por separado a través de subscriptions
    */
-  async createUser(dto: CreateUserDto): Promise<CreateUserResponseDto> {
+  async createUser(
+    dto: CreateUserDto,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<CreateUserResponseDto> {
     this.logger.log(`Creating user with email: ${dto.email}`);
 
     // Verificar si el email ya existe
@@ -250,6 +255,20 @@ export class AdminUsersService {
     });
 
     this.logger.log(`User created successfully: ${user.id}`);
+
+    if (adminInfo) {
+      await this.auditService.createLog({
+        adminId: adminInfo.adminId,
+        adminEmail: adminInfo.adminEmail,
+        adminName: adminInfo.adminName,
+        action: 'USER_CREATED',
+        targetType: 'USER',
+        targetId: user.id,
+        targetName: `${user.firstName} ${user.lastName}`,
+        details: { email: user.email, role: user.role },
+        ipAddress: adminInfo.ip,
+      });
+    }
 
     return {
       success: true,
@@ -277,6 +296,7 @@ export class AdminUsersService {
   async updateUserStatus(
     userId: string,
     dto: UpdateUserStatusDto,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
   ): Promise<UpdateStatusResponseDto> {
     this.logger.log(`Updating status for user ${userId} to ${dto.status}`);
 
@@ -287,6 +307,20 @@ export class AdminUsersService {
 
     await this.userRepository.updateStatus(userId, dto.status);
 
+    if (adminInfo) {
+      await this.auditService.createLog({
+        adminId: adminInfo.adminId,
+        adminEmail: adminInfo.adminEmail,
+        adminName: adminInfo.adminName,
+        action: 'USER_UPDATED',
+        targetType: 'USER',
+        targetId: userId,
+        targetName: `${user.firstName} ${user.lastName}`,
+        details: { previousStatus: user.status, newStatus: dto.status },
+        ipAddress: adminInfo.ip,
+      });
+    }
+
     return {
       success: true,
       message: `Estado del usuario actualizado a ${dto.status}`,
@@ -296,7 +330,11 @@ export class AdminUsersService {
   /**
    * Actualizar datos de un usuario
    */
-  async updateUser(userId: string, dto: UpdateUserDto): Promise<UpdateStatusResponseDto> {
+  async updateUser(
+    userId: string,
+    dto: UpdateUserDto,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<UpdateStatusResponseDto> {
     this.logger.log(`Updating user ${userId}`);
 
     const user = await this.userRepository.findById(userId);
@@ -328,6 +366,20 @@ export class AdminUsersService {
     }
 
     await this.userRepository.update(userId, updateData);
+
+    if (adminInfo) {
+      await this.auditService.createLog({
+        adminId: adminInfo.adminId,
+        adminEmail: adminInfo.adminEmail,
+        adminName: adminInfo.adminName,
+        action: 'USER_UPDATED',
+        targetType: 'USER',
+        targetId: userId,
+        targetName: `${user.firstName} ${user.lastName}`,
+        details: { updatedFields: Object.keys(updateData) },
+        ipAddress: adminInfo.ip,
+      });
+    }
 
     return {
       success: true,
@@ -402,7 +454,11 @@ export class AdminUsersService {
    * Emitir un strike manual
    * Si alcanza el máximo, aplica punishment (no puede acceder a clases en vivo)
    */
-  async issueStrike(userId: string, dto: IssueStrikeDto): Promise<IssueStrikeResponseDto> {
+  async issueStrike(
+    userId: string,
+    dto: IssueStrikeDto,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<IssueStrikeResponseDto> {
     this.logger.log(`Issuing manual strike to user ${userId}`);
 
     const user = await this.userRepository.findById(userId);
@@ -452,6 +508,20 @@ export class AdminUsersService {
       this.logger.warn(
         `User ${userId} has been punished until ${punishedUntil.toISOString()} due to reaching max strikes`,
       );
+    }
+
+    if (adminInfo) {
+      await this.auditService.createLog({
+        adminId: adminInfo.adminId,
+        adminEmail: adminInfo.adminEmail,
+        adminName: adminInfo.adminName,
+        action: 'USER_STRIKE_ISSUED',
+        targetType: 'USER',
+        targetId: userId,
+        targetName: `${user.firstName} ${user.lastName}`,
+        details: { reason: dto.reason, totalStrikes: strikeCount, userPunished },
+        ipAddress: adminInfo.ip,
+      });
     }
 
     return {
@@ -525,6 +595,17 @@ export class AdminUsersService {
 
     this.logger.log(`User ${userId} registration approved with plan ${dto.plan}`);
 
+    await this.auditService.createLog({
+      adminId,
+      adminEmail: '',
+      adminName: '',
+      action: 'USER_APPROVED',
+      targetType: 'USER',
+      targetId: userId,
+      targetName: `${user.firstName} ${user.lastName}`,
+      details: { plan: dto.plan, email: user.email },
+    });
+
     return {
       success: true,
       message: `Registro aprobado exitosamente con plan ${dto.plan.replace('_', ' ')}.`,
@@ -538,6 +619,7 @@ export class AdminUsersService {
   async rejectRegistration(
     userId: string,
     dto: RejectRegistrationDto,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
   ): Promise<RejectRegistrationResponseDto> {
     this.logger.log(`Rejecting registration for user ${userId}`);
 
@@ -565,6 +647,20 @@ export class AdminUsersService {
 
     this.logger.log(`User ${userId} registration rejected and deleted from DB`);
 
+    if (adminInfo) {
+      await this.auditService.createLog({
+        adminId: adminInfo.adminId,
+        adminEmail: adminInfo.adminEmail,
+        adminName: adminInfo.adminName,
+        action: 'USER_REJECTED',
+        targetType: 'USER',
+        targetId: userId,
+        targetName: `${firstName} (${email})`,
+        details: { reason: dto.reason, email },
+        ipAddress: adminInfo.ip,
+      });
+    }
+
     return {
       success: true,
       message: 'Registro rechazado. El usuario ha sido notificado y puede volver a registrarse.',
@@ -579,6 +675,7 @@ export class AdminUsersService {
     userId: string,
     adminRole: UserRole,
     reason?: string,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
   ): Promise<UpdateStatusResponseDto> {
     this.logger.log(`Suspending user ${userId}`);
 
@@ -606,6 +703,20 @@ export class AdminUsersService {
 
     this.logger.log(`User ${userId} has been suspended (banned)`);
 
+    if (adminInfo) {
+      await this.auditService.createLog({
+        adminId: adminInfo.adminId,
+        adminEmail: adminInfo.adminEmail,
+        adminName: adminInfo.adminName,
+        action: 'USER_SUSPENDED',
+        targetType: 'USER',
+        targetId: userId,
+        targetName: `${user.firstName} ${user.lastName}`,
+        details: { reason: reason || 'No reason provided', email: user.email },
+        ipAddress: adminInfo.ip,
+      });
+    }
+
     return {
       success: true,
       message: 'Usuario suspendido (baneado) exitosamente',
@@ -616,7 +727,11 @@ export class AdminUsersService {
    * Quitar suspensión a un usuario (UNBAN)
    * Solo SUPERADMIN puede hacer esto
    */
-  async unsuspendUser(userId: string, adminRole: UserRole): Promise<UpdateStatusResponseDto> {
+  async unsuspendUser(
+    userId: string,
+    adminRole: UserRole,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<UpdateStatusResponseDto> {
     this.logger.log(`Unsuspending user ${userId}`);
 
     if (adminRole !== UserRole.SUPERADMIN) {
@@ -635,6 +750,20 @@ export class AdminUsersService {
     await this.userRepository.updateStatus(userId, UserStatus.ACTIVE);
 
     this.logger.log(`User ${userId} suspension removed`);
+
+    if (adminInfo) {
+      await this.auditService.createLog({
+        adminId: adminInfo.adminId,
+        adminEmail: adminInfo.adminEmail,
+        adminName: adminInfo.adminName,
+        action: 'USER_ACTIVATED',
+        targetType: 'USER',
+        targetId: userId,
+        targetName: `${user.firstName} ${user.lastName}`,
+        details: { previousStatus: 'SUSPENDED', email: user.email },
+        ipAddress: adminInfo.ip,
+      });
+    }
 
     return {
       success: true,
@@ -689,6 +818,7 @@ export class AdminUsersService {
     userId: string,
     currentUserId: string,
     currentRole: string,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
   ): Promise<UpdateStatusResponseDto> {
     this.logger.log(`Permanently deleting user ${userId}`);
 
@@ -717,6 +847,20 @@ export class AdminUsersService {
     });
 
     this.logger.warn(`User ${userId} (${user.email}) permanently deleted by ${currentUserId}`);
+
+    if (adminInfo) {
+      await this.auditService.createLog({
+        adminId: adminInfo.adminId,
+        adminEmail: adminInfo.adminEmail,
+        adminName: adminInfo.adminName,
+        action: 'USER_DELETED',
+        targetType: 'USER',
+        targetId: userId,
+        targetName: `${user.firstName} ${user.lastName}`,
+        details: { email: user.email, role: user.role },
+        ipAddress: adminInfo.ip,
+      });
+    }
 
     return {
       success: true,
