@@ -105,7 +105,10 @@ export class AdminClassesService {
   /**
    * Crear una nueva clase
    */
-  async createClass(dto: CreateClassDto, adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string }): Promise<CreateClassResponseDto> {
+  async createClass(
+    dto: CreateClassDto,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<CreateClassResponseDto> {
     this.logger.log(`Creating class: ${dto.title}`);
 
     const startTime = new Date(dto.startTime);
@@ -316,7 +319,11 @@ export class AdminClassesService {
   /**
    * Actualizar una clase existente
    */
-  async updateClass(classId: number, dto: UpdateClassDto, adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string }): Promise<UpdateClassResponseDto> {
+  async updateClass(
+    classId: number,
+    dto: UpdateClassDto,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<UpdateClassResponseDto> {
     this.logger.log(`Updating class: ${classId}`);
 
     const existing = await this.prisma.classSession.findUnique({ where: { id: classId } });
@@ -383,7 +390,10 @@ export class AdminClassesService {
   /**
    * Eliminar una clase y sus inscripciones
    */
-  async deleteClass(classId: number, adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string }): Promise<DeleteClassResponseDto> {
+  async deleteClass(
+    classId: number,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<DeleteClassResponseDto> {
     this.logger.log(`Deleting class: ${classId}`);
 
     const existing = await this.prisma.classSession.findUnique({ where: { id: classId } });

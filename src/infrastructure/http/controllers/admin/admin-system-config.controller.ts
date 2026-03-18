@@ -58,7 +58,12 @@ export class AdminSystemConfigController {
     @CurrentUser() admin: JwtPayload,
     @Req() req: Request,
   ): Promise<UpdateSystemConfigResponseDto> {
-    const adminInfo = { adminId: admin.userId, adminEmail: admin.email, adminName: admin.email, ip: req.ip ?? 'unknown' };
+    const adminInfo = {
+      adminId: admin.userId,
+      adminEmail: admin.email,
+      adminName: admin.email,
+      ip: req.ip ?? 'unknown',
+    };
     return this.systemConfigService.updateConfig(dto, adminInfo);
   }
 }

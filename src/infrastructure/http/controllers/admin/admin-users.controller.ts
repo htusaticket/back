@@ -100,7 +100,12 @@ export class AdminUsersController {
     @CurrentUser() admin: JwtPayload,
     @Req() req: Request,
   ): Promise<CreateUserResponseDto> {
-    const adminInfo = { adminId: admin.userId, adminEmail: admin.email, adminName: admin.email, ip: req.ip ?? 'unknown' };
+    const adminInfo = {
+      adminId: admin.userId,
+      adminEmail: admin.email,
+      adminName: admin.email,
+      ip: req.ip ?? 'unknown',
+    };
     return this.adminUsersService.createUser(dto, adminInfo);
   }
 
@@ -123,7 +128,12 @@ export class AdminUsersController {
     @CurrentUser() admin: JwtPayload,
     @Req() req: Request,
   ): Promise<UpdateStatusResponseDto> {
-    const adminInfo = { adminId: admin.userId, adminEmail: admin.email, adminName: admin.email, ip: req.ip ?? 'unknown' };
+    const adminInfo = {
+      adminId: admin.userId,
+      adminEmail: admin.email,
+      adminName: admin.email,
+      ip: req.ip ?? 'unknown',
+    };
     return this.adminUsersService.updateUserStatus(userId, dto, adminInfo);
   }
 
@@ -146,7 +156,12 @@ export class AdminUsersController {
     @CurrentUser() admin: JwtPayload,
     @Req() req: Request,
   ): Promise<UpdateStatusResponseDto> {
-    const adminInfo = { adminId: admin.userId, adminEmail: admin.email, adminName: admin.email, ip: req.ip ?? 'unknown' };
+    const adminInfo = {
+      adminId: admin.userId,
+      adminEmail: admin.email,
+      adminName: admin.email,
+      ip: req.ip ?? 'unknown',
+    };
     return this.adminUsersService.updateUser(userId, dto, adminInfo);
   }
 
@@ -193,7 +208,12 @@ export class AdminUsersController {
     @CurrentUser() admin: JwtPayload,
     @Req() req: Request,
   ): Promise<IssueStrikeResponseDto> {
-    const adminInfo = { adminId: admin.userId, adminEmail: admin.email, adminName: admin.email, ip: req.ip ?? 'unknown' };
+    const adminInfo = {
+      adminId: admin.userId,
+      adminEmail: admin.email,
+      adminName: admin.email,
+      ip: req.ip ?? 'unknown',
+    };
     return this.adminUsersService.issueStrike(userId, dto, adminInfo);
   }
 
@@ -244,7 +264,12 @@ export class AdminUsersController {
     @CurrentUser() admin: JwtPayload,
     @Req() req: Request,
   ): Promise<RejectRegistrationResponseDto> {
-    const adminInfo = { adminId: admin.userId, adminEmail: admin.email, adminName: admin.email, ip: req.ip ?? 'unknown' };
+    const adminInfo = {
+      adminId: admin.userId,
+      adminEmail: admin.email,
+      adminName: admin.email,
+      ip: req.ip ?? 'unknown',
+    };
     return this.adminUsersService.rejectRegistration(userId, dto, adminInfo);
   }
 
@@ -271,8 +296,18 @@ export class AdminUsersController {
     @CurrentUser() currentUser: JwtPayload,
     @Req() req: Request,
   ): Promise<UpdateStatusResponseDto> {
-    const adminInfo = { adminId: currentUser.userId, adminEmail: currentUser.email, adminName: currentUser.email, ip: req.ip ?? 'unknown' };
-    return this.adminUsersService.suspendUser(userId, currentUser.role as UserRole, dto?.reason, adminInfo);
+    const adminInfo = {
+      adminId: currentUser.userId,
+      adminEmail: currentUser.email,
+      adminName: currentUser.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.adminUsersService.suspendUser(
+      userId,
+      currentUser.role as UserRole,
+      dto?.reason,
+      adminInfo,
+    );
   }
 
   /**
@@ -297,7 +332,12 @@ export class AdminUsersController {
     @CurrentUser() currentUser: JwtPayload,
     @Req() req: Request,
   ): Promise<UpdateStatusResponseDto> {
-    const adminInfo = { adminId: currentUser.userId, adminEmail: currentUser.email, adminName: currentUser.email, ip: req.ip ?? 'unknown' };
+    const adminInfo = {
+      adminId: currentUser.userId,
+      adminEmail: currentUser.email,
+      adminName: currentUser.email,
+      ip: req.ip ?? 'unknown',
+    };
     return this.adminUsersService.unsuspendUser(userId, currentUser.role as UserRole, adminInfo);
   }
 
@@ -325,7 +365,12 @@ export class AdminUsersController {
     @CurrentUser() currentUser: JwtPayload,
     @Req() req: Request,
   ): Promise<UpdateStatusResponseDto> {
-    const adminInfo = { adminId: currentUser.userId, adminEmail: currentUser.email, adminName: currentUser.email, ip: req.ip ?? 'unknown' };
+    const adminInfo = {
+      adminId: currentUser.userId,
+      adminEmail: currentUser.email,
+      adminName: currentUser.email,
+      ip: req.ip ?? 'unknown',
+    };
     return this.adminUsersService.deleteUser(
       userId,
       currentUser.userId,

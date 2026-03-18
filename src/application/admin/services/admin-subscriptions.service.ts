@@ -336,7 +336,10 @@ export class AdminSubscriptionsService {
   /**
    * Eliminar subscripción (Solo SUPERADMIN)
    */
-  async deleteSubscription(id: string, adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string }): Promise<DeleteSubscriptionResponseDto> {
+  async deleteSubscription(
+    id: string,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<DeleteSubscriptionResponseDto> {
     this.logger.log(`Deleting subscription ${id}`);
 
     const existing = await this.prisma.subscription.findUnique({
@@ -376,7 +379,10 @@ export class AdminSubscriptionsService {
   /**
    * Cancelar subscripción de un usuario
    */
-  async cancelSubscription(id: string, adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string }): Promise<UpdateSubscriptionResponseDto> {
+  async cancelSubscription(
+    id: string,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<UpdateSubscriptionResponseDto> {
     this.logger.log(`Cancelling subscription ${id}`);
 
     const existing = await this.prisma.subscription.findUnique({

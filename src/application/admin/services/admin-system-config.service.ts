@@ -62,7 +62,10 @@ export class AdminSystemConfigService {
   /**
    * Actualizar configuración del sistema (Solo SUPERADMIN)
    */
-  async updateConfig(dto: UpdateSystemConfigDto, adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string }): Promise<UpdateSystemConfigResponseDto> {
+  async updateConfig(
+    dto: UpdateSystemConfigDto,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<UpdateSystemConfigResponseDto> {
     this.logger.log(`Updating system config: ${JSON.stringify(dto)}`);
 
     // Asegurar que existe

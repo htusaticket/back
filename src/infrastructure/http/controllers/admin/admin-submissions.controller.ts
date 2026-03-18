@@ -73,7 +73,12 @@ export class AdminSubmissionsController {
     @CurrentUser() admin: JwtPayload,
     @Req() req: Request,
   ): Promise<ReviewSubmissionResponseDto> {
-    const adminInfo = { adminId: admin.userId, adminEmail: admin.email, adminName: admin.email, ip: req.ip ?? 'unknown' };
+    const adminInfo = {
+      adminId: admin.userId,
+      adminEmail: admin.email,
+      adminName: admin.email,
+      ip: req.ip ?? 'unknown',
+    };
     return this.adminSubmissionsService.reviewSubmission(submissionId, dto, adminInfo);
   }
 }

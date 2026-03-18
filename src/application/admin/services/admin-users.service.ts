@@ -228,7 +228,10 @@ export class AdminUsersService {
    * Crear un nuevo usuario (invitación manual)
    * El plan se asigna por separado a través de subscriptions
    */
-  async createUser(dto: CreateUserDto, adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string }): Promise<CreateUserResponseDto> {
+  async createUser(
+    dto: CreateUserDto,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<CreateUserResponseDto> {
     this.logger.log(`Creating user with email: ${dto.email}`);
 
     // Verificar si el email ya existe
@@ -327,7 +330,11 @@ export class AdminUsersService {
   /**
    * Actualizar datos de un usuario
    */
-  async updateUser(userId: string, dto: UpdateUserDto, adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string }): Promise<UpdateStatusResponseDto> {
+  async updateUser(
+    userId: string,
+    dto: UpdateUserDto,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<UpdateStatusResponseDto> {
     this.logger.log(`Updating user ${userId}`);
 
     const user = await this.userRepository.findById(userId);
@@ -447,7 +454,11 @@ export class AdminUsersService {
    * Emitir un strike manual
    * Si alcanza el máximo, aplica punishment (no puede acceder a clases en vivo)
    */
-  async issueStrike(userId: string, dto: IssueStrikeDto, adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string }): Promise<IssueStrikeResponseDto> {
+  async issueStrike(
+    userId: string,
+    dto: IssueStrikeDto,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<IssueStrikeResponseDto> {
     this.logger.log(`Issuing manual strike to user ${userId}`);
 
     const user = await this.userRepository.findById(userId);
@@ -716,7 +727,11 @@ export class AdminUsersService {
    * Quitar suspensión a un usuario (UNBAN)
    * Solo SUPERADMIN puede hacer esto
    */
-  async unsuspendUser(userId: string, adminRole: UserRole, adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string }): Promise<UpdateStatusResponseDto> {
+  async unsuspendUser(
+    userId: string,
+    adminRole: UserRole,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<UpdateStatusResponseDto> {
     this.logger.log(`Unsuspending user ${userId}`);
 
     if (adminRole !== UserRole.SUPERADMIN) {

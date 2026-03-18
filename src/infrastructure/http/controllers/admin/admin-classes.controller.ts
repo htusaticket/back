@@ -78,7 +78,12 @@ export class AdminClassesController {
     @CurrentUser() admin: JwtPayload,
     @Req() req: Request,
   ): Promise<CreateClassResponseDto> {
-    const adminInfo = { adminId: admin.userId, adminEmail: admin.email, adminName: admin.email, ip: req.ip ?? 'unknown' };
+    const adminInfo = {
+      adminId: admin.userId,
+      adminEmail: admin.email,
+      adminName: admin.email,
+      ip: req.ip ?? 'unknown',
+    };
     return this.adminClassesService.createClass(dto, adminInfo);
   }
 
@@ -122,7 +127,12 @@ export class AdminClassesController {
     @CurrentUser() admin: JwtPayload,
     @Req() req: Request,
   ): Promise<SaveAttendanceResponseDto> {
-    const adminInfo = { adminId: admin.userId, adminEmail: admin.email, adminName: admin.email, ip: req.ip ?? 'unknown' };
+    const adminInfo = {
+      adminId: admin.userId,
+      adminEmail: admin.email,
+      adminName: admin.email,
+      ip: req.ip ?? 'unknown',
+    };
     return this.adminClassesService.saveAttendance(classId, dto, adminInfo);
   }
 
@@ -145,7 +155,12 @@ export class AdminClassesController {
     @CurrentUser() admin: JwtPayload,
     @Req() req: Request,
   ): Promise<UpdateClassResponseDto> {
-    const adminInfo = { adminId: admin.userId, adminEmail: admin.email, adminName: admin.email, ip: req.ip ?? 'unknown' };
+    const adminInfo = {
+      adminId: admin.userId,
+      adminEmail: admin.email,
+      adminName: admin.email,
+      ip: req.ip ?? 'unknown',
+    };
     return this.adminClassesService.updateClass(classId, dto, adminInfo);
   }
 
@@ -168,7 +183,12 @@ export class AdminClassesController {
     @CurrentUser() admin: JwtPayload,
     @Req() req: Request,
   ): Promise<DeleteClassResponseDto> {
-    const adminInfo = { adminId: admin.userId, adminEmail: admin.email, adminName: admin.email, ip: req.ip ?? 'unknown' };
+    const adminInfo = {
+      adminId: admin.userId,
+      adminEmail: admin.email,
+      adminName: admin.email,
+      ip: req.ip ?? 'unknown',
+    };
     return this.adminClassesService.deleteClass(classId, adminInfo);
   }
 }

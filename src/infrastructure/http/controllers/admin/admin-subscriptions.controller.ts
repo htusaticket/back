@@ -116,7 +116,12 @@ export class AdminSubscriptionsController {
     @CurrentUser() currentUser: JwtPayload,
     @Req() req: Request,
   ): Promise<CreateSubscriptionResponseDto> {
-    const adminInfo = { adminId: currentUser.userId, adminEmail: currentUser.email, adminName: currentUser.email, ip: req.ip ?? 'unknown' };
+    const adminInfo = {
+      adminId: currentUser.userId,
+      adminEmail: currentUser.email,
+      adminName: currentUser.email,
+      ip: req.ip ?? 'unknown',
+    };
     return this.subscriptionsService.createSubscription(dto, currentUser.userId, adminInfo);
   }
 
@@ -139,7 +144,12 @@ export class AdminSubscriptionsController {
     @CurrentUser() currentUser: JwtPayload,
     @Req() req: Request,
   ): Promise<UpdateSubscriptionResponseDto> {
-    const adminInfo = { adminId: currentUser.userId, adminEmail: currentUser.email, adminName: currentUser.email, ip: req.ip ?? 'unknown' };
+    const adminInfo = {
+      adminId: currentUser.userId,
+      adminEmail: currentUser.email,
+      adminName: currentUser.email,
+      ip: req.ip ?? 'unknown',
+    };
     return this.subscriptionsService.updateSubscription(id, dto, adminInfo);
   }
 
@@ -162,7 +172,12 @@ export class AdminSubscriptionsController {
     @CurrentUser() currentUser: JwtPayload,
     @Req() req: Request,
   ): Promise<DeleteSubscriptionResponseDto> {
-    const adminInfo = { adminId: currentUser.userId, adminEmail: currentUser.email, adminName: currentUser.email, ip: req.ip ?? 'unknown' };
+    const adminInfo = {
+      adminId: currentUser.userId,
+      adminEmail: currentUser.email,
+      adminName: currentUser.email,
+      ip: req.ip ?? 'unknown',
+    };
     return this.subscriptionsService.deleteSubscription(id, adminInfo);
   }
 
@@ -186,7 +201,12 @@ export class AdminSubscriptionsController {
     @CurrentUser() currentUser: JwtPayload,
     @Req() req: Request,
   ): Promise<UpdateSubscriptionResponseDto> {
-    const adminInfo = { adminId: currentUser.userId, adminEmail: currentUser.email, adminName: currentUser.email, ip: req.ip ?? 'unknown' };
+    const adminInfo = {
+      adminId: currentUser.userId,
+      adminEmail: currentUser.email,
+      adminName: currentUser.email,
+      ip: req.ip ?? 'unknown',
+    };
     return this.subscriptionsService.cancelSubscription(id, adminInfo);
   }
 }
