@@ -60,7 +60,18 @@ export class CreateChallengeDto {
   @MaxLength(5000)
   instructions!: string;
 
-  @ApiProperty({ description: 'Date for the challenge (YYYY-MM-DD)', example: '2026-03-15' })
+  @ApiProperty({ description: 'Date for the challenge (YYYY-MM-DD, DD-MM-YYYY, or DD/MM/YYYY)', example: '2026-03-15' })
+  @Transform(({ value }: { value: unknown }) => {
+    if (!value || typeof value !== 'string') return value;
+    const match = value.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+    if (match) {
+      const day = match[1]!;
+      const month = match[2]!;
+      const year = match[3]!;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    return value;
+  })
   @IsDateString()
   date!: string;
 
@@ -106,8 +117,19 @@ export class UpdateChallengeDto {
   @MaxLength(5000)
   instructions?: string;
 
-  @ApiPropertyOptional({ description: 'Date for the challenge (YYYY-MM-DD)' })
+  @ApiPropertyOptional({ description: 'Date for the challenge (YYYY-MM-DD, DD-MM-YYYY, or DD/MM/YYYY)' })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) => {
+    if (!value || typeof value !== 'string') return value;
+    const match = value.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+    if (match) {
+      const day = match[1]!;
+      const month = match[2]!;
+      const year = match[3]!;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    return value;
+  })
   @IsDateString()
   date?: string;
 
