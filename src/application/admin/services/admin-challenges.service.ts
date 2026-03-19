@@ -23,6 +23,16 @@ export class AdminChallengesService {
     private readonly auditService: AuditLogService,
   ) {}
 
+  /** Parse YYYY-MM-DD as local midnight date (avoids UTC offset issues) */
+  private parseLocalDate(dateStr: string): Date {
+    const parts = dateStr.split('-');
+    return new Date(
+      parseInt(parts[0] ?? '0', 10),
+      parseInt(parts[1] ?? '1', 10) - 1,
+      parseInt(parts[2] ?? '1', 10),
+    );
+  }
+
   async getChallenges(query: GetChallengesQueryDto): Promise<ChallengesListResponseDto> {
     const page = query.page || 1;
     const limit = query.limit || 20;
@@ -135,6 +145,13 @@ export class AdminChallengesService {
     data: CreateChallengeDto,
     adminInfo: { adminId: string; adminEmail: string; adminName: string; ip?: string },
   ): Promise<ChallengeResponseDto> {
+    // Only AUDIO and MULTIPLE_CHOICE types are allowed
+    if (data.type === ChallengeType.WRITING) {
+      throw new BadRequestException(
+        'El tipo WRITING no está soportado. Solo se permiten AUDIO y MULTIPLE_CHOICE',
+      );
+    }
+
     // Validate type-specific requirements
     if (
       data.type === ChallengeType.MULTIPLE_CHOICE &&
@@ -145,16 +162,26 @@ export class AdminChallengesService {
       );
     }
 
-    // Check if there's already a challenge for that date
+    // Validate date is not in the past
+    const challengeDate = this.parseLocalDate(data.date);
+    challengeDate.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (challengeDate < today) {
+      throw new BadRequestException('No se pueden crear challenges para fechas pasadas');
+    }
+
+    // Check if there's already a challenge for that date (only 1 per day allowed)
     const existingChallenge = await this.prisma.dailyChallenge.findFirst({
       where: {
         date: new Date(data.date),
-        isActive: true,
       },
     });
 
     if (existingChallenge) {
-      throw new BadRequestException(`Ya existe un challenge activo para la fecha ${data.date}`);
+      throw new BadRequestException(
+        `Ya existe un challenge para la fecha ${data.date}. Solo se permite 1 challenge diario`,
+      );
     }
 
     const challenge = await this.prisma.dailyChallenge.create({
@@ -218,16 +245,25 @@ export class AdminChallengesService {
 
     // Check date conflict if changing date
     if (data.date) {
+      const updateDate = this.parseLocalDate(data.date);
+      updateDate.setHours(0, 0, 0, 0);
+      const todayDate = new Date();
+      todayDate.setHours(0, 0, 0, 0);
+      if (updateDate < todayDate) {
+        throw new BadRequestException('No se puede cambiar la fecha a una fecha pasada');
+      }
+
       const conflicting = await this.prisma.dailyChallenge.findFirst({
         where: {
           date: new Date(data.date),
-          isActive: true,
           id: { not: id },
         },
       });
 
       if (conflicting) {
-        throw new BadRequestException(`Ya existe un challenge activo para la fecha ${data.date}`);
+        throw new BadRequestException(
+          `Ya existe un challenge para la fecha ${data.date}. Solo se permite 1 challenge diario`,
+        );
       }
     }
 
@@ -318,22 +354,48 @@ export class AdminChallengesService {
     data: BulkCreateChallengeDto,
     adminInfo: { adminId: string; adminEmail: string; adminName: string; ip?: string },
   ): Promise<BulkCreateChallengesResponseDto> {
+    // Limit bulk upload to 30 challenges max
+    if (data.challenges.length > 30) {
+      throw new BadRequestException(
+        'El máximo de challenges por carga masiva es 30',
+      );
+    }
+
     let created = 0;
     let failed = 0;
     const errors: string[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     for (const challengeData of data.challenges) {
       try {
-        // Check for existing challenge on that date
+        // Only AUDIO and MULTIPLE_CHOICE types are allowed
+        if (challengeData.type === ChallengeType.WRITING) {
+          throw new Error(
+            'El tipo WRITING no está soportado. Solo se permiten AUDIO y MULTIPLE_CHOICE',
+          );
+        }
+
+        // Validate date is not in the past
+        const challengeDate = this.parseLocalDate(challengeData.date);
+        challengeDate.setHours(0, 0, 0, 0);
+        if (challengeDate < today) {
+          throw new Error(
+            `La fecha ${challengeData.date} ya pasó. No se pueden crear challenges para fechas pasadas`,
+          );
+        }
+
+        // Check for existing challenge on that date (only 1 per day allowed)
         const existing = await this.prisma.dailyChallenge.findFirst({
           where: {
             date: new Date(challengeData.date),
-            isActive: true,
           },
         });
 
         if (existing) {
-          throw new Error(`Ya existe un challenge para la fecha ${challengeData.date}`);
+          throw new Error(
+            `Ya existe un challenge para la fecha ${challengeData.date}. Solo se permite 1 challenge diario`,
+          );
         }
 
         // Validate type-specific requirements
