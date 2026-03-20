@@ -93,6 +93,7 @@ enum NotificationType {
   NEW_REGISTRATION   // Notificación a admins de nuevo registro
   PLAN_EXPIRED       // Notificación al usuario de plan expirado
   REGISTRATION_APPROVED // Notificación al usuario de registro aprobado
+  UPGRADE_REQUEST    // Solicitud de upgrade de plan por parte de un usuario
 }
 
 // Modelo base de Usuario
@@ -466,15 +467,18 @@ model JobOffer {
   id           Int      @id @default(autoincrement())
   title        String
   company      String
-  location     String
-  salaryRange  String   @map("salary_range")
+  location     String   @default("")
+  salaryRange  String   @default("") @map("salary_range")
   oteMin       Int      @default(0) @map("ote_min") // OTE minimum in dollars per month
   oteMax       Int      @default(0) @map("ote_max") // OTE maximum in dollars per month
   revenue      Int      @default(0) // Monthly revenue requirement in dollars
-  type         String // "Full-time", "Part-time"
-  description  String   @db.Text
+  type         String   @default("Setter") // "Setter", "Closer", etc.
+  description  String   @default("") @db.Text
   requirements String[] // Supports arrays in Postgres
   isActive     Boolean  @default(true) @map("is_active")
+  social       String?  // Primary social link (Instagram, etc.)
+  website      String?  // Company/recruiter website
+  email        String?  @map("contact_email") // Contact email
 
   applications JobApplication[]
 

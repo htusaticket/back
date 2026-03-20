@@ -26,10 +26,37 @@ const adapter = new PrismaPg(pool);
 
 const prisma = new PrismaClient({ adapter });
 
-async function main() {
-  console.log('🌱 Starting seed...');
+// ============================================================
+// HELPERS
+// ============================================================
+function daysFromNow(days: number): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d;
+}
 
-  // Clear existing data (in correct order to respect foreign keys)
+function todayAt(hours: number, minutes = 0): Date {
+  const d = new Date();
+  d.setHours(hours, minutes, 0, 0);
+  return d;
+}
+
+function dayAt(daysOffset: number, hours: number, minutes = 0): Date {
+  const d = daysFromNow(daysOffset);
+  d.setHours(hours, minutes, 0, 0);
+  return d;
+}
+
+function pastDate(daysAgo: number): Date {
+  return daysFromNow(-daysAgo);
+}
+
+async function main() {
+  console.log('🌱 Starting comprehensive seed (Sprint 6)...');
+
+  // ============================================================
+  // CLEAN DATABASE
+  // ============================================================
   console.log('🧹 Cleaning database...');
   await prisma.auditLog.deleteMany();
   await prisma.notification.deleteMany();
@@ -51,8 +78,10 @@ async function main() {
   await prisma.user.deleteMany();
   await prisma.systemConfig.deleteMany();
 
-  console.log('⚙️ Creating system config...');
-  // Create system configuration
+  // ============================================================
+  // SYSTEM CONFIG
+  // ============================================================
+  console.log('⚙️  Creating system config...');
   await prisma.systemConfig.create({
     data: {
       strikesEnabled: true,
@@ -64,16 +93,63 @@ async function main() {
     },
   });
 
-  console.log('✨ Creating users...');
+  // ============================================================
+  // USERS (12 total — covers every role, status, plan)
+  // ============================================================
+  console.log('👥 Creating users...');
+  const pw = await bcrypt.hash('password123', 10);
 
-  // Hash password for test user
-  const hashedPassword = await bcrypt.hash('password123', 10);
+  // --- SUPERADMINS (2) ---
+  const luby = await prisma.user.create({
+    data: {
+      email: 'luby.demidova@gmail.com',
+      password: pw,
+      firstName: 'Luby',
+      lastName: 'Demidova',
+      role: UserRole.SUPERADMIN,
+      status: UserStatus.ACTIVE,
+    },
+  });
 
-  // Create test user (active)
-  const activeUser = await prisma.user.create({
+  const john = await prisma.user.create({
+    data: {
+      email: 'johnfalcon.va@gmail.com',
+      password: pw,
+      firstName: 'John',
+      lastName: 'Falcon',
+      role: UserRole.SUPERADMIN,
+      status: UserStatus.ACTIVE,
+    },
+  });
+
+  // --- ADMIN / Teacher (2) ---
+  const adminSarah = await prisma.user.create({
+    data: {
+      email: 'sarah@jfalcon.com',
+      password: pw,
+      firstName: 'Sarah',
+      lastName: 'Johnson',
+      role: UserRole.ADMIN,
+      status: UserStatus.ACTIVE,
+    },
+  });
+
+  const adminCarlos = await prisma.user.create({
+    data: {
+      email: 'carlos@jfalcon.com',
+      password: pw,
+      firstName: 'Carlos',
+      lastName: 'Rivera',
+      role: UserRole.ADMIN,
+      status: UserStatus.ACTIVE,
+    },
+  });
+
+  // --- ACTIVE USERS (one per plan) ---
+  const userPro = await prisma.user.create({
     data: {
       email: 'eugenia@test.com',
-      password: hashedPassword,
+      password: pw,
       firstName: 'Eugenia',
       lastName: 'Martinez',
       phone: '+1234567890',
@@ -85,174 +161,254 @@ async function main() {
     },
   });
 
-  // Create another active user
-  const secondUser = await prisma.user.create({
+  const userElite = await prisma.user.create({
     data: {
-      email: 'diegoa.marzioni@gmail.com',
-      password: hashedPassword,
+      email: 'diego@test.com',
+      password: pw,
       firstName: 'Diego',
       lastName: 'Marzioni',
       phone: '+0987654321',
       city: 'Madrid',
       country: 'Spain',
+      reference: 'Instagram Ad',
       role: UserRole.USER,
       status: UserStatus.ACTIVE,
     },
   });
 
-  // Create admin user
-  const adminUser = await prisma.user.create({
+  const userLevelUp = await prisma.user.create({
     data: {
-      email: 'admin@test.com',
-      password: hashedPassword,
-      firstName: 'Admin',
-      lastName: 'User',
-      role: UserRole.ADMIN,
+      email: 'maria@test.com',
+      password: pw,
+      firstName: 'Maria',
+      lastName: 'Gonzalez',
+      phone: '+1122334455',
+      city: 'Mexico City',
+      country: 'Mexico',
+      reference: 'Friend referral',
+      role: UserRole.USER,
       status: UserStatus.ACTIVE,
     },
   });
 
-  // Create superadmin users (real superadmins)
-  const superAdminUser = await prisma.user.create({
+  const userHiringHub = await prisma.user.create({
     data: {
-      email: 'luby.demidova@gmail.com',
-      password: hashedPassword,
-      firstName: 'Luby',
-      lastName: 'Demidova',
-      role: UserRole.SUPERADMIN,
+      email: 'lucas@test.com',
+      password: pw,
+      firstName: 'Lucas',
+      lastName: 'Fernandez',
+      phone: '+5566778899',
+      city: 'Bogota',
+      country: 'Colombia',
+      reference: 'LinkedIn',
+      role: UserRole.USER,
       status: UserStatus.ACTIVE,
     },
   });
 
-  const superAdminUser2 = await prisma.user.create({
+  const userSkillBuilder = await prisma.user.create({
     data: {
-      email: 'johnfalcon.va@gmail.com',
-      password: hashedPassword,
-      firstName: 'John',
-      lastName: 'Falcon',
-      role: UserRole.SUPERADMIN,
+      email: 'ana@test.com',
+      password: pw,
+      firstName: 'Ana',
+      lastName: 'Lopez',
+      phone: '+9988776655',
+      city: 'Lima',
+      country: 'Peru',
+      reference: 'YouTube',
+      role: UserRole.USER,
       status: UserStatus.ACTIVE,
     },
   });
 
-  // Create pending user (for testing approval flow)
+  // --- JOB_UPLOADER ---
+  const jobUploader = await prisma.user.create({
+    data: {
+      email: 'recruiter@talent.com',
+      password: pw,
+      firstName: 'Rachel',
+      lastName: 'Thompson',
+      city: 'Miami',
+      country: 'USA',
+      role: UserRole.JOB_UPLOADER,
+      status: UserStatus.ACTIVE,
+    },
+  });
+
+  // --- PENDING USER ---
   const pendingUser = await prisma.user.create({
     data: {
       email: 'pending@test.com',
-      password: hashedPassword,
+      password: pw,
       firstName: 'Pending',
-      lastName: 'User',
+      lastName: 'Applicant',
       phone: '+5555555555',
-      city: 'Test City',
-      country: 'Test Country',
-      reference: 'Testing approval flow',
+      city: 'Santiago',
+      country: 'Chile',
+      reference: 'TikTok',
       role: UserRole.USER,
       status: UserStatus.PENDING,
     },
   });
 
-  // Create teacher user (for feedback simulation)
-  const teacherUser = await prisma.user.create({
+  // --- SUSPENDED USER ---
+  const suspendedUser = await prisma.user.create({
     data: {
-      email: 'sarah@test.com',
-      password: hashedPassword,
-      firstName: 'Sarah',
-      lastName: 'Johnson',
-      role: UserRole.ADMIN,
-      status: UserStatus.ACTIVE,
+      email: 'suspended@test.com',
+      password: pw,
+      firstName: 'Suspended',
+      lastName: 'Person',
+      city: 'Test City',
+      country: 'Test Country',
+      role: UserRole.USER,
+      status: UserStatus.SUSPENDED,
+      adminNotes: JSON.stringify({ notes: 'Suspended for repeated no-shows.' }),
     },
   });
 
-  console.log('� Creating subscriptions...');
+  // ============================================================
+  // SUBSCRIPTIONS (mix of paid/unpaid, active/expired)
+  // ============================================================
+  console.log('💳 Creating subscriptions...');
+  const monthFromNow = daysFromNow(30);
 
-  // Create subscriptions for active users
-  const subscriptionStartDate = new Date();
-  const subscriptionEndDate = new Date(subscriptionStartDate);
-  subscriptionEndDate.setMonth(subscriptionEndDate.getMonth() + 1);
-
-  // Active subscription for first user (PRO plan)
+  // PRO — paid, active
   await prisma.subscription.create({
     data: {
-      userId: activeUser.id,
+      userId: userPro.id,
       plan: UserPlan.PRO,
       status: SubscriptionStatus.ACTIVE,
-      startDate: subscriptionStartDate,
-      endDate: subscriptionEndDate,
+      startDate: pastDate(15),
+      endDate: monthFromNow,
       hasPaid: true,
-      paidAt: subscriptionStartDate,
-      paymentNote: 'Seed - initial payment',
-      assignedBy: superAdminUser.id,
+      paidAt: pastDate(15),
+      paymentNote: 'PayPal - $197',
+      assignedBy: luby.id,
     },
   });
 
-  // Active subscription for second user (ELITE plan)
+  // ELITE — paid, active
   await prisma.subscription.create({
     data: {
-      userId: secondUser.id,
+      userId: userElite.id,
       plan: UserPlan.ELITE,
       status: SubscriptionStatus.ACTIVE,
-      startDate: subscriptionStartDate,
-      endDate: subscriptionEndDate,
+      startDate: pastDate(10),
+      endDate: monthFromNow,
       hasPaid: true,
-      paidAt: subscriptionStartDate,
-      paymentNote: 'Seed - initial payment',
-      assignedBy: superAdminUser.id,
+      paidAt: pastDate(10),
+      paymentNote: 'Stripe - $297',
+      assignedBy: luby.id,
     },
   });
 
-  console.log('�📚 Creating modules and lessons...');
+  // LEVEL_UP — NOT paid (free trial)
+  await prisma.subscription.create({
+    data: {
+      userId: userLevelUp.id,
+      plan: UserPlan.LEVEL_UP,
+      status: SubscriptionStatus.ACTIVE,
+      startDate: pastDate(5),
+      endDate: daysFromNow(25),
+      hasPaid: false,
+      paymentNote: 'Free trial — 30 days',
+      assignedBy: john.id,
+    },
+  });
 
-  // ====================
-  // MODULE 1: Foundations & Goals
-  // ====================
-  const module1 = await prisma.module.create({
+  // HIRING_HUB — paid, active
+  await prisma.subscription.create({
+    data: {
+      userId: userHiringHub.id,
+      plan: UserPlan.HIRING_HUB,
+      status: SubscriptionStatus.ACTIVE,
+      startDate: pastDate(20),
+      endDate: daysFromNow(10),
+      hasPaid: true,
+      paidAt: pastDate(20),
+      paymentNote: 'Zelle - $147',
+      assignedBy: john.id,
+    },
+  });
+
+  // SKILL_BUILDER — NOT paid
+  await prisma.subscription.create({
+    data: {
+      userId: userSkillBuilder.id,
+      plan: UserPlan.SKILL_BUILDER,
+      status: SubscriptionStatus.ACTIVE,
+      startDate: pastDate(3),
+      endDate: daysFromNow(27),
+      hasPaid: false,
+      paymentNote: 'Scholarship',
+      assignedBy: luby.id,
+    },
+  });
+
+  // Expired subscription for suspended user
+  await prisma.subscription.create({
+    data: {
+      userId: suspendedUser.id,
+      plan: UserPlan.PRO,
+      status: SubscriptionStatus.EXPIRED,
+      startDate: pastDate(60),
+      endDate: pastDate(30),
+      hasPaid: true,
+      paidAt: pastDate(60),
+      paymentNote: 'Expired and not renewed',
+      assignedBy: luby.id,
+    },
+  });
+
+  // ============================================================
+  // MODULES & LESSONS (6 modules — 3 visibleForSkillBuilder, 3 not)
+  // ============================================================
+  console.log('📚 Creating modules and lessons...');
+
+  // MODULE 1 — visibleForSkillBuilder: TRUE
+  const mod1 = await prisma.module.create({
     data: {
       title: 'Foundations & Goals',
       description:
-        'Start your journey by setting clear objectives and understanding the core principles of effective language learning. This module covers the essential mindset changes required for success.',
+        'Start your journey by setting clear objectives and understanding core principles of effective language learning.',
       image:
         'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=1000&auto=format&fit=crop',
       order: 1,
+      visibleForSkillBuilder: true,
     },
   });
 
-  const lesson1_1 = await prisma.lesson.create({
+  const l1_1 = await prisma.lesson.create({
     data: {
       title: 'Introduction to the Course',
-      description:
-        'Welcome to JFalcon Academy! In this lesson, you will learn about the course structure, objectives, and how to make the most of your learning experience.',
+      description: 'Welcome! Learn about the course structure.',
       duration: '10 min',
       contentUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
       order: 1,
-      moduleId: module1.id,
+      moduleId: mod1.id,
     },
   });
-
-  const lesson1_2 = await prisma.lesson.create({
+  const l1_2 = await prisma.lesson.create({
     data: {
       title: 'Setting SMART Goals',
-      description:
-        'Learn how to set Specific, Measurable, Achievable, Relevant, and Time-bound goals for your English learning journey.',
+      description: 'Specific, Measurable, Achievable, Relevant, Time-bound goals.',
       duration: '15 min',
       contentUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
       order: 2,
-      moduleId: module1.id,
+      moduleId: mod1.id,
     },
   });
-
-  const lesson1_3 = await prisma.lesson.create({
+  const l1_3 = await prisma.lesson.create({
     data: {
       title: 'Essential Vocabulary Building',
-      description:
-        'Discover effective techniques for building and retaining new vocabulary. Learn about spaced repetition and active recall methods.',
+      description: 'Spaced repetition and active recall methods.',
       duration: '20 min',
       contentUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
       order: 3,
-      moduleId: module1.id,
+      moduleId: mod1.id,
     },
   });
 
-  // Resources for lessons in module 1
   await prisma.lessonResource.createMany({
     data: [
       {
@@ -260,83 +416,76 @@ async function main() {
         fileUrl: 'https://example.com/resources/course-syllabus.pdf',
         type: ResourceType.PDF,
         size: '245 KB',
-        lessonId: lesson1_1.id,
+        lessonId: l1_1.id,
       },
       {
         title: 'Goal Setting Worksheet.pdf',
         fileUrl: 'https://example.com/resources/goal-worksheet.pdf',
         type: ResourceType.PDF,
         size: '180 KB',
-        lessonId: lesson1_2.id,
+        lessonId: l1_2.id,
       },
       {
-        title: 'Vocabulary Flashcards Template.pdf',
+        title: 'Vocabulary Flashcards.pdf',
         fileUrl: 'https://example.com/resources/flashcards.pdf',
         type: ResourceType.PDF,
         size: '320 KB',
-        lessonId: lesson1_3.id,
+        lessonId: l1_3.id,
       },
       {
         title: 'Anki App Guide',
         fileUrl: 'https://apps.ankiweb.net/',
         type: ResourceType.LINK,
         size: null,
-        lessonId: lesson1_3.id,
+        lessonId: l1_3.id,
       },
     ],
   });
 
-  // ====================
-  // MODULE 2: Conversation Basics
-  // ====================
-  const module2 = await prisma.module.create({
+  // MODULE 2 — visibleForSkillBuilder: TRUE
+  const mod2 = await prisma.module.create({
     data: {
       title: 'Conversation Basics',
       description:
-        'Master the art of small talk and introductions. Learn how to confidently start conversations in professional settings and keep them going with active listening techniques.',
+        'Master small talk and introductions. Learn to confidently start conversations in professional settings.',
       image:
         'https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=1000&auto=format&fit=crop',
       order: 2,
+      visibleForSkillBuilder: true,
     },
   });
 
-  const lesson2_1 = await prisma.lesson.create({
+  const l2_1 = await prisma.lesson.create({
     data: {
       title: 'Greetings and Introductions',
-      description:
-        'Learn formal and informal greetings for different contexts. Practice introducing yourself and others in professional and social situations.',
+      description: 'Formal and informal greetings for different contexts.',
       duration: '12 min',
       contentUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
       order: 1,
-      moduleId: module2.id,
+      moduleId: mod2.id,
     },
   });
-
-  const lesson2_2 = await prisma.lesson.create({
+  const l2_2 = await prisma.lesson.create({
     data: {
       title: 'Small Talk Techniques',
-      description:
-        'Learn effective techniques to start and maintain casual conversations in English. This lesson covers common expressions, useful questions, and how to respond appropriately.',
+      description: 'Common expressions and useful questions for casual conversations.',
       duration: '18 min',
       contentUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
       order: 2,
-      moduleId: module2.id,
+      moduleId: mod2.id,
     },
   });
-
-  const lesson2_3 = await prisma.lesson.create({
+  const l2_3 = await prisma.lesson.create({
     data: {
       title: 'Active Listening Skills',
-      description:
-        'Develop your active listening skills to better understand native speakers and engage more meaningfully in conversations.',
+      description: 'Understand native speakers and engage more meaningfully.',
       duration: '22 min',
       contentUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
       order: 3,
-      moduleId: module2.id,
+      moduleId: mod2.id,
     },
   });
 
-  // Resources for module 2
   await prisma.lessonResource.createMany({
     data: [
       {
@@ -344,79 +493,67 @@ async function main() {
         fileUrl: 'https://example.com/resources/greetings-cheatsheet.pdf',
         type: ResourceType.PDF,
         size: '150 KB',
-        lessonId: lesson2_1.id,
+        lessonId: l2_1.id,
       },
       {
-        title: 'Small Talk Topics List.pdf',
+        title: 'Small Talk Topics.pdf',
         fileUrl: 'https://example.com/resources/smalltalk-topics.pdf',
         type: ResourceType.PDF,
         size: '180 KB',
-        lessonId: lesson2_2.id,
-      },
-      {
-        title: 'Lesson Transcript.pdf',
-        fileUrl: 'https://example.com/resources/lesson-transcript-2-2.pdf',
-        type: ResourceType.PDF,
-        size: '245 KB',
-        lessonId: lesson2_2.id,
+        lessonId: l2_2.id,
       },
       {
         title: 'Practice Exercises.pdf',
         fileUrl: 'https://example.com/resources/exercises-2-3.pdf',
         type: ResourceType.PDF,
         size: '320 KB',
-        lessonId: lesson2_3.id,
+        lessonId: l2_3.id,
       },
     ],
   });
 
-  // ====================
-  // MODULE 3: Business English
-  // ====================
-  const module3 = await prisma.module.create({
+  // MODULE 3 — visibleForSkillBuilder: FALSE
+  const mod3 = await prisma.module.create({
     data: {
       title: 'Business English',
       description:
-        'Dive into the world of corporate communication. From writing professional emails to delivering impactful presentations, this module equips you with the tools for the office.',
+        'Corporate communication: professional emails, impactful presentations, and meeting vocabulary.',
       image:
         'https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=1000&auto=format&fit=crop',
       order: 3,
+      visibleForSkillBuilder: false,
     },
   });
 
-  const lesson3_1 = await prisma.lesson.create({
+  const l3_1 = await prisma.lesson.create({
     data: {
       title: 'Professional Email Writing',
-      description:
-        'Master the art of writing clear, professional emails. Learn proper formatting, tone, and common phrases for business correspondence.',
+      description: 'Clear, professional emails with proper formatting and tone.',
       duration: '25 min',
       contentUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
       order: 1,
-      moduleId: module3.id,
+      moduleId: mod3.id,
     },
   });
-
-  const lesson3_2 = await prisma.lesson.create({
+  const l3_2 = await prisma.lesson.create({
     data: {
       title: 'Meeting Vocabulary & Phrases',
-      description:
-        'Learn essential vocabulary and phrases for participating in business meetings. From opening remarks to closing discussions.',
+      description: 'Essential vocabulary for participating in business meetings.',
       duration: '20 min',
       contentUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
       order: 2,
-      moduleId: module3.id,
+      moduleId: mod3.id,
     },
   });
-
-  const lesson3_3 = await prisma.lesson.create({
+  const l3_3 = await prisma.lesson.create({
     data: {
       title: 'Delivering Presentations',
       description:
-        'Build confidence in presenting in English. Learn structure, transitions, and techniques for engaging your audience.',
+        'Build confidence presenting in English: structure, transitions, audience engagement.',
       duration: '30 min',
       contentUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
       order: 3,
-      moduleId: module3.id,
+      moduleId: mod3.id,
     },
   });
 
@@ -427,60 +564,56 @@ async function main() {
         fileUrl: 'https://example.com/resources/email-templates.pdf',
         type: ResourceType.PDF,
         size: '290 KB',
-        lessonId: lesson3_1.id,
+        lessonId: l3_1.id,
       },
       {
         title: 'Meeting Phrases Reference.pdf',
         fileUrl: 'https://example.com/resources/meeting-phrases.pdf',
         type: ResourceType.PDF,
         size: '200 KB',
-        lessonId: lesson3_2.id,
+        lessonId: l3_2.id,
       },
       {
         title: 'Presentation Slides Template',
         fileUrl: 'https://docs.google.com/presentation/d/example',
         type: ResourceType.LINK,
         size: null,
-        lessonId: lesson3_3.id,
+        lessonId: l3_3.id,
       },
     ],
   });
 
-  // ====================
-  // MODULE 4: Advanced Topics
-  // ====================
-  const module4 = await prisma.module.create({
+  // MODULE 4 — visibleForSkillBuilder: TRUE
+  const mod4 = await prisma.module.create({
     data: {
-      title: 'Advanced Topics',
+      title: 'Advanced Idioms & Culture',
       description:
-        'Refine your skills with complex idioms, cultural nuances, and advanced negotiation tactics. Perfect for those looking to reach near-native fluency levels.',
+        'Complex idioms, cultural nuances, and advanced negotiation tactics for near-native fluency.',
       image:
         'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1000&auto=format&fit=crop',
       order: 4,
+      visibleForSkillBuilder: true,
     },
   });
 
-  const lesson4_1 = await prisma.lesson.create({
+  const l4_1 = await prisma.lesson.create({
     data: {
       title: 'Common Idioms & Expressions',
-      description:
-        'Learn the most common English idioms used in everyday conversation and business contexts.',
+      description: 'Most common English idioms in everyday and business contexts.',
       duration: '18 min',
       contentUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
       order: 1,
-      moduleId: module4.id,
+      moduleId: mod4.id,
     },
   });
-
-  const lesson4_2 = await prisma.lesson.create({
+  const l4_2 = await prisma.lesson.create({
     data: {
       title: 'Cultural Nuances in Communication',
-      description:
-        'Understand the cultural context behind English communication styles in different English-speaking countries.',
+      description: 'Cultural context behind English communication styles.',
       duration: '25 min',
       contentUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
       order: 2,
-      moduleId: module4.id,
+      moduleId: mod4.id,
     },
   });
 
@@ -491,233 +624,225 @@ async function main() {
         fileUrl: 'https://example.com/resources/idioms-dictionary.pdf',
         type: ResourceType.PDF,
         size: '450 KB',
-        lessonId: lesson4_1.id,
+        lessonId: l4_1.id,
       },
     ],
   });
 
-  // ====================
-  // MODULE 5: Interview Mastery (With multiple videos per lesson)
-  // ====================
-  const module5 = await prisma.module.create({
+  // MODULE 5 — visibleForSkillBuilder: FALSE
+  const mod5 = await prisma.module.create({
     data: {
       title: 'Interview Mastery',
       description:
-        'Master the art of job interviews in English. This module includes multiple video perspectives for each topic to give you comprehensive preparation.',
+        'Master job interviews in English. Multiple video perspectives for comprehensive preparation.',
       image:
         'https://images.unsplash.com/photo-1565688534245-05d6b5be184a?q=80&w=1000&auto=format&fit=crop',
       order: 5,
+      visibleForSkillBuilder: false,
     },
   });
 
-  // Lesson 5.1 with 2 videos
-  const lesson5_1 = await prisma.lesson.create({
+  const l5_1 = await prisma.lesson.create({
     data: {
-      title: 'Tell Me About Yourself - The Perfect Answer',
-      description:
-        'Learn how to craft and deliver the perfect answer to the most common interview question. Includes both theory and real-world examples.',
+      title: 'Tell Me About Yourself',
+      description: 'Craft the perfect answer to the most common interview question.',
       duration: '28 min',
-      contentUrl: 'https://www.youtube.com/embed/es7XtrloDIQ', // First video - Theory
+      contentUrl: 'https://www.youtube.com/embed/es7XtrloDIQ',
       order: 1,
-      moduleId: module5.id,
+      moduleId: mod5.id,
     },
   });
-
-  // Lesson 5.2 with 2 videos
-  const lesson5_2 = await prisma.lesson.create({
+  const l5_2 = await prisma.lesson.create({
     data: {
       title: 'Handling Salary Negotiations',
-      description:
-        'Master the art of salary negotiation with confidence. Learn key phrases and strategies from two different expert perspectives.',
+      description: 'Key phrases and strategies for salary negotiation.',
       duration: '35 min',
-      contentUrl: 'https://www.youtube.com/embed/XCtOXJwPkC0', // First video - Basics
+      contentUrl: 'https://www.youtube.com/embed/XCtOXJwPkC0',
       order: 2,
-      moduleId: module5.id,
+      moduleId: mod5.id,
     },
   });
-
-  // Lesson 5.3 with 2 videos
-  const lesson5_3 = await prisma.lesson.create({
+  const l5_3 = await prisma.lesson.create({
     data: {
-      title: 'Behavioral Interview Questions (STAR Method)',
-      description:
-        'Learn the STAR method for answering behavioral questions. Includes explanation video and practice examples video.',
+      title: 'Behavioral Questions (STAR Method)',
+      description: 'The STAR method for answering behavioral questions.',
       duration: '32 min',
-      contentUrl: 'https://www.youtube.com/embed/qKBubKO-798', // First video - STAR Method explained
+      contentUrl: 'https://www.youtube.com/embed/qKBubKO-798',
       order: 3,
-      moduleId: module5.id,
+      moduleId: mod5.id,
     },
   });
 
-  // Resources for Module 5 - Including second videos and PDFs
   await prisma.lessonResource.createMany({
     data: [
-      // Lesson 5.1 resources
       {
         title: 'Part 2: Real Interview Examples',
         fileUrl: 'https://www.youtube.com/embed/kayOhGRcNt4',
         type: ResourceType.VIDEO,
         size: '15 min',
-        lessonId: lesson5_1.id,
+        lessonId: l5_1.id,
       },
       {
         title: 'Personal Pitch Template.pdf',
         fileUrl: 'https://example.com/resources/personal-pitch-template.pdf',
         type: ResourceType.PDF,
         size: '180 KB',
-        lessonId: lesson5_1.id,
+        lessonId: l5_1.id,
       },
-      // Lesson 5.2 resources
       {
         title: 'Part 2: Advanced Negotiation Tactics',
         fileUrl: 'https://www.youtube.com/embed/wFjlq0vEJBw',
         type: ResourceType.VIDEO,
         size: '18 min',
-        lessonId: lesson5_2.id,
+        lessonId: l5_2.id,
       },
       {
         title: 'Salary Research Worksheet.pdf',
         fileUrl: 'https://example.com/resources/salary-worksheet.pdf',
         type: ResourceType.PDF,
         size: '220 KB',
-        lessonId: lesson5_2.id,
+        lessonId: l5_2.id,
       },
-      // Lesson 5.3 resources
       {
         title: 'Part 2: Practice STAR Answers',
         fileUrl: 'https://www.youtube.com/embed/GvJ9G2BKDGM',
         type: ResourceType.VIDEO,
         size: '20 min',
-        lessonId: lesson5_3.id,
+        lessonId: l5_3.id,
       },
       {
         title: 'STAR Method Cheatsheet.pdf',
         fileUrl: 'https://example.com/resources/star-method-cheatsheet.pdf',
         type: ResourceType.PDF,
         size: '150 KB',
-        lessonId: lesson5_3.id,
+        lessonId: l5_3.id,
       },
       {
         title: '50 Common Behavioral Questions.pdf',
         fileUrl: 'https://example.com/resources/behavioral-questions.pdf',
         type: ResourceType.PDF,
         size: '320 KB',
-        lessonId: lesson5_3.id,
+        lessonId: l5_3.id,
       },
     ],
   });
 
+  // MODULE 6 — visibleForSkillBuilder: FALSE (DRAFT status)
+  const mod6 = await prisma.module.create({
+    data: {
+      title: 'Sales English (Coming Soon)',
+      description:
+        'Master the language of sales: cold calling scripts, objection handling, and closing techniques.',
+      image:
+        'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=1000&auto=format&fit=crop',
+      order: 6,
+      status: 'DRAFT',
+      visibleForSkillBuilder: false,
+    },
+  });
+
+  // ============================================================
+  // USER PROGRESS (for PRO user — most progress)
+  // ============================================================
   console.log('📝 Creating user progress...');
 
-  // User has completed all lessons in Module 1
+  // PRO user: Module 1 complete, Module 2 partial, Module 3 partial
   await prisma.userLessonProgress.createMany({
     data: [
-      {
-        userId: activeUser.id,
-        lessonId: lesson1_1.id,
-        completed: true,
-        lastAccessedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-      },
-      {
-        userId: activeUser.id,
-        lessonId: lesson1_2.id,
-        completed: true,
-        lastAccessedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
-      },
-      {
-        userId: activeUser.id,
-        lessonId: lesson1_3.id,
-        completed: true,
-        lastAccessedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-      },
+      { userId: userPro.id, lessonId: l1_1.id, completed: true, lastAccessedAt: pastDate(7) },
+      { userId: userPro.id, lessonId: l1_2.id, completed: true, lastAccessedAt: pastDate(6) },
+      { userId: userPro.id, lessonId: l1_3.id, completed: true, lastAccessedAt: pastDate(5) },
+      { userId: userPro.id, lessonId: l2_1.id, completed: true, lastAccessedAt: pastDate(3) },
+      { userId: userPro.id, lessonId: l2_2.id, completed: true, lastAccessedAt: pastDate(2) },
+      { userId: userPro.id, lessonId: l2_3.id, completed: false, lastAccessedAt: pastDate(1) },
+      { userId: userPro.id, lessonId: l3_1.id, completed: true, lastAccessedAt: pastDate(4) },
+      { userId: userPro.id, lessonId: l3_2.id, completed: true, lastAccessedAt: pastDate(3) },
     ],
   });
-
-  // User has completed 2 of 3 lessons in Module 2
-  await prisma.userLessonProgress.createMany({
-    data: [
-      {
-        userId: activeUser.id,
-        lessonId: lesson2_1.id,
-        completed: true,
-        lastAccessedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-      },
-      {
-        userId: activeUser.id,
-        lessonId: lesson2_2.id,
-        completed: true,
-        lastAccessedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      },
-      {
-        userId: activeUser.id,
-        lessonId: lesson2_3.id,
-        completed: false,
-        lastAccessedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-      },
-    ],
-  });
-
-  // User has completed 2 of 3 lessons in Module 3
-  await prisma.userLessonProgress.createMany({
-    data: [
-      {
-        userId: activeUser.id,
-        lessonId: lesson3_1.id,
-        completed: true,
-        lastAccessedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-      },
-      {
-        userId: activeUser.id,
-        lessonId: lesson3_2.id,
-        completed: true,
-        lastAccessedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-      },
-    ],
-  });
-
-  // Module progress
   await prisma.userModuleProgress.createMany({
     data: [
-      { userId: activeUser.id, moduleId: module1.id, progress: 100 },
-      { userId: activeUser.id, moduleId: module2.id, progress: 66 },
-      { userId: activeUser.id, moduleId: module3.id, progress: 66 },
-      { userId: activeUser.id, moduleId: module4.id, progress: 0 },
+      { userId: userPro.id, moduleId: mod1.id, progress: 100 },
+      { userId: userPro.id, moduleId: mod2.id, progress: 66 },
+      { userId: userPro.id, moduleId: mod3.id, progress: 66 },
+      { userId: userPro.id, moduleId: mod4.id, progress: 0 },
     ],
   });
 
+  // ELITE user: Module 1 complete
+  await prisma.userLessonProgress.createMany({
+    data: [
+      { userId: userElite.id, lessonId: l1_1.id, completed: true, lastAccessedAt: pastDate(4) },
+      { userId: userElite.id, lessonId: l1_2.id, completed: true, lastAccessedAt: pastDate(3) },
+      { userId: userElite.id, lessonId: l1_3.id, completed: true, lastAccessedAt: pastDate(2) },
+      { userId: userElite.id, lessonId: l2_1.id, completed: true, lastAccessedAt: pastDate(1) },
+    ],
+  });
+  await prisma.userModuleProgress.createMany({
+    data: [
+      { userId: userElite.id, moduleId: mod1.id, progress: 100 },
+      { userId: userElite.id, moduleId: mod2.id, progress: 33 },
+    ],
+  });
+
+  // SKILL_BUILDER user: some progress on visible modules only
+  await prisma.userLessonProgress.createMany({
+    data: [
+      {
+        userId: userSkillBuilder.id,
+        lessonId: l1_1.id,
+        completed: true,
+        lastAccessedAt: pastDate(2),
+      },
+      {
+        userId: userSkillBuilder.id,
+        lessonId: l1_2.id,
+        completed: false,
+        lastAccessedAt: pastDate(1),
+      },
+    ],
+  });
+  await prisma.userModuleProgress.createMany({
+    data: [{ userId: userSkillBuilder.id, moduleId: mod1.id, progress: 33 }],
+  });
+
+  // ============================================================
+  // CLASS SESSIONS (8 — past, today, near future, next week)
+  // ============================================================
   console.log('🏫 Creating class sessions...');
 
-  const now = new Date();
-  const today18 = new Date(now);
-  today18.setHours(18, 0, 0, 0);
+  // Past class (2 days ago) — for attendance/strike testing
+  const classPast = await prisma.classSession.create({
+    data: {
+      title: 'Pronunciation Workshop',
+      type: ClassType.WORKSHOP,
+      startTime: dayAt(-2, 10, 0),
+      endTime: dayAt(-2, 11, 30),
+      capacityMax: null,
+      meetLink: 'https://meet.google.com/past-class',
+      description: 'Interactive session to master difficult phonemes.',
+    },
+  });
 
-  const tomorrow17 = new Date(now);
-  tomorrow17.setDate(tomorrow17.getDate() + 1);
-  tomorrow17.setHours(17, 0, 0, 0);
+  // Past class (yesterday)
+  const classYesterday = await prisma.classSession.create({
+    data: {
+      title: 'Debate Club: A.I. Ethics',
+      type: ClassType.REGULAR,
+      startTime: dayAt(-1, 14, 0),
+      endTime: dayAt(-1, 15, 30),
+      capacityMax: 8,
+      meetLink: 'https://meet.google.com/yesterday-debate',
+      description: 'Structured debate practice on AI Ethics.',
+    },
+  });
 
-  const tomorrow19 = new Date(now);
-  tomorrow19.setDate(tomorrow19.getDate() + 1);
-  tomorrow19.setHours(19, 0, 0, 0);
-
-  const dayAfter10 = new Date(now);
-  dayAfter10.setDate(dayAfter10.getDate() + 2);
-  dayAfter10.setHours(10, 0, 0, 0);
-
-  const dayAfter14 = new Date(now);
-  dayAfter14.setDate(dayAfter14.getDate() + 2);
-  dayAfter14.setHours(14, 0, 0, 0);
-
-  const nextWeek18 = new Date(now);
-  nextWeek18.setDate(nextWeek18.getDate() + 7);
-  nextWeek18.setHours(18, 0, 0, 0);
-
-  // Class 1 - Today at 6pm (user enrolled)
-  const class1 = await prisma.classSession.create({
+  // Today's class — 6pm
+  const classToday = await prisma.classSession.create({
     data: {
       title: 'Conversational Advanced II',
       type: ClassType.REGULAR,
-      startTime: today18,
-      endTime: new Date(today18.getTime() + 60 * 60 * 1000),
+      startTime: todayAt(18, 0),
+      endTime: todayAt(19, 0),
       capacityMax: 5,
       meetLink: 'https://meet.google.com/abc-defg-hij',
       materialsLink: 'https://drive.google.com/file/materials1',
@@ -725,26 +850,26 @@ async function main() {
     },
   });
 
-  // Class 2 - Tomorrow at 5pm (full capacity)
-  const class2 = await prisma.classSession.create({
+  // Tomorrow — 5pm (near full)
+  const classTomorrow1 = await prisma.classSession.create({
     data: {
       title: 'Grammar Review Session',
       type: ClassType.REGULAR,
-      startTime: tomorrow17,
-      endTime: new Date(tomorrow17.getTime() + 60 * 60 * 1000),
+      startTime: dayAt(1, 17, 0),
+      endTime: dayAt(1, 18, 0),
       capacityMax: 5,
       meetLink: 'https://meet.google.com/ghi-jklm-nop',
-      description: 'Deep dive into complex grammar structures and common mistakes.',
+      description: 'Deep dive into complex grammar structures.',
     },
   });
 
-  // Class 3 - Tomorrow at 7pm (workshop, unlimited)
-  const class3 = await prisma.classSession.create({
+  // Tomorrow — 7pm (unlimited workshop)
+  const classTomorrow2 = await prisma.classSession.create({
     data: {
       title: 'Business English Masterclass',
       type: ClassType.WORKSHOP,
-      startTime: tomorrow19,
-      endTime: new Date(tomorrow19.getTime() + 90 * 60 * 1000),
+      startTime: dayAt(1, 19, 0),
+      endTime: dayAt(1, 20, 30),
       capacityMax: null,
       meetLink: 'https://meet.google.com/qrs-tuvw-xyz',
       materialsLink: 'https://drive.google.com/file/materials3',
@@ -752,39 +877,26 @@ async function main() {
     },
   });
 
-  // Class 4 - Day after tomorrow at 10am (workshop)
-  const class4 = await prisma.classSession.create({
+  // Day after tomorrow — QA session
+  const classDA = await prisma.classSession.create({
     data: {
-      title: 'Pronunciation Workshop',
-      type: ClassType.WORKSHOP,
-      startTime: dayAfter10,
-      endTime: new Date(dayAfter10.getTime() + 90 * 60 * 1000),
-      capacityMax: null,
-      meetLink: 'https://meet.google.com/pqr-stuv-wxy',
-      description: 'Interactive session to master difficult phonemes and intonation.',
+      title: 'Q&A: Job Interview Prep',
+      type: ClassType.QA,
+      startTime: dayAt(2, 15, 0),
+      endTime: dayAt(2, 16, 0),
+      capacityMax: 10,
+      meetLink: 'https://meet.google.com/qa-session',
+      description: 'Open Q&A about job interview preparation.',
     },
   });
 
-  // Class 5 - Day after tomorrow at 2pm
-  const class5 = await prisma.classSession.create({
-    data: {
-      title: 'Debate Club: A.I. Ethics',
-      type: ClassType.REGULAR,
-      startTime: dayAfter14,
-      endTime: new Date(dayAfter14.getTime() + 90 * 60 * 1000),
-      capacityMax: 8,
-      meetLink: 'https://meet.google.com/aaa-bbbb-ccc',
-      description: 'Structured debate practice. Topic: Artificial Intelligence Ethics.',
-    },
-  });
-
-  // Class 6 - Next week
-  const class6 = await prisma.classSession.create({
+  // Next week — Masterclass
+  const classNextWeek = await prisma.classSession.create({
     data: {
       title: 'IELTS Prep: Writing Task 2',
-      type: ClassType.REGULAR,
-      startTime: nextWeek18,
-      endTime: new Date(nextWeek18.getTime() + 60 * 60 * 1000),
+      type: ClassType.MASTERCLASS,
+      startTime: dayAt(7, 18, 0),
+      endTime: dayAt(7, 19, 0),
       capacityMax: 6,
       meetLink: 'https://meet.google.com/ddd-eeee-fff',
       materialsLink: 'https://drive.google.com/file/materials6',
@@ -792,94 +904,196 @@ async function main() {
     },
   });
 
-  console.log('✅ Creating class enrollments...');
+  // Next week + 1 — Webinar
+  const classWebinar = await prisma.classSession.create({
+    data: {
+      title: 'Guest Speaker: Life as a Remote Closer',
+      type: ClassType.WEBINAR,
+      startTime: dayAt(8, 20, 0),
+      endTime: dayAt(8, 21, 30),
+      capacityMax: null,
+      meetLink: 'https://meet.google.com/webinar-guest',
+      description: 'Special guest shares experience working remotely as a closer.',
+    },
+  });
 
-  // Enroll activeUser in class1 (today's class)
+  // ============================================================
+  // ENROLLMENTS (varied statuses and attendance)
+  // ============================================================
+  console.log('✅ Creating enrollments...');
+
+  // Past class — PRO user was present
   await prisma.classEnrollment.create({
     data: {
-      userId: activeUser.id,
-      classSessionId: class1.id,
+      userId: userPro.id,
+      classSessionId: classPast.id,
+      status: EnrollmentStatus.CONFIRMED,
+      attendanceStatus: 'PRESENT',
+      attendanceMarkedAt: dayAt(-2, 11, 30),
+    },
+  });
+  // Past class — ELITE user was late
+  await prisma.classEnrollment.create({
+    data: {
+      userId: userElite.id,
+      classSessionId: classPast.id,
+      status: EnrollmentStatus.CONFIRMED,
+      attendanceStatus: 'LATE',
+      attendanceMarkedAt: dayAt(-2, 11, 30),
+    },
+  });
+  // Yesterday — PRO absent (strike candidate)
+  await prisma.classEnrollment.create({
+    data: {
+      userId: userPro.id,
+      classSessionId: classYesterday.id,
+      status: EnrollmentStatus.CONFIRMED,
+      attendanceStatus: 'ABSENT',
+      attendanceMarkedAt: dayAt(-1, 15, 30),
+    },
+  });
+  // Yesterday — LEVEL_UP user cancelled
+  await prisma.classEnrollment.create({
+    data: {
+      userId: userLevelUp.id,
+      classSessionId: classYesterday.id,
+      status: EnrollmentStatus.CANCELLED,
+      cancelledAt: dayAt(-1, 12, 0),
+    },
+  });
+
+  // Today — PRO enrolled
+  await prisma.classEnrollment.create({
+    data: { userId: userPro.id, classSessionId: classToday.id, status: EnrollmentStatus.CONFIRMED },
+  });
+  // Today — ELITE enrolled
+  await prisma.classEnrollment.create({
+    data: {
+      userId: userElite.id,
+      classSessionId: classToday.id,
       status: EnrollmentStatus.CONFIRMED,
     },
   });
 
-  // Enroll activeUser in class6 (next week)
+  // Tomorrow grammar — fill to near capacity
   await prisma.classEnrollment.create({
     data: {
-      userId: activeUser.id,
-      classSessionId: class6.id,
+      userId: userPro.id,
+      classSessionId: classTomorrow1.id,
+      status: EnrollmentStatus.CONFIRMED,
+    },
+  });
+  await prisma.classEnrollment.create({
+    data: {
+      userId: userElite.id,
+      classSessionId: classTomorrow1.id,
+      status: EnrollmentStatus.CONFIRMED,
+    },
+  });
+  await prisma.classEnrollment.create({
+    data: {
+      userId: userLevelUp.id,
+      classSessionId: classTomorrow1.id,
       status: EnrollmentStatus.CONFIRMED,
     },
   });
 
-  // Fill class2 to capacity
+  // Tomorrow workshop — a few enrolled
   await prisma.classEnrollment.create({
     data: {
-      userId: secondUser.id,
-      classSessionId: class2.id,
+      userId: userElite.id,
+      classSessionId: classTomorrow2.id,
       status: EnrollmentStatus.CONFIRMED,
     },
   });
 
-  for (let i = 0; i < 4; i++) {
-    const fakeUser = await prisma.user.create({
-      data: {
-        email: `user${i}@test.com`,
-        password: hashedPassword,
-        firstName: `User${i}`,
-        lastName: 'Test',
-        role: UserRole.USER,
-        status: UserStatus.ACTIVE,
-      },
-    });
-
-    await prisma.classEnrollment.create({
-      data: {
-        userId: fakeUser.id,
-        classSessionId: class2.id,
-        status: EnrollmentStatus.CONFIRMED,
-      },
-    });
-  }
-
+  // Next week IELTS — PRO enrolled
   await prisma.classEnrollment.create({
     data: {
-      userId: secondUser.id,
-      classSessionId: class3.id,
+      userId: userPro.id,
+      classSessionId: classNextWeek.id,
       status: EnrollmentStatus.CONFIRMED,
     },
   });
 
+  // ============================================================
+  // STRIKES (for testing strikes section)
+  // ============================================================
+  console.log('⚡ Creating strikes...');
+
+  // PRO user — 1 auto strike from absence
+  await prisma.strike.create({
+    data: {
+      userId: userPro.id,
+      classSessionId: classYesterday.id,
+      reason: 'NO_SHOW',
+      isManual: false,
+      createdAt: pastDate(1),
+    },
+  });
+
+  // ELITE user — 1 manual strike
+  await prisma.strike.create({
+    data: {
+      userId: userElite.id,
+      classSessionId: null,
+      reason: 'Disruptive behavior during class',
+      isManual: true,
+      createdAt: pastDate(5),
+    },
+  });
+
+  // Suspended user — 3 strikes (punished)
+  await prisma.strike.create({
+    data: { userId: suspendedUser.id, reason: 'NO_SHOW', isManual: false, createdAt: pastDate(20) },
+  });
+  await prisma.strike.create({
+    data: {
+      userId: suspendedUser.id,
+      reason: 'LATE_CANCELLATION',
+      isManual: false,
+      createdAt: pastDate(15),
+    },
+  });
+  await prisma.strike.create({
+    data: {
+      userId: suspendedUser.id,
+      reason: 'Repeated no-shows',
+      isManual: true,
+      createdAt: pastDate(10),
+    },
+  });
+
+  // ============================================================
+  // DAILY CHALLENGES (8 — mix of types, visibleForSkillBuilder)
+  // ============================================================
   console.log('🎯 Creating daily challenges...');
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const todayMidnight = new Date();
+  todayMidnight.setHours(0, 0, 0, 0);
 
-  // TODAY'S CHALLENGE - Audio (Pending)
-  const todayChallenge = await prisma.dailyChallenge.create({
+  // ---- TODAY — Audio (active, visible for SB) ----
+  const chToday = await prisma.dailyChallenge.create({
     data: {
       title: 'Describe Your Morning Routine',
       type: ChallengeType.AUDIO,
       instructions:
-        'Record a 2-3 minute audio describing your morning routine in English. Try to use present simple tense and vocabulary related to daily activities. Focus on clear pronunciation and natural flow.',
-      date: today,
-      audioUrl: null,
+        'Record a 2-3 minute audio describing your morning routine. Use present simple tense and daily-activity vocabulary.',
+      date: todayMidnight,
       points: 10,
       isActive: true,
+      visibleForSkillBuilder: true,
     },
   });
 
-  // TOMORROW'S CHALLENGE - Quiz
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  const tomorrowChallenge = await prisma.dailyChallenge.create({
+  // ---- TOMORROW — Quiz (active, NOT visible for SB) ----
+  const chTomorrow = await prisma.dailyChallenge.create({
     data: {
       title: 'Business Vocabulary Quiz',
       type: ChallengeType.MULTIPLE_CHOICE,
       instructions:
-        'Select the correct definition for each business term. You need at least 70% to pass. Good luck!',
-      date: tomorrow,
+        'Select the correct definition for each business term. You need at least 70% to pass.',
+      date: new Date(todayMidnight.getTime() + 86400000),
       questions: [
         {
           id: 1,
@@ -902,9 +1116,9 @@ async function main() {
           id: 3,
           text: "A 'stakeholder' is...",
           options: [
-            'Someone who holds the bets',
-            'A person with an interest in a company',
-            'The owner of a steakhouse',
+            'Someone who holds bets',
+            'Person with interest in a company',
+            'Owner of a steakhouse',
             'An employee who is fired',
           ],
           correctAnswer: 1,
@@ -912,21 +1126,16 @@ async function main() {
         {
           id: 4,
           text: "What does 'to break even' mean?",
-          options: [
-            'To make a profit',
-            'To split something equally',
-            'Neither profit nor loss',
-            'To go bankrupt',
-          ],
+          options: ['Make a profit', 'Split equally', 'Neither profit nor loss', 'Go bankrupt'],
           correctAnswer: 2,
         },
         {
           id: 5,
-          text: "'Scalability' in business refers to...",
+          text: "'Scalability' refers to...",
           options: [
             'Weighing products',
             'Ability to grow without issues',
-            'Climbing the corporate ladder',
+            'Climbing the ladder',
             'Fish farming',
           ],
           correctAnswer: 1,
@@ -934,50 +1143,30 @@ async function main() {
       ],
       points: 10,
       isActive: true,
+      visibleForSkillBuilder: false,
     },
   });
 
-  // PAST CHALLENGES - For History
-
-  // Yesterday - Audio (Approved with feedback)
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  const yesterdayChallenge = await prisma.dailyChallenge.create({
+  // ---- YESTERDAY — Audio (reviewed, visible for SB) ----
+  const chYesterday = await prisma.dailyChallenge.create({
     data: {
       title: 'Tell Us About Your Hometown',
       type: ChallengeType.AUDIO,
       instructions: 'Record a 2-minute audio describing your hometown and what makes it special.',
-      date: yesterday,
+      date: new Date(todayMidnight.getTime() - 86400000),
       points: 10,
       isActive: false,
+      visibleForSkillBuilder: true,
     },
   });
 
-  await prisma.userDailyChallengeProgress.create({
-    data: {
-      userId: activeUser.id,
-      challengeId: yesterdayChallenge.id,
-      completed: true,
-      completedAt: yesterday,
-      fileUrl: 'https://storage.example.com/audio/user1-challenge2.webm',
-      status: SubmissionStatus.APPROVED,
-      feedback:
-        'Excellent work! Your pronunciation has improved significantly. Try to work on using more descriptive adjectives next time.',
-      score: null,
-    },
-  });
-
-  // 2 days ago - Quiz (Approved)
-  const twoDaysAgo = new Date(today);
-  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-
-  const twoDaysAgoChallenge = await prisma.dailyChallenge.create({
+  // ---- 2 DAYS AGO — Quiz (completed, visible for SB) ----
+  const ch2d = await prisma.dailyChallenge.create({
     data: {
       title: 'Grammar Quiz: Present Perfect',
       type: ChallengeType.MULTIPLE_CHOICE,
       instructions: 'Test your knowledge of present perfect tense usage.',
-      date: twoDaysAgo,
+      date: new Date(todayMidnight.getTime() - 2 * 86400000),
       questions: [
         {
           id: 1,
@@ -1009,94 +1198,33 @@ async function main() {
           options: ['works', 'worked', 'has worked', 'is working'],
           correctAnswer: 2,
         },
-        {
-          id: 6,
-          text: 'We _____ finished the project.',
-          options: ['just have', 'have just', 'just', 'having just'],
-          correctAnswer: 1,
-        },
-        {
-          id: 7,
-          text: '_____ you ever eaten sushi?',
-          options: ['Did', 'Have', 'Are', 'Were'],
-          correctAnswer: 1,
-        },
-        {
-          id: 8,
-          text: 'She _____ to the gym twice this week.',
-          options: ['went', 'goes', 'has gone', 'is going'],
-          correctAnswer: 2,
-        },
-        {
-          id: 9,
-          text: 'The train _____. We missed it!',
-          options: ['left', 'has left', 'leaves', 'is leaving'],
-          correctAnswer: 1,
-        },
-        {
-          id: 10,
-          text: 'I _____ my keys. Can you help me find them?',
-          options: ['lose', 'lost', 'have lost', 'am losing'],
-          correctAnswer: 2,
-        },
       ],
       points: 10,
       isActive: false,
+      visibleForSkillBuilder: true,
     },
   });
 
-  await prisma.userDailyChallengeProgress.create({
-    data: {
-      userId: activeUser.id,
-      challengeId: twoDaysAgoChallenge.id,
-      completed: true,
-      completedAt: twoDaysAgo,
-      answers: [0, 1, 1, 1, 2, 1, 1, 2, 0, 2],
-      status: SubmissionStatus.APPROVED,
-      feedback: 'Great job! Only one small mistake on question 9.',
-      score: 90,
-    },
-  });
-
-  // 3 days ago - Audio (Needs Improvement)
-  const threeDaysAgo = new Date(today);
-  threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-
-  const threeDaysAgoChallenge = await prisma.dailyChallenge.create({
+  // ---- 3 DAYS AGO — Audio (needs improvement) ----
+  const ch3d = await prisma.dailyChallenge.create({
     data: {
       title: 'Describe Your Dream Job',
       type: ChallengeType.AUDIO,
       instructions: 'Record a 2-minute audio describing your dream job and why it appeals to you.',
-      date: threeDaysAgo,
+      date: new Date(todayMidnight.getTime() - 3 * 86400000),
       points: 10,
       isActive: false,
+      visibleForSkillBuilder: false,
     },
   });
 
-  await prisma.userDailyChallengeProgress.create({
-    data: {
-      userId: activeUser.id,
-      challengeId: threeDaysAgoChallenge.id,
-      completed: true,
-      completedAt: threeDaysAgo,
-      fileUrl: 'https://storage.example.com/audio/user1-challenge4.webm',
-      status: SubmissionStatus.NEEDS_IMPROVEMENT,
-      feedback:
-        'You need to focus more on clarity. Some words were mumbled. Please work on your enunciation and try again!',
-      score: null,
-    },
-  });
-
-  // 4 days ago - Quiz (Approved)
-  const fourDaysAgo = new Date(today);
-  fourDaysAgo.setDate(fourDaysAgo.getDate() - 4);
-
-  const fourDaysAgoChallenge = await prisma.dailyChallenge.create({
+  // ---- 4 DAYS AGO — Quiz (approved, NOT visible for SB) ----
+  const ch4d = await prisma.dailyChallenge.create({
     data: {
       title: 'Phrasal Verbs Challenge',
       type: ChallengeType.MULTIPLE_CHOICE,
       instructions: 'Test your knowledge of common phrasal verbs.',
-      date: fourDaysAgo,
+      date: new Date(todayMidnight.getTime() - 4 * 86400000),
       questions: [
         {
           id: 1,
@@ -1119,27 +1247,180 @@ async function main() {
       ],
       points: 10,
       isActive: false,
+      visibleForSkillBuilder: false,
     },
   });
 
+  // ---- 5 DAYS AGO — Writing challenge (visible for SB) ----
+  const ch5d = await prisma.dailyChallenge.create({
+    data: {
+      title: 'Write a Professional Email',
+      type: ChallengeType.WRITING,
+      instructions:
+        'Write a professional email to a potential employer introducing yourself and expressing interest in a remote sales position.',
+      date: new Date(todayMidnight.getTime() - 5 * 86400000),
+      points: 15,
+      isActive: false,
+      visibleForSkillBuilder: true,
+    },
+  });
+
+  // ---- 6 DAYS AGO — Audio (visible for SB) ----
+  const ch6d = await prisma.dailyChallenge.create({
+    data: {
+      title: 'Describe a Challenge You Overcame',
+      type: ChallengeType.AUDIO,
+      instructions:
+        'Record a 2-minute audio describing a professional challenge you overcame and what you learned from it.',
+      date: new Date(todayMidnight.getTime() - 6 * 86400000),
+      points: 10,
+      isActive: false,
+      visibleForSkillBuilder: true,
+    },
+  });
+
+  // ============================================================
+  // CHALLENGE PROGRESS / SUBMISSIONS (various statuses for corrections page)
+  // ============================================================
+  console.log('📊 Creating challenge submissions...');
+
+  // PRO user — yesterday audio: APPROVED
   await prisma.userDailyChallengeProgress.create({
     data: {
-      userId: activeUser.id,
-      challengeId: fourDaysAgoChallenge.id,
+      userId: userPro.id,
+      challengeId: chYesterday.id,
       completed: true,
-      completedAt: fourDaysAgo,
+      completedAt: pastDate(1),
+      fileUrl: 'https://storage.example.com/audio/pro-hometown.webm',
+      status: SubmissionStatus.APPROVED,
+      feedback: 'Excellent work! Your pronunciation has improved significantly.',
+      score: null,
+    },
+  });
+
+  // PRO user — 2d ago quiz: APPROVED (90%)
+  await prisma.userDailyChallengeProgress.create({
+    data: {
+      userId: userPro.id,
+      challengeId: ch2d.id,
+      completed: true,
+      completedAt: pastDate(2),
+      answers: [0, 1, 1, 1, 2],
+      status: SubmissionStatus.APPROVED,
+      feedback: 'Great job! Only one small mistake.',
+      score: 90,
+    },
+  });
+
+  // PRO user — 3d ago audio: NEEDS_IMPROVEMENT
+  await prisma.userDailyChallengeProgress.create({
+    data: {
+      userId: userPro.id,
+      challengeId: ch3d.id,
+      completed: true,
+      completedAt: pastDate(3),
+      fileUrl: 'https://storage.example.com/audio/pro-dreamjob.webm',
+      status: SubmissionStatus.NEEDS_IMPROVEMENT,
+      feedback: 'Focus more on clarity. Some words were mumbled. Please work on enunciation.',
+      score: null,
+    },
+  });
+
+  // PRO user — 4d ago quiz: APPROVED (100%)
+  await prisma.userDailyChallengeProgress.create({
+    data: {
+      userId: userPro.id,
+      challengeId: ch4d.id,
+      completed: true,
+      completedAt: pastDate(4),
       answers: [1, 2, 0],
       status: SubmissionStatus.APPROVED,
-      feedback: 'Perfect score! Excellent understanding of phrasal verbs.',
+      feedback: 'Perfect score!',
       score: 100,
     },
   });
 
-  console.log('🔔 Creating notifications...');
+  // ELITE user — yesterday audio: PENDING (awaiting review)
+  const pendingSub1 = await prisma.userDailyChallengeProgress.create({
+    data: {
+      userId: userElite.id,
+      challengeId: chYesterday.id,
+      completed: true,
+      completedAt: pastDate(1),
+      fileUrl: 'https://storage.example.com/audio/elite-hometown.webm',
+      status: SubmissionStatus.PENDING,
+    },
+  });
 
-  console.log('💼 Creating job offers and applications...');
+  // ELITE user — today audio: PENDING
+  const pendingSub2 = await prisma.userDailyChallengeProgress.create({
+    data: {
+      userId: userElite.id,
+      challengeId: chToday.id,
+      completed: true,
+      completedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      fileUrl: 'https://storage.example.com/audio/elite-morning.webm',
+      status: SubmissionStatus.PENDING,
+    },
+  });
 
-  // Create job offers based on real format
+  // LEVEL_UP user — today audio: PENDING
+  const pendingSub3 = await prisma.userDailyChallengeProgress.create({
+    data: {
+      userId: userLevelUp.id,
+      challengeId: chToday.id,
+      completed: true,
+      completedAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
+      fileUrl: 'https://storage.example.com/audio/levelup-morning.webm',
+      status: SubmissionStatus.PENDING,
+    },
+  });
+
+  // SKILL_BUILDER user — 2d ago quiz: APPROVED (80%)
+  await prisma.userDailyChallengeProgress.create({
+    data: {
+      userId: userSkillBuilder.id,
+      challengeId: ch2d.id,
+      completed: true,
+      completedAt: pastDate(2),
+      answers: [0, 1, 0, 1, 2],
+      status: SubmissionStatus.APPROVED,
+      feedback: 'Good job! Keep it up.',
+      score: 80,
+    },
+  });
+
+  // SKILL_BUILDER user — 6d ago audio: APPROVED
+  await prisma.userDailyChallengeProgress.create({
+    data: {
+      userId: userSkillBuilder.id,
+      challengeId: ch6d.id,
+      completed: true,
+      completedAt: pastDate(6),
+      fileUrl: 'https://storage.example.com/audio/sb-challenge.webm',
+      status: SubmissionStatus.APPROVED,
+      feedback: 'Nice effort! Work on connecting ideas more fluently.',
+      score: null,
+    },
+  });
+
+  // HIRING_HUB user — 5d ago writing: PENDING
+  const pendingSub4 = await prisma.userDailyChallengeProgress.create({
+    data: {
+      userId: userHiringHub.id,
+      challengeId: ch5d.id,
+      completed: true,
+      completedAt: pastDate(5),
+      fileUrl: 'https://storage.example.com/writing/hiringhub-email.pdf',
+      status: SubmissionStatus.PENDING,
+    },
+  });
+
+  // ============================================================
+  // JOB OFFERS (8 — mix with/without social, website, email)
+  // ============================================================
+  console.log('💼 Creating job offers...');
+
   const job1 = await prisma.jobOffer.create({
     data: {
       title: '$15k/Mo Closers for Info Coaching Offer',
@@ -1149,17 +1430,18 @@ async function main() {
       oteMin: 5000,
       oteMax: 15000,
       revenue: 200000,
-      type: 'Full-time',
-      description:
-        "Join our high-ticket sales team selling SaaS to B2C Info Coaching products. We're looking for hungry closers who want to earn $15k+ per month. Revenue: $60k-$200k/Mo. Must be comfortable with high-pressure sales environment and working US hours.",
+      type: 'Closer',
+      description: 'Join our high-ticket sales team selling SaaS to B2C Info Coaching products.',
       requirements: [
-        'Fluent English (C1 or higher)',
-        '2+ years of closing experience',
-        'Experience in high-ticket sales',
-        'Comfortable working US hours',
-        'Self-motivated and money-hungry attitude',
+        'Fluent English (C1+)',
+        '2+ years closing',
+        'High-ticket sales experience',
+        'US hours',
       ],
       isActive: true,
+      social: 'https://instagram.com/adamstifel',
+      website: 'https://adamstifelcoaching.com',
+      email: 'recruit@adamstifel.com',
     },
   });
 
@@ -1172,17 +1454,18 @@ async function main() {
       oteMin: 6500,
       oteMax: 8000,
       revenue: 50000,
-      type: 'Full-time',
-      description:
-        'B2B AI SaaS company looking for experienced setters to join our growing sales team. Work with cutting-edge AI technology and help businesses transform their operations.',
+      type: 'Setter',
+      description: 'B2B AI SaaS company looking for experienced setters.',
       requirements: [
-        'Fluent English (C1 or higher)',
-        '3+ years of cold calling experience',
-        'B2B sales background preferred',
-        'Experience with SaaS products',
-        'US or Canada timezone availability',
+        'Fluent English (C1+)',
+        '3+ years cold calling',
+        'B2B SaaS background',
+        'US/CA timezone',
       ],
       isActive: true,
+      social: 'https://linkedin.com/company/frontegg',
+      website: 'https://frontegg.com',
+      email: 'jobs@frontegg.com',
     },
   });
 
@@ -1195,468 +1478,555 @@ async function main() {
       oteMin: 4000,
       oteMax: 6000,
       revenue: 300000,
-      type: 'Full-time',
-      description:
-        'Customer Success Manager position for a yoga online business opportunity company. Help yoga teachers succeed with our $5.9k ticket program. Revenue: $300k/Mo.',
+      type: 'Setter',
+      description: 'Customer Success Manager for yoga online business. $5.9k ticket program.',
       requirements: [
-        'Fluent English (B2 or higher)',
+        'Fluent English (B2+)',
         'Customer success experience',
-        'Passion for wellness industry',
-        'Strong communication skills',
-        'Experience with online coaching programs',
+        'Wellness industry interest',
       ],
       isActive: true,
+      social: 'https://instagram.com/impactacademy',
+      website: null,
+      email: 'careers@impactacademy.com',
     },
   });
 
   const job4 = await prisma.jobOffer.create({
     data: {
-      title: 'Senior Frontend Developer',
-      company: 'TechCorp Inc.',
-      location: 'Remote - Worldwide',
-      salaryRange: '$80,000 - $120,000/year',
-      oteMin: 6666,
+      title: '$10k/Mo DM Setters for Real Estate Coaching',
+      company: 'Wholesaling Empire',
+      location: 'Remote - Any Timezone',
+      salaryRange: '$7,000 - $10,000/month OTE',
+      oteMin: 7000,
       oteMax: 10000,
-      revenue: 0,
-      type: 'Full-time',
-      description:
-        "We're looking for an experienced Frontend Developer to join our international team. Work on cutting-edge web applications using React, TypeScript, and modern technologies.",
+      revenue: 150000,
+      type: 'Setter',
+      description: 'DM setting for high-ticket real estate wholesaling coaching program.',
       requirements: [
-        'Fluent English (B2 or higher)',
-        '4+ years of frontend development experience',
-        'Expert in React and TypeScript',
-        'Experience with modern CSS frameworks',
-        'Strong problem-solving skills',
+        'Fluent English (B2+)',
+        'DM setting experience preferred',
+        'Social media savvy',
+        'Self-motivated',
       ],
       isActive: true,
+      social: 'https://instagram.com/wholesalingempire',
+      website: 'https://wholesalingempire.com',
+      email: null,
     },
   });
 
   const job5 = await prisma.jobOffer.create({
     data: {
-      title: 'English Teacher (Online)',
-      company: 'Global Education',
-      location: 'Remote',
-      salaryRange: '$25 - $40/hour',
-      oteMin: 2000,
-      oteMax: 4000,
-      revenue: 0,
-      type: 'Part-time',
-      description:
-        'Teach English to students worldwide from the comfort of your home. Flexible schedule, great pay, and the opportunity to make a difference.',
+      title: '$12k/Mo Closers + Manager for Finance Coaching',
+      company: 'Wealth Builders Co.',
+      location: 'Remote - US Hours',
+      salaryRange: '$8,000 - $12,000/month OTE',
+      oteMin: 8000,
+      oteMax: 12000,
+      revenue: 500000,
+      type: 'Closer',
+      description: 'High-ticket finance coaching offer. Looking for closers and a sales manager.',
       requirements: [
-        'Native or near-native English speaker',
-        'TEFL/TESOL certification preferred',
-        'Teaching experience is a plus',
-        'Reliable internet connection',
-        'Patient and engaging personality',
+        'Fluent English (C1+)',
+        'Finance/investing knowledge preferred',
+        '1+ year closing',
+        'Leadership skills for manager',
       ],
       isActive: true,
+      social: null,
+      website: 'https://wealthbuilders.co',
+      email: 'hiring@wealthbuilders.co',
     },
   });
 
   const job6 = await prisma.jobOffer.create({
     data: {
-      title: 'Marketing Coordinator',
+      title: 'English Teacher (Online)',
+      company: 'Global Education',
+      location: 'Remote - Worldwide',
+      salaryRange: '$25 - $40/hour',
+      oteMin: 2000,
+      oteMax: 4000,
+      revenue: 0,
+      type: 'Setter',
+      description: 'Teach English to students worldwide from home. Flexible schedule.',
+      requirements: ['Native or near-native English', 'TEFL/TESOL preferred', 'Reliable internet'],
+      isActive: true,
+      social: null,
+      website: null,
+      email: 'apply@globaleducation.com',
+    },
+  });
+
+  const job7 = await prisma.jobOffer.create({
+    data: {
+      title: '$20k/Mo Sales Director for E-Commerce Brand',
+      company: 'Luxe Digital Agency',
+      location: 'Remote - US/EU',
+      salaryRange: '$15,000 - $20,000/month OTE',
+      oteMin: 15000,
+      oteMax: 20000,
+      revenue: 800000,
+      type: 'Closer',
+      description: 'Lead the sales team for a 7-figure e-commerce brand. Director-level role.',
+      requirements: [
+        'Fluent English (C2)',
+        '5+ years in sales management',
+        'E-commerce experience',
+        'Proven team leadership',
+      ],
+      isActive: true,
+      social: 'https://instagram.com/luxedigital',
+      website: 'https://luxedigitalagency.com',
+      email: 'director@luxedigital.com',
+    },
+  });
+
+  // Inactive job (for testing filtering)
+  const job8 = await prisma.jobOffer.create({
+    data: {
+      title: 'Marketing Coordinator (CLOSED)',
       company: 'Digital Agency Plus',
       location: 'Hybrid - Buenos Aires',
       salaryRange: '$45,000 - $60,000/year',
       oteMin: 3750,
       oteMax: 5000,
       revenue: 25000,
-      type: 'Full-time',
-      description:
-        'Join our dynamic marketing team and help create impactful campaigns for international clients. Bilingual role requiring English and Spanish.',
-      requirements: [
-        'Fluent English and Spanish',
-        '2+ years of marketing experience',
-        'Experience with digital marketing tools',
-        'Creative mindset',
-        'Strong organizational skills',
-      ],
-      isActive: true,
+      type: 'Setter',
+      description: 'This position has been filled.',
+      requirements: ['Fluent English and Spanish', '2+ years marketing'],
+      isActive: false,
+      social: null,
+      website: null,
+      email: null,
     },
   });
 
-  // Create some job applications for the test user
-  await prisma.jobApplication.create({
-    data: {
-      userId: activeUser.id,
-      jobOfferId: job3.id,
-      status: ApplicationStatus.APPLIED,
-      notes: null,
-      appliedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-    },
+  // ============================================================
+  // JOB APPLICATIONS (various statuses)
+  // ============================================================
+  console.log('📋 Creating job applications...');
+
+  await prisma.jobApplication.createMany({
+    data: [
+      {
+        userId: userPro.id,
+        jobOfferId: job1.id,
+        status: ApplicationStatus.INTERVIEW,
+        notes: 'Interview scheduled for Thursday',
+        appliedAt: pastDate(7),
+      },
+      {
+        userId: userPro.id,
+        jobOfferId: job3.id,
+        status: ApplicationStatus.APPLIED,
+        notes: null,
+        appliedAt: pastDate(2),
+      },
+      {
+        userId: userPro.id,
+        jobOfferId: job6.id,
+        status: ApplicationStatus.PENDING,
+        notes: 'Waiting for response',
+        appliedAt: pastDate(14),
+      },
+      {
+        userId: userElite.id,
+        jobOfferId: job2.id,
+        status: ApplicationStatus.APPLIED,
+        notes: null,
+        appliedAt: pastDate(3),
+      },
+      {
+        userId: userElite.id,
+        jobOfferId: job7.id,
+        status: ApplicationStatus.REJECTED,
+        notes: 'Needed more experience',
+        appliedAt: pastDate(20),
+      },
+      {
+        userId: userHiringHub.id,
+        jobOfferId: job4.id,
+        status: ApplicationStatus.APPLIED,
+        notes: null,
+        appliedAt: pastDate(1),
+      },
+      {
+        userId: userLevelUp.id,
+        jobOfferId: job5.id,
+        status: ApplicationStatus.INTERVIEW,
+        notes: 'Second round next Monday',
+        appliedAt: pastDate(10),
+      },
+    ],
   });
 
-  await prisma.jobApplication.create({
-    data: {
-      userId: activeUser.id,
-      jobOfferId: job5.id,
-      status: ApplicationStatus.INTERVIEW,
-      notes: 'Interview scheduled for Thursday at 3pm',
-      appliedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
-    },
-  });
-
-  await prisma.jobApplication.create({
-    data: {
-      userId: activeUser.id,
-      jobOfferId: job6.id,
-      status: ApplicationStatus.PENDING,
-      notes: 'Waiting for response - Applied 2 weeks ago',
-      appliedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), // 14 days ago
-    },
-  });
-
+  // ============================================================
+  // NOTIFICATIONS (variety for all user types)
+  // ============================================================
   console.log('🔔 Creating notifications...');
 
-  // Create audio submissions PENDING review (for admin/superadmin to review)
-  // Second user submitted audio for yesterday's challenge - awaiting review
-  const pendingSubmission1 = await prisma.userDailyChallengeProgress.create({
-    data: {
-      userId: secondUser.id,
-      challengeId: yesterdayChallenge.id,
-      completed: true,
-      completedAt: new Date(Date.now() - 20 * 60 * 60 * 1000), // 20 hours ago
-      fileUrl: 'https://storage.example.com/audio/user2-hometown.webm',
-      status: SubmissionStatus.PENDING,
-      feedback: null,
-      score: null,
-    },
-  });
-
-  // Second user also submitted today's challenge - awaiting review
-  const pendingSubmission2 = await prisma.userDailyChallengeProgress.create({
-    data: {
-      userId: secondUser.id,
-      challengeId: todayChallenge.id,
-      completed: true,
-      completedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-      fileUrl: 'https://storage.example.com/audio/user2-morning-routine.webm',
-      status: SubmissionStatus.PENDING,
-      feedback: null,
-      score: null,
-    },
-  });
-
-  // Pending user also submitted (before getting approved) - for edge case testing
-  const pendingSubmission3 = await prisma.userDailyChallengeProgress.create({
-    data: {
-      userId: pendingUser.id,
-      challengeId: todayChallenge.id,
-      completed: true,
-      completedAt: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
-      fileUrl: 'https://storage.example.com/audio/pending-user-morning.webm',
-      status: SubmissionStatus.PENDING,
-      feedback: null,
-      score: null,
-    },
-  });
-
-  // Notifications for users
   await prisma.notification.createMany({
     data: [
+      // --- User notifications ---
       {
-        userId: activeUser.id,
+        userId: userPro.id,
         type: NotificationType.CLASS_CONFIRMED,
         title: 'Class Enrollment Confirmed',
-        message: 'You have been enrolled in "Conversational Advanced II" for today at 6:00 PM',
+        message: 'You are enrolled in "Conversational Advanced II" for today at 6:00 PM.',
         isRead: false,
-        data: { classSessionId: class1.id },
+        data: { classSessionId: classToday.id },
       },
       {
-        userId: activeUser.id,
+        userId: userPro.id,
         type: NotificationType.MATERIAL_AVAILABLE,
         title: 'New Materials Available',
-        message: 'Study materials for "Business English Masterclass" are now available',
+        message: 'Study materials for "Business English Masterclass" are now available.',
         isRead: false,
-        data: { classSessionId: class3.id },
+        data: { classSessionId: classTomorrow2.id },
       },
       {
-        userId: activeUser.id,
+        userId: userPro.id,
         type: NotificationType.CHALLENGE_FEEDBACK,
         title: 'New Feedback on Your Challenge',
-        message: 'Sarah Johnson has reviewed your "Tell Us About Your Hometown" submission.',
+        message: 'Sarah Johnson reviewed your "Tell Us About Your Hometown" submission.',
         isRead: false,
-        data: { challengeId: yesterdayChallenge.id },
+        data: { challengeId: chYesterday.id },
       },
-      // Notification for second user about pending challenge
       {
-        userId: secondUser.id,
+        userId: userPro.id,
+        type: NotificationType.STRIKE_APPLIED,
+        title: 'Strike Received',
+        message: 'You received a strike for not attending "Debate Club: A.I. Ethics".',
+        isRead: true,
+        data: { classSessionId: classYesterday.id },
+      },
+      {
+        userId: userElite.id,
         type: NotificationType.GENERAL,
         title: 'Challenge Submitted',
-        message: 'Your audio submission for "Describe Your Morning Routine" is being reviewed.',
+        message: 'Your audio for "Describe Your Morning Routine" is being reviewed.',
         isRead: false,
-        data: { challengeId: todayChallenge.id },
+        data: { challengeId: chToday.id },
+      },
+      {
+        userId: userSkillBuilder.id,
+        type: NotificationType.GENERAL,
+        title: 'Welcome to JFalcon!',
+        message: 'Your Skill Builder plan is now active. Start learning today!',
+        isRead: false,
+      },
+      {
+        userId: userHiringHub.id,
+        type: NotificationType.GENERAL,
+        title: 'New Job Postings',
+        message: '3 new job offers match your profile. Check the Job Board!',
+        isRead: false,
+      },
+
+      // --- Admin notifications (pending submissions to review) ---
+      {
+        userId: adminSarah.id,
+        type: NotificationType.GENERAL,
+        title: '🎤 New Audio Submission',
+        message: `Diego Marzioni submitted audio for "Tell Us About Your Hometown". Please review.`,
+        isRead: false,
+        data: {
+          challengeId: chYesterday.id,
+          submissionId: pendingSub1.id,
+          studentName: 'Diego Marzioni',
+        },
+      },
+      {
+        userId: adminSarah.id,
+        type: NotificationType.GENERAL,
+        title: '🎤 New Audio Submission',
+        message: `Diego Marzioni submitted audio for "Describe Your Morning Routine". Please review.`,
+        isRead: false,
+        data: {
+          challengeId: chToday.id,
+          submissionId: pendingSub2.id,
+          studentName: 'Diego Marzioni',
+        },
+      },
+      {
+        userId: adminSarah.id,
+        type: NotificationType.GENERAL,
+        title: '🎤 New Audio Submission',
+        message: `Maria Gonzalez submitted audio for "Describe Your Morning Routine". Please review.`,
+        isRead: false,
+        data: {
+          challengeId: chToday.id,
+          submissionId: pendingSub3.id,
+          studentName: 'Maria Gonzalez',
+        },
+      },
+      {
+        userId: adminSarah.id,
+        type: NotificationType.GENERAL,
+        title: '✍️ New Writing Submission',
+        message: `Lucas Fernandez submitted a writing for "Write a Professional Email". Please review.`,
+        isRead: false,
+        data: {
+          challengeId: ch5d.id,
+          submissionId: pendingSub4.id,
+          studentName: 'Lucas Fernandez',
+        },
+      },
+
+      // --- Superadmin notifications ---
+      {
+        userId: luby.id,
+        type: NotificationType.NEW_REGISTRATION,
+        title: 'New User Registration',
+        message: 'Pending Applicant (pending@test.com) has registered and is awaiting approval.',
+        isRead: false,
+        data: { userId: pendingUser.id },
+      },
+      {
+        userId: luby.id,
+        type: NotificationType.GENERAL,
+        title: '🎤 4 Submissions Awaiting Review',
+        message: 'There are 4 pending challenge submissions to review in the Corrections panel.',
+        isRead: false,
+      },
+      {
+        userId: john.id,
+        type: NotificationType.NEW_REGISTRATION,
+        title: 'New User Registration',
+        message: 'Pending Applicant (pending@test.com) has registered and is awaiting approval.',
+        isRead: false,
+        data: { userId: pendingUser.id },
+      },
+      {
+        userId: john.id,
+        type: NotificationType.UPGRADE_REQUEST,
+        title: 'Upgrade Request',
+        message: 'Ana Lopez (ana@test.com) has requested a plan upgrade from SKILL_BUILDER.',
+        isRead: false,
+        data: { userId: userSkillBuilder.id },
       },
     ],
   });
 
-  // Notifications for Admins/Superadmins about pending audio submissions to review
-  await prisma.notification.createMany({
-    data: [
-      // For Admin User
-      {
-        userId: adminUser.id,
-        type: NotificationType.GENERAL,
-        title: '🎤 New Audio Submission to Review',
-        message: `Diego Marzioni submitted an audio for "Tell Us About Your Hometown". Please review and provide feedback.`,
-        isRead: false,
-        data: {
-          challengeId: yesterdayChallenge.id,
-          submissionId: pendingSubmission1.id,
-          studentName: 'Diego Marzioni',
-          studentId: secondUser.id,
-        },
-      },
-      {
-        userId: adminUser.id,
-        type: NotificationType.GENERAL,
-        title: '🎤 New Audio Submission to Review',
-        message: `Diego Marzioni submitted an audio for "Describe Your Morning Routine". Please review and provide feedback.`,
-        isRead: false,
-        data: {
-          challengeId: todayChallenge.id,
-          submissionId: pendingSubmission2.id,
-          studentName: 'Diego Marzioni',
-          studentId: secondUser.id,
-        },
-      },
-      {
-        userId: adminUser.id,
-        type: NotificationType.GENERAL,
-        title: '🎤 New Audio Submission to Review',
-        message: `Pending User submitted an audio for "Describe Your Morning Routine". Please review and provide feedback.`,
-        isRead: false,
-        data: {
-          challengeId: todayChallenge.id,
-          submissionId: pendingSubmission3.id,
-          studentName: 'Pending User',
-          studentId: pendingUser.id,
-        },
-      },
-      // For Superadmin User
-      {
-        userId: superAdminUser.id,
-        type: NotificationType.GENERAL,
-        title: '🎤 New Audio Submission to Review',
-        message: `Diego Marzioni submitted an audio for "Tell Us About Your Hometown". Please review and provide feedback.`,
-        isRead: false,
-        data: {
-          challengeId: yesterdayChallenge.id,
-          submissionId: pendingSubmission1.id,
-          studentName: 'Diego Marzioni',
-          studentId: secondUser.id,
-        },
-      },
-      {
-        userId: superAdminUser.id,
-        type: NotificationType.GENERAL,
-        title: '🎤 New Audio Submission to Review',
-        message: `Diego Marzioni submitted an audio for "Describe Your Morning Routine". Please review and provide feedback.`,
-        isRead: false,
-        data: {
-          challengeId: todayChallenge.id,
-          submissionId: pendingSubmission2.id,
-          studentName: 'Diego Marzioni',
-          studentId: secondUser.id,
-        },
-      },
-      {
-        userId: superAdminUser.id,
-        type: NotificationType.GENERAL,
-        title: '🎤 New Audio Submission to Review',
-        message: `Pending User submitted an audio for "Describe Your Morning Routine". Please review and provide feedback.`,
-        isRead: false,
-        data: {
-          challengeId: todayChallenge.id,
-          submissionId: pendingSubmission3.id,
-          studentName: 'Pending User',
-          studentId: pendingUser.id,
-        },
-      },
-      // Also notify teacher (Sarah)
-      {
-        userId: teacherUser.id,
-        type: NotificationType.GENERAL,
-        title: '🎤 New Audio Submission to Review',
-        message: `Diego Marzioni submitted an audio for "Describe Your Morning Routine". Please review and provide feedback.`,
-        isRead: false,
-        data: {
-          challengeId: todayChallenge.id,
-          submissionId: pendingSubmission2.id,
-          studentName: 'Diego Marzioni',
-          studentId: secondUser.id,
-        },
-      },
-    ],
-  });
+  // ============================================================
+  // AUDIT LOGS (recent activity)
+  // ============================================================
+  console.log('📜 Creating audit logs...');
 
-  // Create sample audit logs (reusing 'now' variable from above)
+  const auditBase = {
+    adminId: luby.id,
+    adminEmail: luby.email,
+    adminName: 'Luby Demidova',
+    ipAddress: '192.168.1.100',
+    userAgent: 'Mozilla/5.0 Chrome/120.0.0.0',
+  };
+
   await prisma.auditLog.createMany({
     data: [
       {
-        adminId: superAdminUser.id,
-        adminEmail: superAdminUser.email,
-        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        ...auditBase,
         action: AuditAction.USER_APPROVED,
         targetType: 'User',
-        targetId: String(activeUser.id),
-        targetName: `${activeUser.firstName} ${activeUser.lastName}`,
+        targetId: userPro.id,
+        targetName: 'Eugenia Martinez',
         details: { previousStatus: 'PENDING', newStatus: 'ACTIVE' },
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
-        createdAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+        createdAt: pastDate(15),
       },
       {
-        adminId: superAdminUser.id,
-        adminEmail: superAdminUser.email,
-        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
-        action: AuditAction.MODULE_CREATED,
-        targetType: 'Module',
-        targetId: String(module1.id),
-        targetName: module1.title,
-        details: { order: module1.order },
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
-        createdAt: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000), // 6 days ago
-      },
-      {
-        adminId: superAdminUser.id,
-        adminEmail: superAdminUser.email,
-        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
-        action: AuditAction.CLASS_CREATED,
-        targetType: 'ClassSession',
-        targetId: String(class1.id),
-        targetName: class1.title,
-        details: { type: class1.type, capacityMax: class1.capacityMax },
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
-        createdAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
-      },
-      {
-        adminId: superAdminUser.id,
-        adminEmail: superAdminUser.email,
-        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        ...auditBase,
         action: AuditAction.SUBSCRIPTION_CREATED,
         targetType: 'Subscription',
-        targetId: 'sub_001',
-        targetName: 'Premium Plan - Monthly',
-        details: { planType: 'PREMIUM', billingCycle: 'MONTHLY', userId: activeUser.id },
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
-        createdAt: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000), // 4 days ago
+        targetId: 'sub_pro',
+        targetName: 'PRO Plan - Eugenia',
+        details: { plan: 'PRO', hasPaid: true },
+        createdAt: pastDate(15),
       },
       {
-        adminId: superAdminUser.id,
-        adminEmail: superAdminUser.email,
-        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        ...auditBase,
+        action: AuditAction.MODULE_CREATED,
+        targetType: 'Module',
+        targetId: String(mod1.id),
+        targetName: mod1.title,
+        details: { order: 1 },
+        createdAt: pastDate(12),
+      },
+      {
+        ...auditBase,
+        action: AuditAction.MODULE_CREATED,
+        targetType: 'Module',
+        targetId: String(mod2.id),
+        targetName: mod2.title,
+        details: { order: 2 },
+        createdAt: pastDate(12),
+      },
+      {
+        ...auditBase,
+        action: AuditAction.CLASS_CREATED,
+        targetType: 'ClassSession',
+        targetId: String(classToday.id),
+        targetName: classToday.title,
+        details: { type: 'REGULAR', capacityMax: 5 },
+        createdAt: pastDate(5),
+      },
+      {
+        ...auditBase,
         action: AuditAction.CHALLENGE_CREATED,
         targetType: 'DailyChallenge',
-        targetId: String(todayChallenge.id),
-        targetName: 'Today Challenge',
-        details: { type: todayChallenge.type },
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
-        createdAt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+        targetId: String(chToday.id),
+        targetName: chToday.title,
+        details: { type: 'AUDIO' },
+        createdAt: pastDate(1),
       },
       {
-        adminId: superAdminUser.id,
-        adminEmail: superAdminUser.email,
-        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        ...auditBase,
         action: AuditAction.JOB_CREATED,
         targetType: 'JobOffer',
         targetId: String(job1.id),
         targetName: job1.title,
-        details: { company: job1.company, location: job1.location },
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
-        createdAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+        details: { company: job1.company, social: job1.social },
+        createdAt: pastDate(3),
       },
       {
-        adminId: superAdminUser.id,
-        adminEmail: superAdminUser.email,
-        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        ...auditBase,
+        action: AuditAction.JOB_CREATED,
+        targetType: 'JobOffer',
+        targetId: String(job7.id),
+        targetName: job7.title,
+        details: { company: job7.company, website: job7.website },
+        createdAt: pastDate(2),
+      },
+      {
+        ...auditBase,
         action: AuditAction.USER_STRIKE_ISSUED,
         targetType: 'User',
-        targetId: String(activeUser.id),
-        targetName: `${activeUser.firstName} ${activeUser.lastName}`,
-        details: { reason: 'Inappropriate behavior in class', strikeNumber: 1 },
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
-        createdAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+        targetId: userPro.id,
+        targetName: 'Eugenia Martinez',
+        details: { reason: 'NO_SHOW', classTitle: 'Debate Club' },
+        createdAt: pastDate(1),
       },
       {
-        adminId: superAdminUser.id,
-        adminEmail: superAdminUser.email,
-        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        ...auditBase,
+        action: AuditAction.SUBMISSION_REVIEWED,
+        targetType: 'Submission',
+        targetId: 'sub_review_1',
+        targetName: 'Eugenia - Hometown Audio',
+        details: { status: 'APPROVED' },
+        createdAt: pastDate(1),
+      },
+      {
+        ...auditBase,
+        action: AuditAction.USER_SUSPENDED,
+        targetType: 'User',
+        targetId: suspendedUser.id,
+        targetName: 'Suspended Person',
+        details: { reason: 'Repeated no-shows' },
+        createdAt: pastDate(10),
+      },
+      {
+        ...auditBase,
         action: AuditAction.SYSTEM_CONFIG_UPDATED,
         targetType: 'System',
         targetId: 'system_settings',
         targetName: 'Platform Settings',
-        details: { setting: 'registration_enabled', oldValue: false, newValue: true },
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
-        createdAt: new Date(now.getTime() - 12 * 60 * 60 * 1000), // 12 hours ago
+        details: { setting: 'strikesEnabled', newValue: true },
+        createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
       },
       {
-        adminId: superAdminUser.id,
-        adminEmail: superAdminUser.email,
-        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
+        ...auditBase,
         action: AuditAction.LOGIN_SUCCESS,
         targetType: 'Admin',
-        targetId: String(superAdminUser.id),
-        targetName: superAdminUser.email,
+        targetId: luby.id,
+        targetName: luby.email,
         details: { loginMethod: 'password' },
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
-        createdAt: new Date(now.getTime() - 2 * 60 * 60 * 1000), // 2 hours ago
+        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      },
+      // John Falcon audit entries
+      {
+        adminId: john.id,
+        adminEmail: john.email,
+        adminName: 'John Falcon',
+        ipAddress: '10.0.0.1',
+        userAgent: 'Mozilla/5.0 Chrome/120.0.0.0',
+        action: AuditAction.USER_APPROVED,
+        targetType: 'User',
+        targetId: userElite.id,
+        targetName: 'Diego Marzioni',
+        details: { previousStatus: 'PENDING', newStatus: 'ACTIVE' },
+        createdAt: pastDate(10),
       },
       {
-        adminId: superAdminUser.id,
-        adminEmail: superAdminUser.email,
-        adminName: `${superAdminUser.firstName} ${superAdminUser.lastName}`,
-        action: AuditAction.USER_UPDATED,
-        targetType: 'User',
-        targetId: String(activeUser.id),
-        targetName: `${activeUser.firstName} ${activeUser.lastName}`,
-        details: { field: 'email', oldValue: 'old@test.com', newValue: 'eugenia@test.com' },
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
-        createdAt: new Date(now.getTime() - 30 * 60 * 1000), // 30 minutes ago
+        adminId: john.id,
+        adminEmail: john.email,
+        adminName: 'John Falcon',
+        ipAddress: '10.0.0.1',
+        userAgent: 'Mozilla/5.0 Chrome/120.0.0.0',
+        action: AuditAction.SUBSCRIPTION_CREATED,
+        targetType: 'Subscription',
+        targetId: 'sub_sb',
+        targetName: 'SKILL_BUILDER - Ana Lopez',
+        details: { plan: 'SKILL_BUILDER', hasPaid: false },
+        createdAt: pastDate(3),
       },
     ],
   });
 
-  console.log('✅ Seed completed successfully!');
+  // ============================================================
+  // SUMMARY
+  // ============================================================
+  console.log('\n✅ Seed completed successfully!');
   console.log('\n📊 Summary:');
-  console.log(`- Users created: ${await prisma.user.count()}`);
-  console.log(`- Modules: ${await prisma.module.count()}`);
-  console.log(`- Lessons: ${await prisma.lesson.count()}`);
-  console.log(`- Lesson Resources: ${await prisma.lessonResource.count()}`);
-  console.log(`- Class sessions: ${await prisma.classSession.count()}`);
-  console.log(`- Enrollments: ${await prisma.classEnrollment.count()}`);
-  console.log(`- Daily challenges: ${await prisma.dailyChallenge.count()}`);
-  console.log(`- Challenge progress: ${await prisma.userDailyChallengeProgress.count()}`);
-  console.log(`- Job offers: ${await prisma.jobOffer.count()}`);
-  console.log(`- Job applications: ${await prisma.jobApplication.count()}`);
-  console.log(`- Notifications: ${await prisma.notification.count()}`);
-  console.log(`- Audit logs: ${await prisma.auditLog.count()}`);
-  console.log('\n🔐 Test credentials:');
-  console.log('Email: eugenia@test.com');
-  console.log('Password: password123');
-  console.log('\n📈 User Progress:');
-  console.log('- Module 1 (Foundations): 100% complete');
-  console.log('- Module 2 (Conversation): 66% complete');
-  console.log('- Module 3 (Business): 66% complete');
-  console.log('- Module 4 (Advanced): 0% complete');
-  console.log('- Overall Progress: ~54%');
-  console.log('- Lessons Completed: 7/11');
-  console.log('\n💼 Job Applications:');
-  console.log('- Applied: 1 (CSMs for Yoga)');
-  console.log('- Interview: 1 (English Teacher)');
-  console.log('- Offer: 1 (Marketing Coordinator)');
+  console.log(`  Users:              ${await prisma.user.count()}`);
+  console.log(`  Subscriptions:      ${await prisma.subscription.count()}`);
+  console.log(`  Modules:            ${await prisma.module.count()}`);
+  console.log(`  Lessons:            ${await prisma.lesson.count()}`);
+  console.log(`  Lesson Resources:   ${await prisma.lessonResource.count()}`);
+  console.log(`  Class Sessions:     ${await prisma.classSession.count()}`);
+  console.log(`  Enrollments:        ${await prisma.classEnrollment.count()}`);
+  console.log(`  Strikes:            ${await prisma.strike.count()}`);
+  console.log(`  Daily Challenges:   ${await prisma.dailyChallenge.count()}`);
+  console.log(`  Submissions:        ${await prisma.userDailyChallengeProgress.count()}`);
+  console.log(`  Job Offers:         ${await prisma.jobOffer.count()}`);
+  console.log(`  Job Applications:   ${await prisma.jobApplication.count()}`);
+  console.log(`  Notifications:      ${await prisma.notification.count()}`);
+  console.log(`  Audit Logs:         ${await prisma.auditLog.count()}`);
+
+  console.log('\n🔐 Test Credentials (all use password: password123):');
+  console.log('  SUPERADMIN:     luby.demidova@gmail.com');
+  console.log('  SUPERADMIN:     johnfalcon.va@gmail.com');
+  console.log('  ADMIN:          sarah@jfalcon.com');
+  console.log('  ADMIN:          carlos@jfalcon.com');
+  console.log('  USER (PRO):     eugenia@test.com');
+  console.log('  USER (ELITE):   diego@test.com');
+  console.log('  USER (LEVEL_UP):maria@test.com');
+  console.log('  USER (HIRING):  lucas@test.com');
+  console.log('  USER (SKILL_B): ana@test.com');
+  console.log('  JOB_UPLOADER:   recruiter@talent.com');
+  console.log('  PENDING:        pending@test.com');
+  console.log('  SUSPENDED:      suspended@test.com');
+
+  console.log('\n📚 Module Visibility for SKILL_BUILDER:');
+  console.log('  ✅ Foundations & Goals (visible)');
+  console.log('  ✅ Conversation Basics (visible)');
+  console.log('  ❌ Business English (hidden)');
+  console.log('  ✅ Advanced Idioms & Culture (visible)');
+  console.log('  ❌ Interview Mastery (hidden)');
+  console.log('  ❌ Sales English - DRAFT (hidden)');
+
+  console.log('\n💳 Subscription Payment Status:');
+  console.log('  PRO (Eugenia):        PAID');
+  console.log('  ELITE (Diego):        PAID');
+  console.log('  LEVEL_UP (Maria):     FREE TRIAL');
+  console.log('  HIRING_HUB (Lucas):   PAID');
+  console.log('  SKILL_BUILDER (Ana):  FREE');
+  console.log('  PRO (Suspended):      EXPIRED');
+
+  console.log('\n📝 Pending Corrections (4):');
+  console.log('  Diego - Yesterday Audio (Hometown)');
+  console.log('  Diego - Today Audio (Morning Routine)');
+  console.log('  Maria - Today Audio (Morning Routine)');
+  console.log('  Lucas - Writing (Professional Email)');
 }
 
 main()
@@ -1664,7 +2034,7 @@ main()
     await prisma.$disconnect();
   })
   .catch(async e => {
-    console.error('❌ Error durante seeding:', e);
+    console.error('❌ Error during seeding:', e);
     await prisma.$disconnect();
     process.exit(1);
   });

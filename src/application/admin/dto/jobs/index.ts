@@ -15,22 +15,23 @@ import { Type, Transform } from 'class-transformer';
 // ==================== Job Offer DTOs ====================
 
 export class CreateJobOfferDto {
-  @ApiProperty({ description: 'Job title', example: 'Senior Frontend Developer' })
+  @ApiProperty({ description: 'Job title', example: '$40k/Mo Closers for RE Development' })
   @IsString()
   @MaxLength(200)
   title!: string;
 
-  @ApiProperty({ description: 'Company name', example: 'TechCorp Inc.' })
+  @ApiProperty({ description: 'Contact/recruiter name', example: 'Ryan Herrera' })
   @IsString()
   @MaxLength(200)
   company!: string;
 
-  @ApiProperty({ description: 'Job location', example: 'Remote' })
+  @ApiPropertyOptional({ description: 'Job location', example: 'Remote' })
+  @IsOptional()
   @IsString()
   @MaxLength(200)
-  location!: string;
+  location?: string;
 
-  @ApiPropertyOptional({ description: 'Salary range', example: '$80k - $120k/year' })
+  @ApiPropertyOptional({ description: 'Salary range', example: '$8,000-$40,000/Mo' })
   @IsOptional()
   @IsString()
   @MaxLength(100)
@@ -57,15 +58,17 @@ export class CreateJobOfferDto {
   @Type(() => Number)
   revenue?: number;
 
-  @ApiProperty({ description: 'Job type', example: 'Full-time' })
+  @ApiPropertyOptional({ description: 'Job type', example: 'Setter' })
+  @IsOptional()
   @IsString()
   @MaxLength(50)
-  type!: string;
+  type?: string;
 
-  @ApiProperty({ description: 'Job description' })
+  @ApiPropertyOptional({ description: 'Job description' })
+  @IsOptional()
   @IsString()
   @MaxLength(10000)
-  description!: string;
+  description?: string;
 
   @ApiPropertyOptional({ description: 'Job requirements', type: [String] })
   @IsOptional()
@@ -78,6 +81,27 @@ export class CreateJobOfferDto {
   @IsBoolean()
   @Transform(({ value }: { value: unknown }) => value === 'true' || value === true)
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Primary social link',
+    example: 'https://www.instagram.com/user/',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  social?: string;
+
+  @ApiPropertyOptional({ description: 'Website URL', example: 'https://www.company.com/' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  website?: string;
+
+  @ApiPropertyOptional({ description: 'Contact email', example: 'contact@company.com' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  email?: string;
 }
 
 export class UpdateJobOfferDto {
@@ -149,6 +173,24 @@ export class UpdateJobOfferDto {
   @IsBoolean()
   @Transform(({ value }: { value: unknown }) => value === 'true' || value === true)
   isActive?: boolean;
+
+  @ApiPropertyOptional({ description: 'Primary social link' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  social?: string;
+
+  @ApiPropertyOptional({ description: 'Website URL' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  website?: string;
+
+  @ApiPropertyOptional({ description: 'Contact email' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  email?: string;
 }
 
 export class JobOfferResponseDto {
@@ -190,6 +232,15 @@ export class JobOfferResponseDto {
 
   @ApiProperty()
   applicationsCount!: number;
+
+  @ApiPropertyOptional()
+  social?: string | null;
+
+  @ApiPropertyOptional()
+  website?: string | null;
+
+  @ApiPropertyOptional()
+  email?: string | null;
 
   @ApiProperty()
   createdAt!: Date;

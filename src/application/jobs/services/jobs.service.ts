@@ -43,6 +43,9 @@ export class JobsService {
       type: job.type,
       description: job.description,
       requirements: job.requirements,
+      social: job.social ?? null,
+      website: job.website ?? null,
+      email: job.email ?? null,
       hasApplied: job.hasApplied,
       createdAt: job.createdAt,
     }));

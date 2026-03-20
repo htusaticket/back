@@ -774,4 +774,189 @@ export class EmailService {
 </html>
     `;
   }
+
+  /**
+   * Envía email a todos los superadmins notificando una solicitud de upgrade de plan
+   */
+  async sendUpgradeRequestNotificationToAdmins(
+    adminEmails: string[],
+    userData: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      currentPlan: string;
+      message?: string;
+    },
+  ): Promise<void> {
+    if (adminEmails.length === 0) {
+      this.logger.warn('No hay superadmins para notificar solicitud de upgrade');
+      return;
+    }
+
+    const reviewLink = `${this.env.FRONTEND_URL}/admin/users`;
+
+    for (const adminEmail of adminEmails) {
+      try {
+        const { data, error } = await this.resend.emails.send({
+          from: `${this.env.RESEND_FROM_NAME} <${this.env.RESEND_FROM_EMAIL}>`,
+          to: adminEmail,
+          subject: 'Solicitud de upgrade de plan - High Ticket USA',
+          html: this.getUpgradeRequestAdminTemplate(userData, reviewLink),
+        });
+
+        if (error) {
+          this.logger.error(
+            `Error de Resend enviando notificación de upgrade al admin ${adminEmail}:`,
+            JSON.stringify(error),
+          );
+        } else {
+          this.logger.log(`Notificación de upgrade enviada a: ${adminEmail} (ID: ${data?.id})`);
+        }
+      } catch (error) {
+        this.logger.error(`Error enviando notificación de upgrade al admin ${adminEmail}:`, error);
+      }
+    }
+  }
+
+  /**
+   * Template HTML para notificación de solicitud de upgrade
+   */
+  private getUpgradeRequestAdminTemplate(
+    userData: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      currentPlan: string;
+      message?: string;
+    },
+    reviewLink: string,
+  ): string {
+    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/falcon-logo.png';
+    return `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solicitud de upgrade de plan</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 20px 0;">
+        <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 24px 0; text-align: center; background-color: #000000; border-radius: 8px 8px 0 0;">
+              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; height: auto; display: inline-block;" />
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <h2 style="margin: 0 0 20px; color: #1a1a2e; font-size: 24px;">
+                Solicitud de Upgrade de Plan ⬆️
+              </h2>
+              
+              <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
+                Un usuario ha solicitado un upgrade de su plan actual.
+              </p>
+              
+              <!-- User Info Box -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 20px 0; background-color: #f8f9fa; border-radius: 8px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <h3 style="margin: 0 0 15px; color: #1a1a2e; font-size: 16px;">
+                      Datos del solicitante:
+                    </h3>
+                    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                      <tr>
+                        <td style="padding: 8px 0; color: #666666; font-size: 14px; width: 120px;">
+                          <strong>Nombre:</strong>
+                        </td>
+                        <td style="padding: 8px 0; color: #4a4a4a; font-size: 14px;">
+                          ${userData.firstName} ${userData.lastName}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; color: #666666; font-size: 14px;">
+                          <strong>Email:</strong>
+                        </td>
+                        <td style="padding: 8px 0; color: #4a4a4a; font-size: 14px;">
+                          ${userData.email}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; color: #666666; font-size: 14px;">
+                          <strong>Plan actual:</strong>
+                        </td>
+                        <td style="padding: 8px 0; color: #4a4a4a; font-size: 14px;">
+                          ${userData.currentPlan}
+                        </td>
+                      </tr>
+                      ${
+                        userData.message
+                          ? `
+                      <tr>
+                        <td style="padding: 8px 0; color: #666666; font-size: 14px; vertical-align: top;">
+                          <strong>Mensaje:</strong>
+                        </td>
+                        <td style="padding: 8px 0; color: #4a4a4a; font-size: 14px;">
+                          ${userData.message}
+                        </td>
+                      </tr>
+                      `
+                          : ''
+                      }
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 20px 0 30px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
+                Para gestionar esta solicitud, haz clic en el siguiente botón:
+              </p>
+              
+              <!-- Button -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td align="center">
+                    <a href="${reviewLink}" 
+                       style="display: inline-block; padding: 16px 40px; background-color: #4f46e5; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: bold; border-radius: 8px;">
+                      Gestionar Solicitud
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 30px 0 0; color: #888888; font-size: 14px; line-height: 1.6;">
+                Si el botón no funciona, copia y pega este enlace en tu navegador:
+              </p>
+              
+              <p style="margin: 10px 0 0; color: #4f46e5; font-size: 12px; word-break: break-all;">
+                ${reviewLink}
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 40px; background-color: #f8f8f8; border-radius: 0 0 8px 8px; text-align: center;">
+              <p style="margin: 0; color: #888888; font-size: 12px;">
+                © ${new Date().getFullYear()} High Ticket USA. Todos los derechos reservados.
+              </p>
+              <p style="margin: 10px 0 0; color: #888888; font-size: 12px;">
+                Este es un correo automático del sistema de administración.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `;
+  }
 }

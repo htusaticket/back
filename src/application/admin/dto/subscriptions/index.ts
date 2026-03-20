@@ -39,6 +39,11 @@ export class GetSubscriptionsQueryDto {
   @IsOptional()
   @IsEnum(SubscriptionStatus)
   status?: SubscriptionStatus;
+
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  hasPaid?: boolean;
 }
 
 // ==================== Create/Update DTOs ====================

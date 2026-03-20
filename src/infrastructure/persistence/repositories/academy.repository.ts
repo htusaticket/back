@@ -56,6 +56,7 @@ export class AcademyRepository implements IAcademyRepository {
         description: module.description,
         image: module.image,
         order: module.order,
+        visibleForSkillBuilder: module.visibleForSkillBuilder,
         createdAt: module.createdAt,
         updatedAt: module.updatedAt,
         totalLessons,

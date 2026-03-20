@@ -84,6 +84,15 @@ export class JobOfferDto {
   })
   requirements!: string[];
 
+  @ApiPropertyOptional({ example: 'https://instagram.com/company', nullable: true })
+  social!: string | null;
+
+  @ApiPropertyOptional({ example: 'https://company.com', nullable: true })
+  website!: string | null;
+
+  @ApiPropertyOptional({ example: 'contact@company.com', nullable: true })
+  email!: string | null;
+
   @ApiProperty({ example: false })
   hasApplied!: boolean;
 

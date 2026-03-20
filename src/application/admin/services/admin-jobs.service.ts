@@ -75,6 +75,9 @@ export class AdminJobsService {
         requirements: job.requirements,
         isActive: job.isActive,
         applicationsCount: job._count.applications,
+        social: job.social,
+        website: job.website,
+        email: job.email,
         createdAt: job.createdAt,
         updatedAt: job.updatedAt,
       })),
@@ -126,6 +129,9 @@ export class AdminJobsService {
       requirements: job.requirements,
       isActive: job.isActive,
       applicationsCount: job._count.applications,
+      social: job.social,
+      website: job.website,
+      email: job.email,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
       applications: job.applications.map(app => ({
@@ -148,15 +154,18 @@ export class AdminJobsService {
       data: {
         title: data.title,
         company: data.company,
-        location: data.location,
+        location: data.location ?? '',
         salaryRange: data.salaryRange ?? '',
         oteMin: data.oteMin ?? 0,
         oteMax: data.oteMax ?? 0,
         revenue: data.revenue ?? 0,
-        type: data.type,
-        description: data.description,
+        type: data.type ?? 'Setter',
+        description: data.description ?? '',
         requirements: data.requirements ?? [],
         isActive: data.isActive ?? true,
+        social: data.social ?? null,
+        website: data.website ?? null,
+        email: data.email ?? null,
       },
       include: {
         _count: {
@@ -192,6 +201,9 @@ export class AdminJobsService {
       requirements: job.requirements,
       isActive: job.isActive,
       applicationsCount: job._count.applications,
+      social: job.social,
+      website: job.website,
+      email: job.email,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
     };
@@ -219,6 +231,9 @@ export class AdminJobsService {
     if (data.description !== undefined) updateData.description = data.description;
     if (data.requirements !== undefined) updateData.requirements = data.requirements;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
+    if (data.social !== undefined) updateData.social = data.social || null;
+    if (data.website !== undefined) updateData.website = data.website || null;
+    if (data.email !== undefined) updateData.email = data.email || null;
 
     const job = await this.prisma.jobOffer.update({
       where: { id },
@@ -257,6 +272,9 @@ export class AdminJobsService {
       requirements: job.requirements,
       isActive: job.isActive,
       applicationsCount: job._count.applications,
+      social: job.social,
+      website: job.website,
+      email: job.email,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
     };
@@ -302,15 +320,18 @@ export class AdminJobsService {
           data: {
             title: jobData.title,
             company: jobData.company,
-            location: jobData.location,
+            location: jobData.location ?? '',
             salaryRange: jobData.salaryRange ?? '',
             oteMin: jobData.oteMin ?? 0,
             oteMax: jobData.oteMax ?? 0,
             revenue: jobData.revenue ?? 0,
-            type: jobData.type,
-            description: jobData.description,
+            type: jobData.type ?? 'Setter',
+            description: jobData.description ?? '',
             requirements: jobData.requirements ?? [],
             isActive: jobData.isActive ?? true,
+            social: jobData.social ?? null,
+            website: jobData.website ?? null,
+            email: jobData.email ?? null,
           },
         });
         created++;

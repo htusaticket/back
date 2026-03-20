@@ -24,6 +24,8 @@ import {
   DeleteClassResponseDto,
   ClassListItemDto,
   ClassAttendeeDto,
+  BulkCreateClassesDto,
+  BulkCreateClassesResponseDto,
 } from '../dto/classes';
 
 @Injectable()
@@ -421,6 +423,75 @@ export class AdminClassesService {
     return {
       success: true,
       message: 'Clase eliminada exitosamente',
+    };
+  }
+
+  /**
+   * Crear múltiples clases en lote desde Excel/CSV
+   */
+  async bulkCreateClasses(
+    dto: BulkCreateClassesDto,
+    adminInfo?: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<BulkCreateClassesResponseDto> {
+    this.logger.log(`Bulk creating ${dto.classes.length} classes`);
+
+    let created = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    for (const classData of dto.classes) {
+      try {
+        const startTime = new Date(classData.startTime);
+        const endTime = new Date(classData.endTime);
+
+        if (endTime <= startTime) {
+          failed++;
+          errors.push(`"${classData.title}": End time must be after start time`);
+          continue;
+        }
+
+        await this.prisma.classSession.create({
+          data: {
+            title: classData.title,
+            description: classData.description ?? null,
+            type: classData.type,
+            startTime,
+            endTime,
+            capacityMax: classData.capacityMax ?? null,
+            meetLink: classData.meetLink ?? null,
+            materialsLink: classData.materialsLink ?? null,
+          },
+        });
+
+        created++;
+      } catch (err) {
+        failed++;
+        errors.push(
+          `"${classData.title}": ${err instanceof Error ? err.message : 'Unknown error'}`,
+        );
+      }
+    }
+
+    if (adminInfo) {
+      await this.auditService.createLog({
+        adminId: adminInfo.adminId,
+        adminEmail: adminInfo.adminEmail,
+        adminName: adminInfo.adminName,
+        action: 'CLASS_CREATED',
+        targetType: 'CLASS',
+        targetId: 'bulk',
+        targetName: `Bulk: ${created} classes created`,
+        details: { total: dto.classes.length, created, failed },
+        ipAddress: adminInfo.ip,
+      });
+    }
+
+    return {
+      success: failed === 0,
+      message: `${created} classes created successfully${failed > 0 ? `, ${failed} failed` : ''}`,
+      created,
+      failed,
+      errors,
     };
   }
 }
