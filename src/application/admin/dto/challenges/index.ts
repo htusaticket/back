@@ -60,7 +60,10 @@ export class CreateChallengeDto {
   @MaxLength(5000)
   instructions!: string;
 
-  @ApiProperty({ description: 'Date for the challenge (YYYY-MM-DD, DD-MM-YYYY, or DD/MM/YYYY)', example: '2026-03-15' })
+  @ApiProperty({
+    description: 'Date for the challenge (YYYY-MM-DD, DD-MM-YYYY, or DD/MM/YYYY)',
+    example: '2026-03-15',
+  })
   @Transform(({ value }: { value: unknown }) => {
     if (!value || typeof value !== 'string') return value;
     const match = value.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
@@ -117,7 +120,9 @@ export class UpdateChallengeDto {
   @MaxLength(5000)
   instructions?: string;
 
-  @ApiPropertyOptional({ description: 'Date for the challenge (YYYY-MM-DD, DD-MM-YYYY, or DD/MM/YYYY)' })
+  @ApiPropertyOptional({
+    description: 'Date for the challenge (YYYY-MM-DD, DD-MM-YYYY, or DD/MM/YYYY)',
+  })
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => {
     if (!value || typeof value !== 'string') return value;

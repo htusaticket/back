@@ -163,7 +163,7 @@ export class ChallengesService {
 
     const message = passed
       ? `Great job! You passed with ${score}%!`
-      : `You scored ${score}%. You need at least ${QUIZ_PASS_THRESHOLD}% to pass. Try again!`;
+      : `You scored ${score}%. You need at least ${QUIZ_PASS_THRESHOLD}% to pass. Keep practicing!`;
 
     return {
       passed,

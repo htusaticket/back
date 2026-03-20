@@ -57,7 +57,7 @@ export class AdminSubscriptionsService {
   ): Promise<PaginatedSubscriptionsResponseDto> {
     this.logger.debug(`Fetching subscriptions with query: ${JSON.stringify(query)}`);
 
-    const { page = 1, limit = 10, search, plan, status } = query;
+    const { page = 1, limit = 10, search, plan, status, hasPaid } = query;
     const skip = (page - 1) * limit;
 
     // Construir where clause
@@ -69,6 +69,10 @@ export class AdminSubscriptionsService {
 
     if (status) {
       where.status = status;
+    }
+
+    if (hasPaid !== undefined) {
+      where.hasPaid = hasPaid;
     }
 
     if (search) {

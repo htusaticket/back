@@ -36,6 +36,8 @@ import {
   SaveAttendanceResponseDto,
   UpdateClassResponseDto,
   DeleteClassResponseDto,
+  BulkCreateClassesDto,
+  BulkCreateClassesResponseDto,
 } from '@/application/admin/dto/classes';
 
 @ApiTags('Admin - Classes')
@@ -190,5 +192,31 @@ export class AdminClassesController {
       ip: req.ip ?? 'unknown',
     };
     return this.adminClassesService.deleteClass(classId, adminInfo);
+  }
+
+  /**
+   * POST /api/admin/classes/bulk
+   * Crear múltiples clases en lote
+   */
+  @Post('bulk')
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Crear clases en lote',
+    description: 'Crea múltiples sesiones de clase a partir de un array',
+  })
+  @ApiResponse({ status: 201, description: 'Clases creadas' })
+  async bulkCreateClasses(
+    @Body() dto: BulkCreateClassesDto,
+    @CurrentUser() admin: JwtPayload,
+    @Req() req: Request,
+  ): Promise<BulkCreateClassesResponseDto> {
+    const adminInfo = {
+      adminId: admin.userId,
+      adminEmail: admin.email,
+      adminName: admin.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.adminClassesService.bulkCreateClasses(dto, adminInfo);
   }
 }

@@ -5,6 +5,7 @@ export interface Module {
   description: string;
   image: string;
   order: number;
+  visibleForSkillBuilder?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

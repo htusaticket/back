@@ -1,6 +1,7 @@
 // src/application/academy/services/academy.service.ts
 import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
 import { IAcademyRepository, ACADEMY_REPOSITORY } from '@/core/interfaces';
+import { PrismaService } from '@/infrastructure/persistence/prisma/prisma.service';
 import { AcademyOverviewDto, LessonDetailDto, ToggleLessonCompleteDto } from '../dto';
 
 @Injectable()
@@ -10,30 +11,60 @@ export class AcademyService {
   constructor(
     @Inject(ACADEMY_REPOSITORY)
     private readonly academyRepository: IAcademyRepository,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
    * Obtener vista general de la Academy con estadísticas y módulos
+   * Si el usuario tiene plan SKILL_BUILDER, solo muestra módulos marcados como visibleForSkillBuilder
    */
   async getOverview(userId: string): Promise<AcademyOverviewDto> {
     this.logger.debug(`Getting academy overview for user: ${userId}`);
+
+    // Check if user has SKILL_BUILDER plan
+    const activeSubscription = await this.prisma.subscription.findFirst({
+      where: {
+        userId,
+        status: 'ACTIVE',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const isSkillBuilder = activeSubscription?.plan === 'SKILL_BUILDER';
 
     const [stats, modules] = await Promise.all([
       this.academyRepository.getUserStats(userId),
       this.academyRepository.findModulesWithProgress(userId),
     ]);
 
+    // Filter modules for SKILL_BUILDER users - only show modules marked as visible
+    const filteredModules = isSkillBuilder
+      ? modules.filter(m => m.visibleForSkillBuilder === true)
+      : modules;
+
+    // Recalculate stats based on filtered modules for SKILL_BUILDER
+    const effectiveLessonsCompleted = isSkillBuilder
+      ? filteredModules.reduce((sum, m) => sum + m.completedLessons, 0)
+      : stats.lessonsCompleted;
+    const effectiveTotalLessons = isSkillBuilder
+      ? filteredModules.reduce((sum, m) => sum + m.totalLessons, 0)
+      : stats.totalLessons;
+    const effectiveProgress =
+      effectiveTotalLessons > 0
+        ? Math.round((effectiveLessonsCompleted / effectiveTotalLessons) * 100)
+        : 0;
+
     // Formatear tiempo total
     const totalTime = this.formatTime(stats.totalTimeMinutes);
 
     return {
       stats: {
-        overallProgress: stats.overallProgress,
-        lessonsCompleted: stats.lessonsCompleted,
-        totalLessons: stats.totalLessons,
+        overallProgress: isSkillBuilder ? effectiveProgress : stats.overallProgress,
+        lessonsCompleted: effectiveLessonsCompleted,
+        totalLessons: effectiveTotalLessons,
         totalTime,
       },
-      modules: modules.map(module => ({
+      modules: filteredModules.map(module => ({
         id: module.id,
         title: module.title,
         description: module.description,

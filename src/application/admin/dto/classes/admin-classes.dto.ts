@@ -222,3 +222,21 @@ export interface DeleteClassResponseDto {
   success: boolean;
   message: string;
 }
+
+// ==================== BULK CREATE ====================
+
+export class BulkCreateClassesDto {
+  @ApiProperty({ type: [CreateClassDto], description: 'Array de clases a crear' })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateClassDto)
+  classes!: CreateClassDto[];
+}
+
+export interface BulkCreateClassesResponseDto {
+  success: boolean;
+  message: string;
+  created: number;
+  failed: number;
+  errors: string[];
+}

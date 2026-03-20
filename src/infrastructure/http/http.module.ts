@@ -8,6 +8,7 @@ import { JobsModule } from './controllers/jobs/jobs.module';
 import { ProfileModule } from './controllers/profile/profile.module';
 import { AdminModule } from './controllers/admin/admin.module';
 import { NotificationsModule } from './controllers/notifications/notifications.module';
+import { ContactModule } from './controllers/contact/contact.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { NotificationsModule } from './controllers/notifications/notifications.m
     ProfileModule,
     AdminModule,
     NotificationsModule,
+    ContactModule,
   ],
   controllers: [],
   exports: [
@@ -31,6 +33,7 @@ import { NotificationsModule } from './controllers/notifications/notifications.m
     ProfileModule,
     AdminModule,
     NotificationsModule,
+    ContactModule,
   ],
 })
 export class HttpModule {}

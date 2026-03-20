@@ -356,9 +356,7 @@ export class AdminChallengesService {
   ): Promise<BulkCreateChallengesResponseDto> {
     // Limit bulk upload to 30 challenges max
     if (data.challenges.length > 30) {
-      throw new BadRequestException(
-        'El máximo de challenges por carga masiva es 30',
-      );
+      throw new BadRequestException('El máximo de challenges por carga masiva es 30');
     }
 
     let created = 0;
