@@ -59,11 +59,8 @@ export class AdminSubmissionsService {
     const { status, search, page = 1, limit = 10 } = query;
 
     const where: Record<string, unknown> = {
-      challenge: {
-        type: ChallengeType.AUDIO,
-      },
       completed: true,
-      fileUrl: { not: null },
+      OR: [{ fileUrl: { not: null } }, { challenge: { type: ChallengeType.MULTIPLE_CHOICE } }],
     };
 
     if (status) {
@@ -101,6 +98,7 @@ export class AdminSubmissionsService {
               id: true,
               title: true,
               type: true,
+              questions: true,
             },
           },
         },
@@ -125,6 +123,8 @@ export class AdminSubmissionsService {
           submittedAt: s.createdAt,
           feedback: s.feedback,
           score: s.score,
+          answers: s.answers as unknown as Record<string, unknown>[] | null,
+          questions: s.challenge.questions as unknown as Record<string, unknown>[] | null,
         }),
       ),
       total,
@@ -209,11 +209,8 @@ export class AdminSubmissionsService {
    */
   private async getStats(): Promise<SubmissionStatsDto> {
     const baseWhere = {
-      challenge: {
-        type: ChallengeType.AUDIO,
-      },
       completed: true,
-      fileUrl: { not: null },
+      OR: [{ fileUrl: { not: null } }, { challenge: { type: ChallengeType.MULTIPLE_CHOICE } }],
     };
 
     const [pending, approved, needsImprovement] = await Promise.all([

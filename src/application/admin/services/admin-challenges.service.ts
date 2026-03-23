@@ -184,13 +184,16 @@ export class AdminChallengesService {
       );
     }
 
+    // Auto-assign sequential IDs to quiz questions
+    const questionsWithIds = data.questions?.map((q, index) => ({ ...q, id: index + 1 }));
+
     const challenge = await this.prisma.dailyChallenge.create({
       data: {
         title: data.title,
         type: data.type,
         instructions: data.instructions,
         date: new Date(data.date),
-        questions: (data.questions as unknown as Prisma.JsonArray) ?? Prisma.JsonNull,
+        questions: (questionsWithIds as unknown as Prisma.JsonArray) ?? Prisma.JsonNull,
         audioUrl: data.audioUrl ?? null,
         points: data.points ?? 10,
         visibleForSkillBuilder: data.visibleForSkillBuilder ?? false,
@@ -271,8 +274,10 @@ export class AdminChallengesService {
     if (data.title !== undefined) updateData.title = data.title;
     if (data.instructions !== undefined) updateData.instructions = data.instructions;
     if (data.date !== undefined) updateData.date = new Date(data.date);
-    if (data.questions !== undefined)
-      updateData.questions = (data.questions as unknown as Prisma.JsonArray) ?? Prisma.JsonNull;
+    if (data.questions !== undefined) {
+      const questionsWithIds = data.questions?.map((q, index) => ({ ...q, id: index + 1 }));
+      updateData.questions = (questionsWithIds as unknown as Prisma.JsonArray) ?? Prisma.JsonNull;
+    }
     if (data.audioUrl !== undefined) updateData.audioUrl = data.audioUrl ?? null;
     if (data.points !== undefined) updateData.points = data.points;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
@@ -404,13 +409,19 @@ export class AdminChallengesService {
           throw new Error('Los challenges MULTIPLE_CHOICE requieren preguntas');
         }
 
+        // Auto-assign sequential IDs to quiz questions
+        const questionsWithIds = challengeData.questions?.map((q, index) => ({
+          ...q,
+          id: index + 1,
+        }));
+
         await this.prisma.dailyChallenge.create({
           data: {
             title: challengeData.title,
             type: challengeData.type,
             instructions: challengeData.instructions,
             date: new Date(challengeData.date),
-            questions: (challengeData.questions as unknown as Prisma.JsonArray) ?? Prisma.JsonNull,
+            questions: (questionsWithIds as unknown as Prisma.JsonArray) ?? Prisma.JsonNull,
             audioUrl: challengeData.audioUrl ?? null,
             points: challengeData.points ?? 10,
             visibleForSkillBuilder: challengeData.visibleForSkillBuilder ?? false,

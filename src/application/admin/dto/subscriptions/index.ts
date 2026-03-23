@@ -9,7 +9,7 @@ import {
   Min,
   Max,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { UserPlan, SubscriptionStatus } from '@prisma/client';
 
 // ==================== Query DTOs ====================
@@ -42,7 +42,11 @@ export class GetSubscriptionsQueryDto {
 
   @IsOptional()
   @IsBoolean()
-  @Type(() => Boolean)
+  @Transform(({ value }: { value: unknown }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return value as boolean;
+  })
   hasPaid?: boolean;
 }
 
