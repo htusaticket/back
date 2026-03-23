@@ -67,6 +67,8 @@ export interface SubmissionListItemDto {
   submittedAt: Date;
   feedback: string | null;
   score: number | null;
+  answers: Record<string, unknown>[] | null;
+  questions: Record<string, unknown>[] | null;
 }
 
 export interface SubmissionStatsDto {
