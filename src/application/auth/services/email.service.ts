@@ -210,7 +210,7 @@ export class EmailService {
    * Template HTML para email de recuperación de contraseña
    */
   private getPasswordResetTemplate(firstName: string, resetLink: string): string {
-    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/falcon-logo.png';
+    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/HT_USA_Logo-lau.png';
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -226,8 +226,8 @@ export class EmailService {
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 24px 0; text-align: center; background-color: #000000; border-radius: 8px 8px 0 0;">
-              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; height: auto; display: inline-block;" />
+            <td style="padding: 40px 20px; text-align: center; background-color: #000000; border-radius: 8px 8px 0 0;">
+              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 220px; height: auto; display: inline-block;" />
             </td>
           </tr>
           
@@ -294,7 +294,7 @@ export class EmailService {
    * Template HTML para email de registro pendiente (al usuario)
    */
   private getRegistrationPendingTemplate(firstName: string): string {
-    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/falcon-logo.png';
+    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/HT_USA_Logo-lau.png';
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -310,8 +310,8 @@ export class EmailService {
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 24px 0; text-align: center; background-color: #000000; border-radius: 8px 8px 0 0;">
-              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; height: auto; display: inline-block;" />
+            <td style="padding: 40px 20px; text-align: center; background-color: #000000; border-radius: 8px 8px 0 0;">
+              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 220px; height: auto; display: inline-block;" />
             </td>
           </tr>
           
@@ -371,7 +371,7 @@ export class EmailService {
    * Template HTML para notificación de nuevo registro (al admin)
    */
   private getNewRegistrationAdminTemplate(userData: NewUserData, reviewLink: string): string {
-    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/falcon-logo.png';
+    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/HT_USA_Logo-lau.png';
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -387,8 +387,8 @@ export class EmailService {
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 24px 0; text-align: center; background-color: #000000; border-radius: 8px 8px 0 0;">
-              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; height: auto; display: inline-block;" />
+            <td style="padding: 40px 20px; text-align: center; background-color: #000000; border-radius: 8px 8px 0 0;">
+              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 220px; height: auto; display: inline-block;" />
             </td>
           </tr>
           
@@ -510,7 +510,7 @@ export class EmailService {
    * Template HTML para email de registro aprobado
    */
   private getRegistrationApprovedTemplate(firstName: string, loginLink: string): string {
-    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/falcon-logo.png';
+    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/HT_USA_Logo-lau.png';
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -526,8 +526,8 @@ export class EmailService {
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 24px 0; text-align: center; background-color: #000000; border-radius: 8px 8px 0 0;">
-              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; height: auto; display: inline-block;" />
+            <td style="padding: 40px 20px; text-align: center; background-color: #000000; border-radius: 8px 8px 0 0;">
+              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 220px; height: auto; display: inline-block;" />
             </td>
           </tr>
           
@@ -608,7 +608,7 @@ export class EmailService {
    * Template HTML para email de registro rechazado
    */
   private getRegistrationRejectedTemplate(firstName: string, reason?: string): string {
-    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/falcon-logo.png';
+    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/HT_USA_Logo-lau.png';
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -624,8 +624,8 @@ export class EmailService {
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 24px 0; text-align: center; background-color: #000000; border-radius: 8px 8px 0 0;">
-              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; height: auto; display: inline-block;" />
+            <td style="padding: 40px 20px; text-align: center; background-color: #000000; border-radius: 8px 8px 0 0;">
+              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 220px; height: auto; display: inline-block;" />
             </td>
           </tr>
           
@@ -688,7 +688,7 @@ export class EmailService {
    * Template HTML para email de plan expirado
    */
   private getPlanExpiredTemplate(firstName: string, planName: string, loginLink: string): string {
-    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/falcon-logo.png';
+    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/HT_USA_Logo-lau.png';
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -704,8 +704,8 @@ export class EmailService {
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 24px 0; text-align: center; background-color: #000000; border-radius: 8px 8px 0 0;">
-              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; height: auto; display: inline-block;" />
+            <td style="padding: 40px 20px; text-align: center; background-color: #000000; border-radius: 8px 8px 0 0;">
+              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 220px; height: auto; display: inline-block;" />
             </td>
           </tr>
           
@@ -793,7 +793,7 @@ export class EmailService {
       return;
     }
 
-    const reviewLink = `${this.env.FRONTEND_URL}/admin/users`;
+    const reviewLink = 'https://admin.hte.syroxtech.com/subscription';
 
     for (const adminEmail of adminEmails) {
       try {
@@ -831,7 +831,7 @@ export class EmailService {
     },
     reviewLink: string,
   ): string {
-    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/falcon-logo.png';
+    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/HT_USA_Logo-lau.png';
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -847,8 +847,8 @@ export class EmailService {
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 24px 0; text-align: center; background-color: #000000; border-radius: 8px 8px 0 0;">
-              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; height: auto; display: inline-block;" />
+            <td style="padding: 40px 20px; text-align: center; background-color: #000000; border-radius: 8px 8px 0 0;">
+              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 220px; height: auto; display: inline-block;" />
             </td>
           </tr>
           
