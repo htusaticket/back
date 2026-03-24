@@ -28,12 +28,13 @@ export class ContactService {
     this.logger.log(`Solicitud de upgrade recibida del usuario: ${currentUser.email}`);
 
     // Obtener datos completos del usuario actual
+    // Buscar la suscripción más reciente sin filtrar por estado,
+    // para mostrar el plan anterior incluso si ya expiró o fue cancelada
     const user = await this.prisma.user.findUnique({
       where: { id: currentUser.userId },
       include: {
         subscriptions: {
-          where: { status: 'ACTIVE' },
-          orderBy: { startDate: 'desc' },
+          orderBy: { endDate: 'desc' },
           take: 1,
         },
       },
@@ -43,7 +44,53 @@ export class ContactService {
       throw new BadRequestException('Usuario no encontrado');
     }
 
-    const currentPlan = user.subscriptions[0]?.plan ?? 'Sin plan activo';
+    const lastSubscription = user.subscriptions[0];
+    const currentPlan = lastSubscription
+      ? `${lastSubscription.plan} (${lastSubscription.status})`
+      : 'Sin plan';
+
+    // Verificar si ya existe una solicitud de upgrade pendiente (no leída)
+    // para este usuario con el MISMO plan/status actual.
+    // Si el plan o status cambió (ej: de SKILL_BUILDER(ACTIVE) a PRO(EXPIRED)),
+    // se permite una nueva solicitud.
+    const existingRequest = await this.prisma.notification.findFirst({
+      where: {
+        type: NotificationType.UPGRADE_REQUEST,
+        isRead: false,
+        data: {
+          path: ['requestingUserId'],
+          equals: currentUser.userId,
+        },
+      },
+    });
+
+    if (existingRequest) {
+      const existingData = existingRequest.data as Record<string, unknown> | null;
+      const existingPlan = existingData?.currentPlan as string | undefined;
+
+      // Solo bloquear si el plan/status actual es el mismo que el de la solicitud existente
+      if (existingPlan === currentPlan) {
+        this.logger.log(`Solicitud de upgrade duplicada rechazada para usuario: ${currentUser.email} (plan: ${currentPlan})`);
+        return {
+          success: true,
+          message: 'Ya tienes una solicitud de upgrade pendiente. Un administrador se pondrá en contacto contigo pronto.',
+        };
+      }
+
+      // El plan/status cambió: marcar la solicitud anterior como leída
+      this.logger.log(`Plan cambió de "${existingPlan}" a "${currentPlan}", permitiendo nueva solicitud`);
+      await this.prisma.notification.updateMany({
+        where: {
+          type: NotificationType.UPGRADE_REQUEST,
+          isRead: false,
+          data: {
+            path: ['requestingUserId'],
+            equals: currentUser.userId,
+          },
+        },
+        data: { isRead: true },
+      });
+    }
 
     // Buscar todos los SUPERADMIN activos
     const superadmins = await this.prisma.user.findMany({
