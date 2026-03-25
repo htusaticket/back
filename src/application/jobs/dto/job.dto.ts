@@ -87,6 +87,9 @@ export class JobOfferDto {
   @ApiPropertyOptional({ example: 'https://instagram.com/company', nullable: true })
   social!: string | null;
 
+  @ApiPropertyOptional({ example: 'https://instagram.com/recruiter', nullable: true })
+  recruiterSocial!: string | null;
+
   @ApiPropertyOptional({ example: 'https://company.com', nullable: true })
   website!: string | null;
 

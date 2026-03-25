@@ -176,6 +176,23 @@ async function main() {
     },
   });
 
+  // Santiago — Alumno ELITE (SyroxTech)
+  const santiago = await prisma.user.create({
+    data: {
+      email: 'santiago@syroxtech.com',
+      password: pw,
+      firstName: 'Santiago',
+      lastName: 'Perez Baglivo',
+      phone: '+5491155667788',
+      city: 'Buenos Aires',
+      country: 'Argentina',
+      reference: 'SyroxTech Internal',
+      role: UserRole.USER,
+      status: UserStatus.ACTIVE,
+    },
+  });
+  console.log(`   \u2713 User (ELITE): ${santiago.email}`);
+
   const userLevelUp = await prisma.user.create({
     data: {
       email: 'maria@test.com',
@@ -917,6 +934,21 @@ async function main() {
     },
   });
 
+  // Today — Santiago's class with extra materials (10am)
+  const classSantiago = await prisma.classSession.create({
+    data: {
+      title: 'Sales Vocabulary & Cold Calling Scripts',
+      type: ClassType.MASTERCLASS,
+      startTime: todayAt(10, 0),
+      endTime: todayAt(11, 30),
+      capacityMax: 10,
+      meetLink: 'https://meet.google.com/santiago-masterclass',
+      materialsLink: 'https://drive.google.com/file/santiago-materials',
+      description:
+        'Masterclass on sales vocabulary and cold calling scripts. Includes downloadable templates, role-play audio examples, and a comprehensive PDF guide.',
+    },
+  });
+
   // ============================================================
   // ENROLLMENTS (varied statuses and attendance)
   // ============================================================
@@ -1013,6 +1045,38 @@ async function main() {
       userId: userPro.id,
       classSessionId: classNextWeek.id,
       status: EnrollmentStatus.CONFIRMED,
+    },
+  });
+
+  // Santiago — enrolled in today's masterclass
+  await prisma.classEnrollment.create({
+    data: {
+      userId: santiago.id,
+      classSessionId: classSantiago.id,
+      status: EnrollmentStatus.CONFIRMED,
+    },
+  });
+  // Santiago — also enrolled in today's Conversational class
+  await prisma.classEnrollment.create({
+    data: {
+      userId: santiago.id,
+      classSessionId: classToday.id,
+      status: EnrollmentStatus.CONFIRMED,
+    },
+  });
+
+  // Santiago — ELITE subscription (paid, active, infinite)
+  await prisma.subscription.create({
+    data: {
+      userId: santiago.id,
+      plan: UserPlan.ELITE,
+      status: SubscriptionStatus.ACTIVE,
+      startDate: pastDate(30),
+      endDate: new Date('2099-12-31'),
+      hasPaid: true,
+      paidAt: pastDate(30),
+      paymentNote: 'SyroxTech — lifetime access',
+      assignedBy: luby.id,
     },
   });
 
@@ -1999,6 +2063,7 @@ async function main() {
   console.log('  ADMIN:          carlos@jfalcon.com');
   console.log('  USER (PRO):     eugenia@test.com');
   console.log('  USER (ELITE):   diego@test.com');
+  console.log('  USER (ELITE):   santiago@syroxtech.com');
   console.log('  USER (LEVEL_UP):maria@test.com');
   console.log('  USER (HIRING):  lucas@test.com');
   console.log('  USER (SKILL_B): ana@test.com');

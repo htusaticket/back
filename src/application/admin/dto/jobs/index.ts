@@ -91,6 +91,15 @@ export class CreateJobOfferDto {
   @MaxLength(500)
   social?: string;
 
+  @ApiPropertyOptional({
+    description: 'Recruiter social link',
+    example: 'https://www.instagram.com/recruiter/',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  recruiterSocial?: string;
+
   @ApiPropertyOptional({ description: 'Website URL', example: 'https://www.company.com/' })
   @IsOptional()
   @IsString()
@@ -180,6 +189,12 @@ export class UpdateJobOfferDto {
   @MaxLength(500)
   social?: string;
 
+  @ApiPropertyOptional({ description: 'Recruiter social link' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  recruiterSocial?: string;
+
   @ApiPropertyOptional({ description: 'Website URL' })
   @IsOptional()
   @IsString()
@@ -235,6 +250,9 @@ export class JobOfferResponseDto {
 
   @ApiPropertyOptional()
   social?: string | null;
+
+  @ApiPropertyOptional()
+  recruiterSocial?: string | null;
 
   @ApiPropertyOptional()
   website?: string | null;
@@ -304,7 +322,12 @@ export class GetJobOffersQueryDto {
   @ApiPropertyOptional({ description: 'Filter by active status' })
   @IsOptional()
   @IsBoolean()
-  @Transform(({ value }: { value: unknown }) => value === 'true' || value === true)
+  @Transform(({ key, obj }: { key: string; obj: Record<string, unknown> }) => {
+    const raw = obj[key];
+    if (raw === 'true' || raw === true) return true;
+    if (raw === 'false' || raw === false) return false;
+    return undefined;
+  })
   isActive?: boolean;
 
   @ApiPropertyOptional({ description: 'Filter by job type' })
