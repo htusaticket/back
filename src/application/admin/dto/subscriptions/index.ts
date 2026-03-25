@@ -42,10 +42,11 @@ export class GetSubscriptionsQueryDto {
 
   @IsOptional()
   @IsBoolean()
-  @Transform(({ value }: { value: unknown }) => {
-    if (value === 'true' || value === true) return true;
-    if (value === 'false' || value === false) return false;
-    return value as boolean;
+  @Transform(({ key, obj }: { key: string; obj: Record<string, unknown> }) => {
+    const raw = obj[key];
+    if (raw === 'true' || raw === true) return true;
+    if (raw === 'false' || raw === false) return false;
+    return undefined;
   })
   hasPaid?: boolean;
 }

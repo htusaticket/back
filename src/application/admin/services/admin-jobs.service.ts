@@ -76,6 +76,7 @@ export class AdminJobsService {
         isActive: job.isActive,
         applicationsCount: job._count.applications,
         social: job.social,
+        recruiterSocial: job.recruiterSocial,
         website: job.website,
         email: job.email,
         createdAt: job.createdAt,
@@ -130,6 +131,7 @@ export class AdminJobsService {
       isActive: job.isActive,
       applicationsCount: job._count.applications,
       social: job.social,
+      recruiterSocial: job.recruiterSocial,
       website: job.website,
       email: job.email,
       createdAt: job.createdAt,
@@ -164,6 +166,7 @@ export class AdminJobsService {
         requirements: data.requirements ?? [],
         isActive: data.isActive ?? true,
         social: data.social ?? null,
+        recruiterSocial: data.recruiterSocial ?? null,
         website: data.website ?? null,
         email: data.email ?? null,
       },
@@ -202,6 +205,7 @@ export class AdminJobsService {
       isActive: job.isActive,
       applicationsCount: job._count.applications,
       social: job.social,
+      recruiterSocial: job.recruiterSocial,
       website: job.website,
       email: job.email,
       createdAt: job.createdAt,
@@ -232,6 +236,7 @@ export class AdminJobsService {
     if (data.requirements !== undefined) updateData.requirements = data.requirements;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
     if (data.social !== undefined) updateData.social = data.social || null;
+    if (data.recruiterSocial !== undefined) updateData.recruiterSocial = data.recruiterSocial || null;
     if (data.website !== undefined) updateData.website = data.website || null;
     if (data.email !== undefined) updateData.email = data.email || null;
 
@@ -273,6 +278,7 @@ export class AdminJobsService {
       isActive: job.isActive,
       applicationsCount: job._count.applications,
       social: job.social,
+      recruiterSocial: job.recruiterSocial,
       website: job.website,
       email: job.email,
       createdAt: job.createdAt,
@@ -330,6 +336,7 @@ export class AdminJobsService {
             requirements: jobData.requirements ?? [],
             isActive: jobData.isActive ?? true,
             social: jobData.social ?? null,
+            recruiterSocial: jobData.recruiterSocial ?? null,
             website: jobData.website ?? null,
             email: jobData.email ?? null,
           },

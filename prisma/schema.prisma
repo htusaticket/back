@@ -477,6 +477,7 @@ model JobOffer {
   requirements String[] // Supports arrays in Postgres
   isActive     Boolean  @default(true) @map("is_active")
   social       String?  // Primary social link (Instagram, etc.)
+  recruiterSocial String? @map("recruiter_social") // Recruiter social link
   website      String?  // Company/recruiter website
   email        String?  @map("contact_email") // Contact email
 
