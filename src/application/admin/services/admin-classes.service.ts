@@ -66,7 +66,7 @@ export class AdminClassesService {
     const [classes, total] = await Promise.all([
       this.prisma.classSession.findMany({
         where,
-        orderBy: { startTime: 'desc' },
+        orderBy: { startTime: 'asc' },
         skip: (page - 1) * limit,
         take: limit,
         include: {
@@ -94,6 +94,7 @@ export class AdminClassesService {
           enrolledCount: c._count.enrollments,
           meetLink: c.meetLink,
           description: c.description,
+          visibleForSkillBuilderLive: c.visibleForSkillBuilderLive,
           createdAt: c.createdAt,
         }),
       ),
@@ -130,6 +131,7 @@ export class AdminClassesService {
         capacityMax: dto.capacityMax ?? null,
         meetLink: dto.meetLink ?? null,
         materialsLink: dto.materialsLink ?? null,
+        visibleForSkillBuilderLive: dto.visibleForSkillBuilderLive ?? false,
       },
     });
 
@@ -162,6 +164,7 @@ export class AdminClassesService {
         enrolledCount: 0,
         meetLink: classSession.meetLink,
         description: classSession.description,
+        visibleForSkillBuilderLive: classSession.visibleForSkillBuilderLive,
         createdAt: classSession.createdAt,
       },
     };
@@ -342,6 +345,8 @@ export class AdminClassesService {
     if (dto.capacityMax !== undefined) data.capacityMax = dto.capacityMax;
     if (dto.meetLink !== undefined) data.meetLink = dto.meetLink;
     if (dto.materialsLink !== undefined) data.materialsLink = dto.materialsLink;
+    if (dto.visibleForSkillBuilderLive !== undefined)
+      data.visibleForSkillBuilderLive = dto.visibleForSkillBuilderLive;
 
     const startTime = (data.startTime as Date) || existing.startTime;
     const endTime = (data.endTime as Date) || existing.endTime;
@@ -384,6 +389,7 @@ export class AdminClassesService {
         enrolledCount: updated._count.enrollments,
         meetLink: updated.meetLink,
         description: updated.description,
+        visibleForSkillBuilderLive: updated.visibleForSkillBuilderLive,
         createdAt: updated.createdAt,
       },
     };
@@ -460,6 +466,7 @@ export class AdminClassesService {
             capacityMax: classData.capacityMax ?? null,
             meetLink: classData.meetLink ?? null,
             materialsLink: classData.materialsLink ?? null,
+            visibleForSkillBuilderLive: classData.visibleForSkillBuilderLive ?? false,
           },
         });
 

@@ -105,6 +105,12 @@ export class CreateChallengeDto {
   @IsBoolean()
   @Transform(({ value }: { value: unknown }) => value === 'true' || value === true)
   visibleForSkillBuilder?: boolean;
+
+  @ApiPropertyOptional({ description: 'Visible for SKILL_BUILDER_LIVE plan', default: false })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }: { value: unknown }) => value === 'true' || value === true)
+  visibleForSkillBuilderLive?: boolean;
 }
 
 export class UpdateChallengeDto {
@@ -171,6 +177,12 @@ export class UpdateChallengeDto {
   @IsBoolean()
   @Transform(({ value }: { value: unknown }) => value === 'true' || value === true)
   visibleForSkillBuilder?: boolean;
+
+  @ApiPropertyOptional({ description: 'Visible for SKILL_BUILDER_LIVE plan' })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }: { value: unknown }) => value === 'true' || value === true)
+  visibleForSkillBuilderLive?: boolean;
 }
 
 export class ChallengeResponseDto {
@@ -203,6 +215,9 @@ export class ChallengeResponseDto {
 
   @ApiProperty()
   visibleForSkillBuilder!: boolean;
+
+  @ApiProperty()
+  visibleForSkillBuilderLive!: boolean;
 
   @ApiProperty()
   submissionsCount!: number;

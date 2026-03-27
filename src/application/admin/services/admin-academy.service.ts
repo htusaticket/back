@@ -65,6 +65,7 @@ export class AdminAcademyService {
         order: m.order,
         status: m.status,
         visibleForSkillBuilder: m.visibleForSkillBuilder,
+        visibleForSkillBuilderLive: m.visibleForSkillBuilderLive,
         lessonsCount: m._count.lessons,
         createdAt: m.createdAt,
         updatedAt: m.updatedAt,
@@ -104,6 +105,7 @@ export class AdminAcademyService {
       order: module.order,
       status: module.status,
       visibleForSkillBuilder: module.visibleForSkillBuilder,
+      visibleForSkillBuilderLive: module.visibleForSkillBuilderLive,
       lessonsCount: module._count.lessons,
       createdAt: module.createdAt,
       updatedAt: module.updatedAt,
@@ -114,6 +116,7 @@ export class AdminAcademyService {
         duration: lesson.duration,
         contentUrl: lesson.contentUrl ?? undefined,
         order: lesson.order,
+        status: lesson.status,
         moduleId: lesson.moduleId,
         resources: lesson.resources.map(r => ({
           id: r.id,
@@ -147,6 +150,7 @@ export class AdminAcademyService {
         order: data.order ?? (maxOrder._max.order ?? 0) + 1,
         status: data.status ?? 'DRAFT',
         visibleForSkillBuilder: data.visibleForSkillBuilder ?? false,
+        visibleForSkillBuilderLive: data.visibleForSkillBuilderLive ?? false,
       },
       include: {
         _count: {
@@ -176,6 +180,7 @@ export class AdminAcademyService {
       order: module.order,
       status: module.status,
       visibleForSkillBuilder: module.visibleForSkillBuilder,
+      visibleForSkillBuilderLive: module.visibleForSkillBuilderLive,
       lessonsCount: module._count.lessons,
       createdAt: module.createdAt,
       updatedAt: module.updatedAt,
@@ -199,6 +204,8 @@ export class AdminAcademyService {
     if (data.order !== undefined) updateData.order = data.order;
     if (data.visibleForSkillBuilder !== undefined)
       updateData.visibleForSkillBuilder = data.visibleForSkillBuilder;
+    if (data.visibleForSkillBuilderLive !== undefined)
+      updateData.visibleForSkillBuilderLive = data.visibleForSkillBuilderLive;
     if (data.status !== undefined) updateData.status = data.status;
 
     const module = await this.prisma.module.update({
@@ -232,6 +239,7 @@ export class AdminAcademyService {
       order: module.order,
       status: module.status,
       visibleForSkillBuilder: module.visibleForSkillBuilder,
+      visibleForSkillBuilderLive: module.visibleForSkillBuilderLive,
       lessonsCount: module._count.lessons,
       createdAt: module.createdAt,
       updatedAt: module.updatedAt,
@@ -302,6 +310,7 @@ export class AdminAcademyService {
         duration: data.duration,
         contentUrl: data.contentUrl ?? null,
         order: targetOrder,
+        status: data.status ?? 'PUBLISHED',
         moduleId,
       },
       include: {
@@ -329,6 +338,7 @@ export class AdminAcademyService {
       duration: lesson.duration,
       contentUrl: lesson.contentUrl ?? undefined,
       order: lesson.order,
+      status: lesson.status,
       moduleId: lesson.moduleId,
       resources: lesson.resources.map(r => ({
         id: r.id,
@@ -356,6 +366,7 @@ export class AdminAcademyService {
     if (data.duration !== undefined) updateData.duration = data.duration;
     if (data.contentUrl !== undefined) updateData.contentUrl = data.contentUrl;
     if (data.order !== undefined) updateData.order = data.order;
+    if (data.status !== undefined) updateData.status = data.status;
 
     const lesson = await this.prisma.lesson.update({
       where: { id: lessonId },
@@ -385,6 +396,7 @@ export class AdminAcademyService {
       duration: lesson.duration,
       contentUrl: lesson.contentUrl ?? undefined,
       order: lesson.order,
+      status: lesson.status,
       moduleId: lesson.moduleId,
       resources: lesson.resources.map(r => ({
         id: r.id,

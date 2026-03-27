@@ -31,24 +31,29 @@ export class AcademyService {
     });
 
     const isSkillBuilder = activeSubscription?.plan === 'SKILL_BUILDER';
+    const isSkillBuilderLive = activeSubscription?.plan === 'SKILL_BUILDER_LIVE';
 
     const [stats, modules] = await Promise.all([
       this.academyRepository.getUserStats(userId),
       this.academyRepository.findModulesWithProgress(userId),
     ]);
 
-    // Filter modules for SKILL_BUILDER users - only show modules marked as visible
+    // Filter modules for SKILL_BUILDER/SKILL_BUILDER_LIVE users - only show modules marked as visible
     const filteredModules = isSkillBuilder
       ? modules.filter(m => m.visibleForSkillBuilder === true)
-      : modules;
+      : isSkillBuilderLive
+        ? modules.filter(m => m.visibleForSkillBuilderLive === true)
+        : modules;
 
-    // Recalculate stats based on filtered modules for SKILL_BUILDER
-    const effectiveLessonsCompleted = isSkillBuilder
-      ? filteredModules.reduce((sum, m) => sum + m.completedLessons, 0)
-      : stats.lessonsCompleted;
-    const effectiveTotalLessons = isSkillBuilder
-      ? filteredModules.reduce((sum, m) => sum + m.totalLessons, 0)
-      : stats.totalLessons;
+    // Recalculate stats based on filtered modules for SKILL_BUILDER/SKILL_BUILDER_LIVE
+    const effectiveLessonsCompleted =
+      isSkillBuilder || isSkillBuilderLive
+        ? filteredModules.reduce((sum, m) => sum + m.completedLessons, 0)
+        : stats.lessonsCompleted;
+    const effectiveTotalLessons =
+      isSkillBuilder || isSkillBuilderLive
+        ? filteredModules.reduce((sum, m) => sum + m.totalLessons, 0)
+        : stats.totalLessons;
     const effectiveProgress =
       effectiveTotalLessons > 0
         ? Math.round((effectiveLessonsCompleted / effectiveTotalLessons) * 100)
@@ -59,7 +64,8 @@ export class AcademyService {
 
     return {
       stats: {
-        overallProgress: isSkillBuilder ? effectiveProgress : stats.overallProgress,
+        overallProgress:
+          isSkillBuilder || isSkillBuilderLive ? effectiveProgress : stats.overallProgress,
         lessonsCompleted: effectiveLessonsCompleted,
         totalLessons: effectiveTotalLessons,
         totalTime,
@@ -99,6 +105,9 @@ export class AcademyService {
       this.academyRepository.findLessonProgress(userId, lessonId),
       this.academyRepository.findAdjacentLessons(lessonId, lesson.moduleId),
     ]);
+
+    // Track lesson access for "Continue Learning" on dashboard
+    await this.academyRepository.trackLessonAccess(userId, lessonId);
 
     return {
       id: lesson.id,

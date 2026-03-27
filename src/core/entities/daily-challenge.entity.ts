@@ -18,6 +18,8 @@ export interface DailyChallenge {
   audioUrl: string | null;
   points: number;
   isActive: boolean;
+  visibleForSkillBuilder: boolean;
+  visibleForSkillBuilderLive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

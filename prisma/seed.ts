@@ -949,6 +949,28 @@ async function main() {
     },
   });
 
+  // Today — Eugenia's live class with MULTIPLE materials (for testing materials modal)
+  const classEugeniaMultiMaterials = await prisma.classSession.create({
+    data: {
+      title: 'Advanced Negotiation & Closing Techniques',
+      type: ClassType.MASTERCLASS,
+      startTime: todayAt(20, 0),
+      endTime: todayAt(21, 30),
+      capacityMax: 8,
+      meetLink: 'https://meet.google.com/nego-masterclass',
+      materialsLink: [
+        'https://docs.google.com/document/d/negotiation-playbook',
+        'https://drive.google.com/file/d/closing-techniques-pdf',
+        'https://drive.google.com/file/d/roleplay-scripts-doc',
+        'https://docs.google.com/spreadsheets/d/objection-handling-sheet',
+        'https://www.loom.com/share/negotiation-demo-video',
+      ].join(', '),
+      description:
+        'Master advanced negotiation tactics and closing techniques. Includes a negotiation playbook, closing techniques PDF, role-play scripts, objection handling spreadsheet, and a demo video.',
+      visibleForSkillBuilderLive: true,
+    },
+  });
+
   // ============================================================
   // ENROLLMENTS (varied statuses and attendance)
   // ============================================================
@@ -1061,6 +1083,15 @@ async function main() {
     data: {
       userId: santiago.id,
       classSessionId: classToday.id,
+      status: EnrollmentStatus.CONFIRMED,
+    },
+  });
+
+  // Eugenia (PRO) — enrolled in today's multi-materials class (for testing materials modal)
+  await prisma.classEnrollment.create({
+    data: {
+      userId: userPro.id,
+      classSessionId: classEugeniaMultiMaterials.id,
       status: EnrollmentStatus.CONFIRMED,
     },
   });

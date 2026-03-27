@@ -78,4 +78,10 @@ export interface IAcademyRepository {
     previous: { id: number; title: string } | null;
     next: { id: number; title: string } | null;
   }>;
+
+  /**
+   * Track lesson access for "Continue Learning" on dashboard.
+   * Upserts UserLessonProgress with lastAccessedAt without changing completed status.
+   */
+  trackLessonAccess(userId: string, lessonId: number): Promise<void>;
 }
