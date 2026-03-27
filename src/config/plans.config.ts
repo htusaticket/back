@@ -10,6 +10,7 @@ export const PLAN_DURATION_MONTHS: Record<UserPlan, number> = {
   LEVEL_UP: 6, // 6 meses
   HIRING_HUB: 1, // 1 mes
   SKILL_BUILDER: 1, // 1 mes
+  SKILL_BUILDER_LIVE: 1, // 1 mes
 };
 
 /**
@@ -24,6 +25,7 @@ export const PLAN_ACCESS_LEVEL: Record<UserPlan, 1 | 2 | 3> = {
   LEVEL_UP: 1,
   HIRING_HUB: 2,
   SKILL_BUILDER: 3,
+  SKILL_BUILDER_LIVE: 3,
 };
 
 /**
@@ -72,5 +74,12 @@ export function calculateEndDate(plan: UserPlan, startDate: Date = new Date()): 
  */
 export function getPlanFeatures(plan: UserPlan): PlanFeatures {
   const level = PLAN_ACCESS_LEVEL[plan];
-  return PLAN_FEATURES[level];
+  const features = { ...PLAN_FEATURES[level] };
+
+  // SKILL_BUILDER_LIVE gets live classes access on top of level 3 features
+  if (plan === 'SKILL_BUILDER_LIVE') {
+    features.liveClasses = true;
+  }
+
+  return features;
 }

@@ -53,6 +53,12 @@ export class CreateModuleDto {
   @Transform(({ value }: { value: unknown }) => value === 'true' || value === true)
   visibleForSkillBuilder?: boolean;
 
+  @ApiPropertyOptional({ description: 'Visible for SKILL_BUILDER_LIVE plan', default: false })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }: { value: unknown }) => value === 'true' || value === true)
+  visibleForSkillBuilderLive?: boolean;
+
   @ApiPropertyOptional({ description: 'Module status', enum: ModuleStatus, default: 'DRAFT' })
   @IsOptional()
   @IsEnum(ModuleStatus)
@@ -93,6 +99,12 @@ export class UpdateModuleDto {
   @Transform(({ value }: { value: unknown }) => value === 'true' || value === true)
   visibleForSkillBuilder?: boolean;
 
+  @ApiPropertyOptional({ description: 'Visible for SKILL_BUILDER_LIVE plan' })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }: { value: unknown }) => value === 'true' || value === true)
+  visibleForSkillBuilderLive?: boolean;
+
   @ApiPropertyOptional({ description: 'Module status', enum: ModuleStatus })
   @IsOptional()
   @IsEnum(ModuleStatus)
@@ -117,6 +129,9 @@ export class ModuleResponseDto {
 
   @ApiProperty()
   visibleForSkillBuilder!: boolean;
+
+  @ApiProperty()
+  visibleForSkillBuilderLive!: boolean;
 
   @ApiProperty({ enum: ModuleStatus })
   status!: ModuleStatus;
@@ -161,6 +176,15 @@ export class CreateLessonDto {
   @Min(0)
   @Type(() => Number)
   order?: number;
+
+  @ApiPropertyOptional({
+    description: 'Lesson status',
+    enum: ModuleStatus,
+    default: ModuleStatus.PUBLISHED,
+  })
+  @IsOptional()
+  @IsEnum(ModuleStatus)
+  status?: ModuleStatus;
 }
 
 export class UpdateLessonDto {
@@ -193,6 +217,11 @@ export class UpdateLessonDto {
   @Min(0)
   @Type(() => Number)
   order?: number;
+
+  @ApiPropertyOptional({ description: 'Lesson status', enum: ModuleStatus })
+  @IsOptional()
+  @IsEnum(ModuleStatus)
+  status?: ModuleStatus;
 }
 
 export class LessonResourceDto {
@@ -251,6 +280,9 @@ export class LessonResponseDto {
 
   @ApiProperty()
   order!: number;
+
+  @ApiProperty({ enum: ModuleStatus })
+  status!: ModuleStatus;
 
   @ApiProperty()
   moduleId!: number;

@@ -17,10 +17,10 @@ export class ChallengesRepository implements IDailyChallengeRepository {
 
   async findTodayChallenge(): Promise<DailyChallenge | null> {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
 
     return this.prisma.dailyChallenge.findFirst({
       where: {

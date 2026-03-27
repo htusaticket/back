@@ -88,6 +88,11 @@ export class CreateClassDto {
   @IsOptional()
   @IsString()
   materialsLink?: string;
+
+  @ApiPropertyOptional({ description: 'Visible para usuarios Skill Builder Live', default: false })
+  @IsOptional()
+  @IsBoolean()
+  visibleForSkillBuilderLive?: boolean;
 }
 
 export class AttendanceRecordDto {
@@ -158,6 +163,11 @@ export class UpdateClassDto {
   @IsOptional()
   @IsString()
   materialsLink?: string;
+
+  @ApiPropertyOptional({ description: 'Visible para usuarios Skill Builder Live' })
+  @IsOptional()
+  @IsBoolean()
+  visibleForSkillBuilderLive?: boolean;
 }
 
 // ==================== RESPONSE INTERFACES ====================
@@ -172,6 +182,7 @@ export interface ClassListItemDto {
   enrolledCount: number;
   meetLink: string | null;
   description: string | null;
+  visibleForSkillBuilderLive: boolean;
   createdAt: Date;
 }
 

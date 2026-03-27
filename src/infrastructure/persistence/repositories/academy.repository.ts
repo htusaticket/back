@@ -33,6 +33,7 @@ export class AcademyRepository implements IAcademyRepository {
       orderBy: { order: 'asc' },
       include: {
         lessons: {
+          where: { status: 'PUBLISHED' },
           orderBy: { order: 'asc' },
           include: {
             userProgress: {
@@ -57,6 +58,7 @@ export class AcademyRepository implements IAcademyRepository {
         image: module.image,
         order: module.order,
         visibleForSkillBuilder: module.visibleForSkillBuilder,
+        visibleForSkillBuilderLive: module.visibleForSkillBuilderLive,
         createdAt: module.createdAt,
         updatedAt: module.updatedAt,
         totalLessons,
@@ -122,7 +124,7 @@ export class AcademyRepository implements IAcademyRepository {
 
   async findLessonsWithProgress(moduleId: number, userId: string): Promise<LessonWithProgress[]> {
     const lessons = await this.prisma.lesson.findMany({
-      where: { moduleId },
+      where: { moduleId, status: 'PUBLISHED' },
       orderBy: { order: 'asc' },
       include: {
         userProgress: {
@@ -180,10 +182,27 @@ export class AcademyRepository implements IAcademyRepository {
     }
   }
 
+  async trackLessonAccess(userId: string, lessonId: number): Promise<void> {
+    await this.prisma.userLessonProgress.upsert({
+      where: {
+        userId_lessonId: { userId, lessonId },
+      },
+      update: {
+        lastAccessedAt: new Date(),
+      },
+      create: {
+        userId,
+        lessonId,
+        completed: false,
+        lastAccessedAt: new Date(),
+      },
+    });
+  }
+
   async updateModuleProgress(userId: string, moduleId: number): Promise<number> {
     // Calcular progreso actual
     const lessons = await this.prisma.lesson.findMany({
-      where: { moduleId },
+      where: { moduleId, status: 'PUBLISHED' },
       include: {
         userProgress: {
           where: { userId },
@@ -221,6 +240,7 @@ export class AcademyRepository implements IAcademyRepository {
     const lessons = await this.prisma.lesson.findMany({
       where: {
         module: { status: 'PUBLISHED' },
+        status: 'PUBLISHED',
       },
       include: {
         userProgress: {
@@ -287,6 +307,7 @@ export class AcademyRepository implements IAcademyRepository {
       this.prisma.lesson.findFirst({
         where: {
           moduleId,
+          status: 'PUBLISHED',
           order: { lt: currentLesson.order },
         },
         orderBy: { order: 'desc' },
@@ -295,6 +316,7 @@ export class AcademyRepository implements IAcademyRepository {
       this.prisma.lesson.findFirst({
         where: {
           moduleId,
+          status: 'PUBLISHED',
           order: { gt: currentLesson.order },
         },
         orderBy: { order: 'asc' },

@@ -18,6 +18,7 @@ import {
   IUserRepository,
   USER_REPOSITORY,
 } from '@/core/interfaces';
+import { PrismaService } from '@/infrastructure/persistence/prisma/prisma.service';
 import { ClassResponseDto, EnrollResponseDto, CancelResponseDto } from '../dto';
 
 @Injectable()
@@ -33,13 +34,51 @@ export class ClassesService {
     private readonly notificationRepository: INotificationRepository,
     @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
    * Obtener todas las clases disponibles (futuras)
+   * Si el usuario tiene plan SKILL_BUILDER_LIVE, solo muestra clases marcadas como visibleForSkillBuilderLive
    */
   async getAvailableClasses(userId?: string): Promise<ClassResponseDto[]> {
     const classes = await this.classSessionRepository.findAvailableClasses(userId);
+
+    // Check if user has restricted plan - filter classes accordingly
+    if (userId) {
+      const activeSubscription = await this.prisma.subscription.findFirst({
+        where: {
+          userId,
+          status: 'ACTIVE',
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      this.logger.debug(`User ${userId} has plan: ${activeSubscription?.plan ?? 'NONE'}`);
+
+      // SKILL_BUILDER has no access to live classes at all
+      if (activeSubscription?.plan === 'SKILL_BUILDER') {
+        this.logger.debug(`User ${userId} is SKILL_BUILDER - returning empty classes`);
+        return [];
+      }
+
+      if (activeSubscription?.plan === 'SKILL_BUILDER_LIVE') {
+        // Get class IDs that are visible for SB Live
+        const visibleClassIds = await this.prisma.classSession.findMany({
+          where: {
+            visibleForSkillBuilderLive: true,
+            startTime: { gt: new Date() },
+          },
+          select: { id: true },
+        });
+        const visibleIds = new Set(visibleClassIds.map(c => c.id));
+        this.logger.debug(
+          `SB Live filter: ${visibleIds.size} visible classes out of ${classes.length} total`,
+        );
+        return classes.filter(c => visibleIds.has(c.id));
+      }
+    }
+
     return classes;
   }
 

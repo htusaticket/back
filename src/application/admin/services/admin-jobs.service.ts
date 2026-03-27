@@ -236,7 +236,8 @@ export class AdminJobsService {
     if (data.requirements !== undefined) updateData.requirements = data.requirements;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
     if (data.social !== undefined) updateData.social = data.social || null;
-    if (data.recruiterSocial !== undefined) updateData.recruiterSocial = data.recruiterSocial || null;
+    if (data.recruiterSocial !== undefined)
+      updateData.recruiterSocial = data.recruiterSocial || null;
     if (data.website !== undefined) updateData.website = data.website || null;
     if (data.email !== undefined) updateData.email = data.email || null;
 

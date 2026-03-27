@@ -70,15 +70,20 @@ export class ContactService {
 
       // Solo bloquear si el plan/status actual es el mismo que el de la solicitud existente
       if (existingPlan === currentPlan) {
-        this.logger.log(`Solicitud de upgrade duplicada rechazada para usuario: ${currentUser.email} (plan: ${currentPlan})`);
+        this.logger.log(
+          `Solicitud de upgrade duplicada rechazada para usuario: ${currentUser.email} (plan: ${currentPlan})`,
+        );
         return {
           success: true,
-          message: 'Ya tienes una solicitud de upgrade pendiente. Un administrador se pondrá en contacto contigo pronto.',
+          message:
+            'Ya tienes una solicitud de upgrade pendiente. Un administrador se pondrá en contacto contigo pronto.',
         };
       }
 
       // El plan/status cambió: marcar la solicitud anterior como leída
-      this.logger.log(`Plan cambió de "${existingPlan}" a "${currentPlan}", permitiendo nueva solicitud`);
+      this.logger.log(
+        `Plan cambió de "${existingPlan}" a "${currentPlan}", permitiendo nueva solicitud`,
+      );
       await this.prisma.notification.updateMany({
         where: {
           type: NotificationType.UPGRADE_REQUEST,

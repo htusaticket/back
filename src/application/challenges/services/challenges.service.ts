@@ -3,6 +3,7 @@ import { Injectable, Inject, Logger, NotFoundException, BadRequestException } fr
 import { SubmissionStatus, ChallengeType } from '@prisma/client';
 import { IDailyChallengeRepository, DAILY_CHALLENGE_REPOSITORY } from '@/core/interfaces';
 import { CloudflareStorageService } from '@/infrastructure/storage/cloudflare/cloudflare-storage.service';
+import { PrismaService } from '@/infrastructure/persistence/prisma/prisma.service';
 import {
   DailyChallengeDto,
   QuizChallengeDto,
@@ -23,10 +24,13 @@ export class ChallengesService {
     @Inject(DAILY_CHALLENGE_REPOSITORY)
     private readonly challengesRepository: IDailyChallengeRepository,
     private readonly cloudflareStorage: CloudflareStorageService,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
    * Obtener el challenge del día actual
+   * Si el usuario tiene plan SKILL_BUILDER, solo muestra si visibleForSkillBuilder está activo
+   * Si el usuario tiene plan SKILL_BUILDER_LIVE, solo muestra si visibleForSkillBuilderLive está activo
    */
   async getDailyChallenge(userId: string): Promise<DailyChallengeDto | QuizChallengeDto | null> {
     this.logger.debug(`Getting daily challenge for user: ${userId}`);
@@ -34,6 +38,22 @@ export class ChallengesService {
     const challenge = await this.challengesRepository.findTodayChallenge();
 
     if (!challenge) {
+      return null;
+    }
+
+    // Check if user has restricted plan and filter accordingly
+    const activeSubscription = await this.prisma.subscription.findFirst({
+      where: { userId, status: 'ACTIVE' },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (activeSubscription?.plan === 'SKILL_BUILDER' && !challenge.visibleForSkillBuilder) {
+      return null;
+    }
+    if (
+      activeSubscription?.plan === 'SKILL_BUILDER_LIVE' &&
+      !challenge.visibleForSkillBuilderLive
+    ) {
       return null;
     }
 

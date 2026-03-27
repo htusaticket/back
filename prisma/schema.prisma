@@ -30,6 +30,7 @@ enum UserPlan {
   LEVEL_UP    // Nivel 1 - Acceso completo
   HIRING_HUB  // Nivel 2 - Contenido + Job Board (sin clases en vivo)
   SKILL_BUILDER // Nivel 3 - Solo contenido
+  SKILL_BUILDER_LIVE // Nivel 3 - Solo contenido + clases en vivo
 }
 
 enum SubscriptionStatus {
@@ -238,6 +239,7 @@ model Module {
   order       Int    @default(0)
   status      ModuleStatus @default(PUBLISHED)
   visibleForSkillBuilder Boolean @default(false) @map("visible_for_skill_builder") // Si es visible para plan SKILL_BUILDER
+  visibleForSkillBuilderLive Boolean @default(false) @map("visible_for_skill_builder_live") // Si es visible para plan SKILL_BUILDER_LIVE
 
   lessons      Lesson[]
   userProgress UserModuleProgress[]
@@ -250,12 +252,13 @@ model Module {
 }
 
 model Lesson {
-  id          Int     @id @default(autoincrement())
+  id          Int          @id @default(autoincrement())
   title       String
-  description String? @db.Text
-  duration    String // e.g. "10 min"
-  contentUrl  String? @map("content_url") // Video url or content
-  order       Int     @default(0)
+  description String?      @db.Text
+  duration    String       // e.g. "10 min"
+  contentUrl  String?      @map("content_url") // Video url or content
+  order       Int          @default(0)
+  status      ModuleStatus @default(PUBLISHED)
 
   moduleId Int    @map("module_id")
   module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
@@ -332,6 +335,8 @@ model ClassSession {
   materialsLink  String? @map("materials_link")
   description    String?
 
+  visibleForSkillBuilderLive Boolean @default(false) @map("visible_for_skill_builder_live")
+
   enrollments ClassEnrollment[]
   strikes     Strike[]
 
@@ -394,6 +399,7 @@ model DailyChallenge {
   points       Int           @default(10)
   isActive     Boolean       @default(true) @map("is_active")
   visibleForSkillBuilder Boolean @default(false) @map("visible_for_skill_builder") // Si es visible para plan SKILL_BUILDER
+  visibleForSkillBuilderLive Boolean @default(false) @map("visible_for_skill_builder_live") // Si es visible para plan SKILL_BUILDER_LIVE
 
   userProgress UserDailyChallengeProgress[]
 

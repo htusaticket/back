@@ -93,6 +93,7 @@ export class AdminChallengesService {
         points: c.points,
         isActive: c.isActive,
         visibleForSkillBuilder: c.visibleForSkillBuilder,
+        visibleForSkillBuilderLive: c.visibleForSkillBuilderLive,
         submissionsCount: c._count.userProgress,
         pendingSubmissions: c.userProgress.length,
         createdAt: c.createdAt,
@@ -134,6 +135,7 @@ export class AdminChallengesService {
       points: challenge.points,
       isActive: challenge.isActive,
       visibleForSkillBuilder: challenge.visibleForSkillBuilder,
+      visibleForSkillBuilderLive: challenge.visibleForSkillBuilderLive,
       submissionsCount: challenge._count.userProgress,
       pendingSubmissions: challenge.userProgress.length,
       createdAt: challenge.createdAt,
@@ -197,6 +199,7 @@ export class AdminChallengesService {
         audioUrl: data.audioUrl ?? null,
         points: data.points ?? 10,
         visibleForSkillBuilder: data.visibleForSkillBuilder ?? false,
+        visibleForSkillBuilderLive: data.visibleForSkillBuilderLive ?? false,
       },
       include: {
         _count: {
@@ -229,6 +232,7 @@ export class AdminChallengesService {
       points: challenge.points,
       isActive: challenge.isActive,
       visibleForSkillBuilder: challenge.visibleForSkillBuilder,
+      visibleForSkillBuilderLive: challenge.visibleForSkillBuilderLive,
       submissionsCount: challenge._count.userProgress,
       pendingSubmissions: 0,
       createdAt: challenge.createdAt,
@@ -283,6 +287,8 @@ export class AdminChallengesService {
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
     if (data.visibleForSkillBuilder !== undefined)
       updateData.visibleForSkillBuilder = data.visibleForSkillBuilder;
+    if (data.visibleForSkillBuilderLive !== undefined)
+      updateData.visibleForSkillBuilderLive = data.visibleForSkillBuilderLive;
 
     const challenge = await this.prisma.dailyChallenge.update({
       where: { id },
@@ -322,6 +328,7 @@ export class AdminChallengesService {
       points: challenge.points,
       isActive: challenge.isActive,
       visibleForSkillBuilder: challenge.visibleForSkillBuilder,
+      visibleForSkillBuilderLive: challenge.visibleForSkillBuilderLive,
       submissionsCount: challenge._count.userProgress,
       pendingSubmissions: challenge.userProgress.length,
       createdAt: challenge.createdAt,
@@ -425,6 +432,7 @@ export class AdminChallengesService {
             audioUrl: challengeData.audioUrl ?? null,
             points: challengeData.points ?? 10,
             visibleForSkillBuilder: challengeData.visibleForSkillBuilder ?? false,
+            visibleForSkillBuilderLive: challengeData.visibleForSkillBuilderLive ?? false,
           },
         });
         created++;
