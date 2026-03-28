@@ -1,3 +1,7 @@
+# Frontend projects (separate repositories)
+front-admin/
+front-user/
+
 # compiled output
 /dist
 /node_modules
