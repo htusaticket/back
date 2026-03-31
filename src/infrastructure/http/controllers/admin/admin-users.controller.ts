@@ -238,8 +238,15 @@ export class AdminUsersController {
     @Param('id') userId: string,
     @Body() dto: ApproveRegistrationDto,
     @CurrentUser() admin: JwtPayload,
+    @Req() req: Request,
   ): Promise<ApproveRegistrationResponseDto> {
-    return this.adminUsersService.approveRegistration(userId, dto, admin.userId);
+    const adminInfo = {
+      adminId: admin.userId,
+      adminEmail: admin.email,
+      adminName: admin.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.adminUsersService.approveRegistration(userId, dto, adminInfo);
   }
 
   /**

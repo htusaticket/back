@@ -544,8 +544,9 @@ export class AdminUsersService {
   async approveRegistration(
     userId: string,
     dto: ApproveRegistrationDto,
-    adminId: string,
+    adminInfo: { adminId: string; adminEmail: string; adminName: string; ip?: string },
   ): Promise<ApproveRegistrationResponseDto> {
+    const adminId = adminInfo.adminId;
     this.logger.log(`Approving registration for user ${userId} with plan ${dto.plan}`);
 
     const user = await this.userRepository.findById(userId);
@@ -596,14 +597,15 @@ export class AdminUsersService {
     this.logger.log(`User ${userId} registration approved with plan ${dto.plan}`);
 
     await this.auditService.createLog({
-      adminId,
-      adminEmail: '',
-      adminName: '',
+      adminId: adminInfo.adminId,
+      adminEmail: adminInfo.adminEmail,
+      adminName: adminInfo.adminName,
       action: 'USER_APPROVED',
       targetType: 'USER',
       targetId: userId,
       targetName: `${user.firstName} ${user.lastName}`,
       details: { plan: dto.plan, email: user.email },
+      ipAddress: adminInfo.ip,
     });
 
     return {
