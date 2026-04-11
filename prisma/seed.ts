@@ -8,7 +8,6 @@ import {
   UserPlan,
   SubscriptionStatus,
   ClassType,
-  ChallengeType,
   EnrollmentStatus,
   NotificationType,
   SubmissionStatus,
@@ -1160,356 +1159,10 @@ async function main() {
   });
 
   // ============================================================
-  // DAILY CHALLENGES (8 — mix of types, visibleForSkillBuilder)
+  // DAILY CHALLENGES — intentionally not seeded. Admins create them
+  // from the dashboard. The deleteMany() call at the top of this file
+  // still runs so re-seeding starts from a clean slate.
   // ============================================================
-  console.log('🎯 Creating daily challenges...');
-
-  const todayMidnight = new Date();
-  todayMidnight.setHours(0, 0, 0, 0);
-
-  // ---- TODAY — Audio (active, visible for SB) ----
-  const chToday = await prisma.dailyChallenge.create({
-    data: {
-      title: 'Describe Your Morning Routine',
-      type: ChallengeType.AUDIO,
-      instructions:
-        'Record a 2-3 minute audio describing your morning routine. Use present simple tense and daily-activity vocabulary.',
-      date: todayMidnight,
-      points: 10,
-      isActive: true,
-      visibleForSkillBuilder: true,
-    },
-  });
-
-  // ---- TOMORROW — Quiz (active, NOT visible for SB) ----
-  const chTomorrow = await prisma.dailyChallenge.create({
-    data: {
-      title: 'Business Vocabulary Quiz',
-      type: ChallengeType.MULTIPLE_CHOICE,
-      instructions:
-        'Select the correct definition for each business term. You need at least 70% to pass.',
-      date: new Date(todayMidnight.getTime() + 86400000),
-      questions: [
-        {
-          id: 1,
-          text: "What does 'ROI' stand for?",
-          options: [
-            'Rate of Inflation',
-            'Return on Investment',
-            'Risk of Insolvency',
-            'Royal Operating Income',
-          ],
-          correctAnswer: 1,
-        },
-        {
-          id: 2,
-          text: "Which phrase means 'to postpone a meeting'?",
-          options: ['Call off', 'Bring forward', 'Put off', 'Get across'],
-          correctAnswer: 2,
-        },
-        {
-          id: 3,
-          text: "A 'stakeholder' is...",
-          options: [
-            'Someone who holds bets',
-            'Person with interest in a company',
-            'Owner of a steakhouse',
-            'An employee who is fired',
-          ],
-          correctAnswer: 1,
-        },
-        {
-          id: 4,
-          text: "What does 'to break even' mean?",
-          options: ['Make a profit', 'Split equally', 'Neither profit nor loss', 'Go bankrupt'],
-          correctAnswer: 2,
-        },
-        {
-          id: 5,
-          text: "'Scalability' refers to...",
-          options: [
-            'Weighing products',
-            'Ability to grow without issues',
-            'Climbing the ladder',
-            'Fish farming',
-          ],
-          correctAnswer: 1,
-        },
-      ],
-      points: 10,
-      isActive: true,
-      visibleForSkillBuilder: false,
-    },
-  });
-
-  // ---- YESTERDAY — Audio (reviewed, visible for SB) ----
-  const chYesterday = await prisma.dailyChallenge.create({
-    data: {
-      title: 'Tell Us About Your Hometown',
-      type: ChallengeType.AUDIO,
-      instructions: 'Record a 2-minute audio describing your hometown and what makes it special.',
-      date: new Date(todayMidnight.getTime() - 86400000),
-      points: 10,
-      isActive: false,
-      visibleForSkillBuilder: true,
-    },
-  });
-
-  // ---- 2 DAYS AGO — Quiz (completed, visible for SB) ----
-  const ch2d = await prisma.dailyChallenge.create({
-    data: {
-      title: 'Grammar Quiz: Present Perfect',
-      type: ChallengeType.MULTIPLE_CHOICE,
-      instructions: 'Test your knowledge of present perfect tense usage.',
-      date: new Date(todayMidnight.getTime() - 2 * 86400000),
-      questions: [
-        {
-          id: 1,
-          text: 'I _____ to London three times.',
-          options: ['have been', 'was', 'am being', 'had been'],
-          correctAnswer: 0,
-        },
-        {
-          id: 2,
-          text: 'She _____ her homework yet.',
-          options: ["didn't finish", "hasn't finished", 'not finished', "wasn't finishing"],
-          correctAnswer: 1,
-        },
-        {
-          id: 3,
-          text: 'They _____ married for 10 years.',
-          options: ['are', 'have been', 'were', 'being'],
-          correctAnswer: 1,
-        },
-        {
-          id: 4,
-          text: 'I _____ that movie before.',
-          options: ['saw', 'have seen', 'had see', 'am seeing'],
-          correctAnswer: 1,
-        },
-        {
-          id: 5,
-          text: 'He _____ here since 2020.',
-          options: ['works', 'worked', 'has worked', 'is working'],
-          correctAnswer: 2,
-        },
-      ],
-      points: 10,
-      isActive: false,
-      visibleForSkillBuilder: true,
-    },
-  });
-
-  // ---- 3 DAYS AGO — Audio (needs improvement) ----
-  const ch3d = await prisma.dailyChallenge.create({
-    data: {
-      title: 'Describe Your Dream Job',
-      type: ChallengeType.AUDIO,
-      instructions: 'Record a 2-minute audio describing your dream job and why it appeals to you.',
-      date: new Date(todayMidnight.getTime() - 3 * 86400000),
-      points: 10,
-      isActive: false,
-      visibleForSkillBuilder: false,
-    },
-  });
-
-  // ---- 4 DAYS AGO — Quiz (approved, NOT visible for SB) ----
-  const ch4d = await prisma.dailyChallenge.create({
-    data: {
-      title: 'Phrasal Verbs Challenge',
-      type: ChallengeType.MULTIPLE_CHOICE,
-      instructions: 'Test your knowledge of common phrasal verbs.',
-      date: new Date(todayMidnight.getTime() - 4 * 86400000),
-      questions: [
-        {
-          id: 1,
-          text: "'Give up' means...",
-          options: ['To start', 'To quit', 'To continue', 'To increase'],
-          correctAnswer: 1,
-        },
-        {
-          id: 2,
-          text: "'Look after' means...",
-          options: ['To search', 'To ignore', 'To take care of', 'To follow'],
-          correctAnswer: 2,
-        },
-        {
-          id: 3,
-          text: "'Put off' means...",
-          options: ['To postpone', 'To remove', 'To annoy', 'To dress'],
-          correctAnswer: 0,
-        },
-      ],
-      points: 10,
-      isActive: false,
-      visibleForSkillBuilder: false,
-    },
-  });
-
-  // ---- 5 DAYS AGO — Writing challenge (visible for SB) ----
-  const ch5d = await prisma.dailyChallenge.create({
-    data: {
-      title: 'Write a Professional Email',
-      type: ChallengeType.WRITING,
-      instructions:
-        'Write a professional email to a potential employer introducing yourself and expressing interest in a remote sales position.',
-      date: new Date(todayMidnight.getTime() - 5 * 86400000),
-      points: 15,
-      isActive: false,
-      visibleForSkillBuilder: true,
-    },
-  });
-
-  // ---- 6 DAYS AGO — Audio (visible for SB) ----
-  const ch6d = await prisma.dailyChallenge.create({
-    data: {
-      title: 'Describe a Challenge You Overcame',
-      type: ChallengeType.AUDIO,
-      instructions:
-        'Record a 2-minute audio describing a professional challenge you overcame and what you learned from it.',
-      date: new Date(todayMidnight.getTime() - 6 * 86400000),
-      points: 10,
-      isActive: false,
-      visibleForSkillBuilder: true,
-    },
-  });
-
-  // ============================================================
-  // CHALLENGE PROGRESS / SUBMISSIONS (various statuses for corrections page)
-  // ============================================================
-  console.log('📊 Creating challenge submissions...');
-
-  // PRO user — yesterday audio: APPROVED
-  await prisma.userDailyChallengeProgress.create({
-    data: {
-      userId: userPro.id,
-      challengeId: chYesterday.id,
-      completed: true,
-      completedAt: pastDate(1),
-      fileUrl: 'https://storage.example.com/audio/pro-hometown.webm',
-      status: SubmissionStatus.APPROVED,
-      feedback: 'Excellent work! Your pronunciation has improved significantly.',
-      score: null,
-    },
-  });
-
-  // PRO user — 2d ago quiz: APPROVED (90%)
-  await prisma.userDailyChallengeProgress.create({
-    data: {
-      userId: userPro.id,
-      challengeId: ch2d.id,
-      completed: true,
-      completedAt: pastDate(2),
-      answers: [0, 1, 1, 1, 2],
-      status: SubmissionStatus.APPROVED,
-      feedback: 'Great job! Only one small mistake.',
-      score: 90,
-    },
-  });
-
-  // PRO user — 3d ago audio: NEEDS_IMPROVEMENT
-  await prisma.userDailyChallengeProgress.create({
-    data: {
-      userId: userPro.id,
-      challengeId: ch3d.id,
-      completed: true,
-      completedAt: pastDate(3),
-      fileUrl: 'https://storage.example.com/audio/pro-dreamjob.webm',
-      status: SubmissionStatus.NEEDS_IMPROVEMENT,
-      feedback: 'Focus more on clarity. Some words were mumbled. Please work on enunciation.',
-      score: null,
-    },
-  });
-
-  // PRO user — 4d ago quiz: APPROVED (100%)
-  await prisma.userDailyChallengeProgress.create({
-    data: {
-      userId: userPro.id,
-      challengeId: ch4d.id,
-      completed: true,
-      completedAt: pastDate(4),
-      answers: [1, 2, 0],
-      status: SubmissionStatus.APPROVED,
-      feedback: 'Perfect score!',
-      score: 100,
-    },
-  });
-
-  // ELITE user — yesterday audio: PENDING (awaiting review)
-  const pendingSub1 = await prisma.userDailyChallengeProgress.create({
-    data: {
-      userId: userElite.id,
-      challengeId: chYesterday.id,
-      completed: true,
-      completedAt: pastDate(1),
-      fileUrl: 'https://storage.example.com/audio/elite-hometown.webm',
-      status: SubmissionStatus.PENDING,
-    },
-  });
-
-  // ELITE user — today audio: PENDING
-  const pendingSub2 = await prisma.userDailyChallengeProgress.create({
-    data: {
-      userId: userElite.id,
-      challengeId: chToday.id,
-      completed: true,
-      completedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      fileUrl: 'https://storage.example.com/audio/elite-morning.webm',
-      status: SubmissionStatus.PENDING,
-    },
-  });
-
-  // LEVEL_UP user — today audio: PENDING
-  const pendingSub3 = await prisma.userDailyChallengeProgress.create({
-    data: {
-      userId: userLevelUp.id,
-      challengeId: chToday.id,
-      completed: true,
-      completedAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
-      fileUrl: 'https://storage.example.com/audio/levelup-morning.webm',
-      status: SubmissionStatus.PENDING,
-    },
-  });
-
-  // SKILL_BUILDER user — 2d ago quiz: APPROVED (80%)
-  await prisma.userDailyChallengeProgress.create({
-    data: {
-      userId: userSkillBuilder.id,
-      challengeId: ch2d.id,
-      completed: true,
-      completedAt: pastDate(2),
-      answers: [0, 1, 0, 1, 2],
-      status: SubmissionStatus.APPROVED,
-      feedback: 'Good job! Keep it up.',
-      score: 80,
-    },
-  });
-
-  // SKILL_BUILDER user — 6d ago audio: APPROVED
-  await prisma.userDailyChallengeProgress.create({
-    data: {
-      userId: userSkillBuilder.id,
-      challengeId: ch6d.id,
-      completed: true,
-      completedAt: pastDate(6),
-      fileUrl: 'https://storage.example.com/audio/sb-challenge.webm',
-      status: SubmissionStatus.APPROVED,
-      feedback: 'Nice effort! Work on connecting ideas more fluently.',
-      score: null,
-    },
-  });
-
-  // HIRING_HUB user — 5d ago writing: PENDING
-  const pendingSub4 = await prisma.userDailyChallengeProgress.create({
-    data: {
-      userId: userHiringHub.id,
-      challengeId: ch5d.id,
-      completed: true,
-      completedAt: pastDate(5),
-      fileUrl: 'https://storage.example.com/writing/hiringhub-email.pdf',
-      status: SubmissionStatus.PENDING,
-    },
-  });
 
   // ============================================================
   // JOB OFFERS (8 — mix with/without social, website, email)
@@ -1783,27 +1436,11 @@ async function main() {
       },
       {
         userId: userPro.id,
-        type: NotificationType.CHALLENGE_FEEDBACK,
-        title: 'New Feedback on Your Challenge',
-        message: 'Sarah Johnson reviewed your "Tell Us About Your Hometown" submission.',
-        isRead: false,
-        data: { challengeId: chYesterday.id },
-      },
-      {
-        userId: userPro.id,
         type: NotificationType.STRIKE_APPLIED,
         title: 'Strike Received',
         message: 'You received a strike for not attending "Debate Club: A.I. Ethics".',
         isRead: true,
         data: { classSessionId: classYesterday.id },
-      },
-      {
-        userId: userElite.id,
-        type: NotificationType.GENERAL,
-        title: 'Challenge Submitted',
-        message: 'Your audio for "Describe Your Morning Routine" is being reviewed.',
-        isRead: false,
-        data: { challengeId: chToday.id },
       },
       {
         userId: userSkillBuilder.id,
@@ -1820,56 +1457,6 @@ async function main() {
         isRead: false,
       },
 
-      // --- Admin notifications (pending submissions to review) ---
-      {
-        userId: adminSarah.id,
-        type: NotificationType.GENERAL,
-        title: '🎤 New Audio Submission',
-        message: `Diego Marzioni submitted audio for "Tell Us About Your Hometown". Please review.`,
-        isRead: false,
-        data: {
-          challengeId: chYesterday.id,
-          submissionId: pendingSub1.id,
-          studentName: 'Diego Marzioni',
-        },
-      },
-      {
-        userId: adminSarah.id,
-        type: NotificationType.GENERAL,
-        title: '🎤 New Audio Submission',
-        message: `Diego Marzioni submitted audio for "Describe Your Morning Routine". Please review.`,
-        isRead: false,
-        data: {
-          challengeId: chToday.id,
-          submissionId: pendingSub2.id,
-          studentName: 'Diego Marzioni',
-        },
-      },
-      {
-        userId: adminSarah.id,
-        type: NotificationType.GENERAL,
-        title: '🎤 New Audio Submission',
-        message: `Maria Gonzalez submitted audio for "Describe Your Morning Routine". Please review.`,
-        isRead: false,
-        data: {
-          challengeId: chToday.id,
-          submissionId: pendingSub3.id,
-          studentName: 'Maria Gonzalez',
-        },
-      },
-      {
-        userId: adminSarah.id,
-        type: NotificationType.GENERAL,
-        title: '✍️ New Writing Submission',
-        message: `Lucas Fernandez submitted a writing for "Write a Professional Email". Please review.`,
-        isRead: false,
-        data: {
-          challengeId: ch5d.id,
-          submissionId: pendingSub4.id,
-          studentName: 'Lucas Fernandez',
-        },
-      },
-
       // --- Superadmin notifications ---
       {
         userId: luby.id,
@@ -1878,13 +1465,6 @@ async function main() {
         message: 'Pending Applicant (pending@test.com) has registered and is awaiting approval.',
         isRead: false,
         data: { userId: pendingUser.id },
-      },
-      {
-        userId: luby.id,
-        type: NotificationType.GENERAL,
-        title: '🎤 4 Submissions Awaiting Review',
-        message: 'There are 4 pending challenge submissions to review in the Corrections panel.',
-        isRead: false,
       },
       {
         userId: john.id,
@@ -1964,15 +1544,6 @@ async function main() {
         targetName: classToday.title,
         details: { type: 'REGULAR', capacityMax: 5 },
         createdAt: pastDate(5),
-      },
-      {
-        ...auditBase,
-        action: AuditAction.CHALLENGE_CREATED,
-        targetType: 'DailyChallenge',
-        targetId: String(chToday.id),
-        targetName: chToday.title,
-        details: { type: 'AUDIO' },
-        createdAt: pastDate(1),
       },
       {
         ...auditBase,

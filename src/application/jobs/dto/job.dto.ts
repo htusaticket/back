@@ -96,6 +96,9 @@ export class JobOfferDto {
   @ApiPropertyOptional({ example: 'contact@company.com', nullable: true })
   email!: string | null;
 
+  @ApiPropertyOptional({ example: '02306', nullable: true, description: 'Apply code' })
+  code!: string | null;
+
   @ApiProperty({ example: false })
   hasApplied!: boolean;
 

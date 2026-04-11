@@ -111,6 +111,15 @@ export class CreateJobOfferDto {
   @IsString()
   @MaxLength(200)
   email?: string;
+
+  @ApiPropertyOptional({
+    description: 'Apply code (auto-extracted from description if omitted)',
+    example: '02306',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  code?: string;
 }
 
 export class UpdateJobOfferDto {
@@ -206,6 +215,12 @@ export class UpdateJobOfferDto {
   @IsString()
   @MaxLength(200)
   email?: string;
+
+  @ApiPropertyOptional({ description: 'Apply code (auto-extracted from description if omitted)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  code?: string;
 }
 
 export class JobOfferResponseDto {
@@ -259,6 +274,9 @@ export class JobOfferResponseDto {
 
   @ApiPropertyOptional()
   email?: string | null;
+
+  @ApiPropertyOptional({ description: 'Apply code extracted from description' })
+  code?: string | null;
 
   @ApiProperty()
   createdAt!: Date;
