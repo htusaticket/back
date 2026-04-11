@@ -256,6 +256,12 @@ export class AdminUsersService {
 
     this.logger.log(`User created successfully: ${user.id}`);
 
+    // Notificar al usuario que su cuenta fue creada y está activa.
+    // Reusamos el template de "registro aprobado" porque una creación directa
+    // por el admin es funcionalmente equivalente: la cuenta queda ACTIVE y
+    // el usuario puede loguearse de inmediato.
+    await this.emailService.sendRegistrationApprovedEmail(user.email, user.firstName);
+
     if (adminInfo) {
       await this.auditService.createLog({
         adminId: adminInfo.adminId,
