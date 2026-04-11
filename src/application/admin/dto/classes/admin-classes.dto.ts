@@ -181,6 +181,7 @@ export interface ClassListItemDto {
   capacityMax: number | null;
   enrolledCount: number;
   meetLink: string | null;
+  materialsLink: string | null;
   description: string | null;
   visibleForSkillBuilderLive: boolean;
   createdAt: Date;

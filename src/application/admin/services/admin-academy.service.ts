@@ -493,11 +493,16 @@ export class AdminAcademyService {
       throw new BadRequestException('El servicio de almacenamiento no está configurado');
     }
 
+    // Multer decodes multipart filenames as latin1 by default, so UTF-8 bytes
+    // in the original filename (é, ñ, ...) come in as mojibake ("é" -> "Ã©").
+    // Re-interpret the bytes as UTF-8 before storing or displaying.
+    const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+
     // Upload file to Cloudflare R2
     const fileUrl = await this.storageService.uploadLessonResource(
       file.buffer,
       lessonId,
-      file.originalname,
+      originalName,
       file.mimetype,
     );
 
@@ -516,7 +521,7 @@ export class AdminAcademyService {
 
     const resource = await this.prisma.lessonResource.create({
       data: {
-        title: file.originalname,
+        title: originalName,
         fileUrl,
         type: resourceType,
         size: sizeStr,
@@ -524,7 +529,7 @@ export class AdminAcademyService {
       },
     });
 
-    this.logger.log(`Resource uploaded for lesson ${lessonId}: ${file.originalname}`);
+    this.logger.log(`Resource uploaded for lesson ${lessonId}: ${originalName}`);
 
     return {
       id: resource.id,
