@@ -13,6 +13,8 @@ export default tseslint.config(
       'test/**',
       'prisma/seed.ts',
       'prisma/seed-sprint5.ts',
+      'prisma/backfill-job-codes.ts',
+      'prisma/clean-challenges.ts',
     ],
   },
   eslint.configs.recommended,

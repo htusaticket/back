@@ -482,6 +482,7 @@ model JobOffer {
   description  String   @default("") @db.Text
   requirements String[] // Supports arrays in Postgres
   isActive     Boolean  @default(true) @map("is_active")
+  code         String?  // Apply code (e.g. "02306"), extracted from description
   social       String?  // Primary social link (Instagram, etc.)
   recruiterSocial String? @map("recruiter_social") // Recruiter social link
   website      String?  // Company/recruiter website

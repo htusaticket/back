@@ -2,6 +2,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/infrastructure/persistence/prisma/prisma.service';
 import { AuditLogService } from './audit-log.service';
+import { extractJobCode } from './extract-job-code';
 import { Prisma } from '@prisma/client';
 import {
   CreateJobOfferDto,
@@ -79,6 +80,7 @@ export class AdminJobsService {
         recruiterSocial: job.recruiterSocial,
         website: job.website,
         email: job.email,
+        code: job.code,
         createdAt: job.createdAt,
         updatedAt: job.updatedAt,
       })),
@@ -134,6 +136,7 @@ export class AdminJobsService {
       recruiterSocial: job.recruiterSocial,
       website: job.website,
       email: job.email,
+      code: job.code,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
       applications: job.applications.map(app => ({
@@ -152,6 +155,7 @@ export class AdminJobsService {
     data: CreateJobOfferDto,
     adminInfo: { adminId: string; adminEmail: string; adminName: string; ip?: string },
   ): Promise<JobOfferResponseDto> {
+    const description = data.description ?? '';
     const job = await this.prisma.jobOffer.create({
       data: {
         title: data.title,
@@ -162,13 +166,14 @@ export class AdminJobsService {
         oteMax: data.oteMax ?? 0,
         revenue: data.revenue ?? 0,
         type: data.type ?? 'Setter',
-        description: data.description ?? '',
+        description,
         requirements: data.requirements ?? [],
         isActive: data.isActive ?? true,
         social: data.social ?? null,
         recruiterSocial: data.recruiterSocial ?? null,
         website: data.website ?? null,
         email: data.email ?? null,
+        code: data.code ?? extractJobCode(description),
       },
       include: {
         _count: {
@@ -208,6 +213,7 @@ export class AdminJobsService {
       recruiterSocial: job.recruiterSocial,
       website: job.website,
       email: job.email,
+      code: job.code,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
     };
@@ -240,6 +246,12 @@ export class AdminJobsService {
       updateData.recruiterSocial = data.recruiterSocial || null;
     if (data.website !== undefined) updateData.website = data.website || null;
     if (data.email !== undefined) updateData.email = data.email || null;
+
+    if (data.code !== undefined) {
+      updateData.code = data.code || null;
+    } else if (data.description !== undefined) {
+      updateData.code = extractJobCode(data.description) ?? existing.code;
+    }
 
     const job = await this.prisma.jobOffer.update({
       where: { id },
@@ -282,6 +294,7 @@ export class AdminJobsService {
       recruiterSocial: job.recruiterSocial,
       website: job.website,
       email: job.email,
+      code: job.code,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
     };
@@ -323,6 +336,7 @@ export class AdminJobsService {
 
     for (const jobData of data.jobs) {
       try {
+        const description = jobData.description ?? '';
         await this.prisma.jobOffer.create({
           data: {
             title: jobData.title,
@@ -333,13 +347,14 @@ export class AdminJobsService {
             oteMax: jobData.oteMax ?? 0,
             revenue: jobData.revenue ?? 0,
             type: jobData.type ?? 'Setter',
-            description: jobData.description ?? '',
+            description,
             requirements: jobData.requirements ?? [],
             isActive: jobData.isActive ?? true,
             social: jobData.social ?? null,
             recruiterSocial: jobData.recruiterSocial ?? null,
             website: jobData.website ?? null,
             email: jobData.email ?? null,
+            code: jobData.code ?? extractJobCode(description),
           },
         });
         created++;
