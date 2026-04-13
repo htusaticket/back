@@ -47,7 +47,7 @@ export class AdminClassesService {
   async getClasses(query: GetClassesQueryDto): Promise<PaginatedClassesResponseDto> {
     this.logger.debug(`Fetching classes with query: ${JSON.stringify(query)}`);
 
-    const { fromDate, toDate, type, page = 1, limit = 10 } = query;
+    const { fromDate, toDate, type, page = 1, limit = 30 } = query;
 
     const where: Record<string, unknown> = {};
 

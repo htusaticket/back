@@ -45,7 +45,7 @@ export class GetClassesQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  limit?: number = 10;
+  limit?: number = 30;
 }
 
 // ==================== INPUT DTOs ====================
