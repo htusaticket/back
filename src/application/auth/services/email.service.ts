@@ -2,6 +2,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Resend } from 'resend';
 import { getEnvConfig } from '@/config/env.config';
+import { PrismaService } from '@/infrastructure/persistence/prisma/prisma.service';
+
+const DEFAULT_LOGO_URL = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/HT_USA_Logo-lau.png';
 
 interface NewUserData {
   firstName: string;
@@ -17,9 +20,28 @@ export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   private readonly resend: Resend;
   private readonly env = getEnvConfig();
+  private cachedLogoUrl: string | null = null;
+  private logoFetchedAt = 0;
+  private static readonly LOGO_TTL_MS = 60_000;
 
-  constructor() {
+  constructor(private readonly prisma?: PrismaService) {
     this.resend = new Resend(this.env.RESEND_API_KEY);
+  }
+
+  private async getLogoUrl(): Promise<string> {
+    const now = Date.now();
+    if (this.cachedLogoUrl && now - this.logoFetchedAt < EmailService.LOGO_TTL_MS) {
+      return this.cachedLogoUrl;
+    }
+    try {
+      const cfg = await this.prisma?.systemConfig.findUnique({ where: { id: 'default' } });
+      const url = cfg?.logoUrl?.trim() || DEFAULT_LOGO_URL;
+      this.cachedLogoUrl = url;
+      this.logoFetchedAt = now;
+      return url;
+    } catch {
+      return DEFAULT_LOGO_URL;
+    }
   }
 
   /**
@@ -40,7 +62,7 @@ export class EmailService {
         from: `${this.env.RESEND_FROM_NAME} <${this.env.RESEND_FROM_EMAIL}>`,
         to,
         subject: 'Recupera tu contraseña - High Ticket USA',
-        html: this.getPasswordResetTemplate(firstName, resetLink),
+        html: await this.getPasswordResetTemplate(firstName, resetLink),
       });
 
       if (error) {
@@ -64,7 +86,7 @@ export class EmailService {
         from: `${this.env.RESEND_FROM_NAME} <${this.env.RESEND_FROM_EMAIL}>`,
         to,
         subject: 'Registro recibido - High Ticket USA',
-        html: this.getRegistrationPendingTemplate(firstName),
+        html: await this.getRegistrationPendingTemplate(firstName),
       });
 
       if (error) {
@@ -101,7 +123,7 @@ export class EmailService {
           from: `${this.env.RESEND_FROM_NAME} <${this.env.RESEND_FROM_EMAIL}>`,
           to: adminEmail,
           subject: 'Nuevo registro pendiente de aprobación - High Ticket USA',
-          html: this.getNewRegistrationAdminTemplate(userData, reviewLink),
+          html: await this.getNewRegistrationAdminTemplate(userData, reviewLink),
         });
 
         if (error) {
@@ -131,7 +153,7 @@ export class EmailService {
         from: `${this.env.RESEND_FROM_NAME} <${this.env.RESEND_FROM_EMAIL}>`,
         to,
         subject: '¡Tu cuenta ha sido aprobada! - High Ticket USA',
-        html: this.getRegistrationApprovedTemplate(firstName, loginLink),
+        html: await this.getRegistrationApprovedTemplate(firstName, loginLink),
       });
 
       if (error) {
@@ -161,7 +183,7 @@ export class EmailService {
         from: `${this.env.RESEND_FROM_NAME} <${this.env.RESEND_FROM_EMAIL}>`,
         to,
         subject: 'Actualización sobre tu registro - High Ticket USA',
-        html: this.getRegistrationRejectedTemplate(firstName, reason),
+        html: await this.getRegistrationRejectedTemplate(firstName, reason),
       });
 
       if (error) {
@@ -189,7 +211,7 @@ export class EmailService {
         from: `${this.env.RESEND_FROM_NAME} <${this.env.RESEND_FROM_EMAIL}>`,
         to,
         subject: 'Tu plan ha expirado - High Ticket USA',
-        html: this.getPlanExpiredTemplate(firstName, planName, loginLink),
+        html: await this.getPlanExpiredTemplate(firstName, planName, loginLink),
       });
 
       if (error) {
@@ -209,8 +231,8 @@ export class EmailService {
   /**
    * Template HTML para email de recuperación de contraseña
    */
-  private getPasswordResetTemplate(firstName: string, resetLink: string): string {
-    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/HT_USA_Logo-lau.png';
+  private async getPasswordResetTemplate(firstName: string, resetLink: string): Promise<string> {
+    const logoUrl = await this.getLogoUrl();
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -293,8 +315,8 @@ export class EmailService {
   /**
    * Template HTML para email de registro pendiente (al usuario)
    */
-  private getRegistrationPendingTemplate(firstName: string): string {
-    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/HT_USA_Logo-lau.png';
+  private async getRegistrationPendingTemplate(firstName: string): Promise<string> {
+    const logoUrl = await this.getLogoUrl();
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -370,8 +392,11 @@ export class EmailService {
   /**
    * Template HTML para notificación de nuevo registro (al admin)
    */
-  private getNewRegistrationAdminTemplate(userData: NewUserData, reviewLink: string): string {
-    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/HT_USA_Logo-lau.png';
+  private async getNewRegistrationAdminTemplate(
+    userData: NewUserData,
+    reviewLink: string,
+  ): Promise<string> {
+    const logoUrl = await this.getLogoUrl();
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -509,8 +534,11 @@ export class EmailService {
   /**
    * Template HTML para email de registro aprobado
    */
-  private getRegistrationApprovedTemplate(firstName: string, loginLink: string): string {
-    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/HT_USA_Logo-lau.png';
+  private async getRegistrationApprovedTemplate(
+    firstName: string,
+    loginLink: string,
+  ): Promise<string> {
+    const logoUrl = await this.getLogoUrl();
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -607,8 +635,11 @@ export class EmailService {
   /**
    * Template HTML para email de registro rechazado
    */
-  private getRegistrationRejectedTemplate(firstName: string, reason?: string): string {
-    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/HT_USA_Logo-lau.png';
+  private async getRegistrationRejectedTemplate(
+    firstName: string,
+    reason?: string,
+  ): Promise<string> {
+    const logoUrl = await this.getLogoUrl();
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -687,8 +718,12 @@ export class EmailService {
   /**
    * Template HTML para email de plan expirado
    */
-  private getPlanExpiredTemplate(firstName: string, planName: string, loginLink: string): string {
-    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/HT_USA_Logo-lau.png';
+  private async getPlanExpiredTemplate(
+    firstName: string,
+    planName: string,
+    loginLink: string,
+  ): Promise<string> {
+    const logoUrl = await this.getLogoUrl();
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -801,7 +836,7 @@ export class EmailService {
           from: `${this.env.RESEND_FROM_NAME} <${this.env.RESEND_FROM_EMAIL}>`,
           to: adminEmail,
           subject: 'Solicitud de upgrade de plan - High Ticket USA',
-          html: this.getUpgradeRequestAdminTemplate(userData, reviewLink),
+          html: await this.getUpgradeRequestAdminTemplate(userData, reviewLink),
         });
 
         if (error) {
@@ -821,7 +856,7 @@ export class EmailService {
   /**
    * Template HTML para notificación de solicitud de upgrade
    */
-  private getUpgradeRequestAdminTemplate(
+  private async getUpgradeRequestAdminTemplate(
     userData: {
       firstName: string;
       lastName: string;
@@ -830,8 +865,8 @@ export class EmailService {
       message?: string;
     },
     reviewLink: string,
-  ): string {
-    const logoUrl = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/HT_USA_Logo-lau.png';
+  ): Promise<string> {
+    const logoUrl = await this.getLogoUrl();
     return `
 <!DOCTYPE html>
 <html lang="es">

@@ -33,6 +33,18 @@ export class AdminChallengesService {
     );
   }
 
+  /** Reference "today" anchored on the user's local date when provided, else server local date. */
+  private resolveToday(userToday?: string): Date {
+    if (userToday && /^\d{4}-\d{2}-\d{2}$/.test(userToday)) {
+      const d = this.parseLocalDate(userToday);
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
   async getChallenges(query: GetChallengesQueryDto): Promise<ChallengesListResponseDto> {
     const page = query.page || 1;
     const limit = query.limit || 20;
@@ -164,11 +176,10 @@ export class AdminChallengesService {
       );
     }
 
-    // Validate date is not in the past
+    // Validate date is not in the past (relative to user's local today)
     const challengeDate = this.parseLocalDate(data.date);
     challengeDate.setHours(0, 0, 0, 0);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = this.resolveToday(data.userToday);
     if (challengeDate < today) {
       throw new BadRequestException('No se pueden crear challenges para fechas pasadas');
     }
@@ -254,8 +265,7 @@ export class AdminChallengesService {
     if (data.date) {
       const updateDate = this.parseLocalDate(data.date);
       updateDate.setHours(0, 0, 0, 0);
-      const todayDate = new Date();
-      todayDate.setHours(0, 0, 0, 0);
+      const todayDate = this.resolveToday(data.userToday);
       if (updateDate < todayDate) {
         throw new BadRequestException('No se puede cambiar la fecha a una fecha pasada');
       }
@@ -374,8 +384,7 @@ export class AdminChallengesService {
     let created = 0;
     let failed = 0;
     const errors: string[] = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = this.resolveToday(data.userToday);
 
     for (const challengeData of data.challenges) {
       try {

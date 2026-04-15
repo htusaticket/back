@@ -176,6 +176,33 @@ export class CloudflareStorageService implements OnModuleInit {
   }
 
   /**
+   * Sube un logo del sistema (branding global). Sobrescribe con nombre único.
+   */
+  async uploadSystemLogo(file: Buffer, originalName: string, mimeType: string): Promise<string> {
+    if (!this.isConfigured || !this.s3Client) {
+      throw new Error('Cloudflare R2 Storage is not configured');
+    }
+    const extension = (originalName.split('.').pop() || 'png').toLowerCase();
+    const filename = `branding/logo-${uuidv4()}.${extension}`;
+    await this.s3Client.send(
+      new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: filename,
+        Body: file,
+        ContentType: mimeType,
+        Metadata: {
+          originalName: originalName.replace(/[^\x20-\x7E]/g, '_'),
+          uploadedAt: new Date().toISOString(),
+        },
+      }),
+    );
+    if (!this.publicUrl) {
+      throw new Error('CLOUDFLARE_R2_PUBLIC_URL is not configured.');
+    }
+    return `${this.publicUrl}/${filename}`;
+  }
+
+  /**
    * Sube un recurso de lección al storage
    * @param file - Buffer del archivo
    * @param lessonId - ID de la lección

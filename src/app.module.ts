@@ -6,6 +6,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HealthController } from './infrastructure/http/controllers/health.controller';
+import { PublicConfigController } from './infrastructure/http/controllers/public-config.controller';
 import { PrismaModule } from './infrastructure/persistence/prisma/prisma.module';
 import { AuthModule } from './infrastructure/http/controllers/auth/auth.module';
 import { HttpModule } from './infrastructure/http/http.module';
@@ -45,7 +46,7 @@ const env = getEnvConfig();
     AuthModule,
     HttpModule,
   ],
-  controllers: [AppController, HealthController],
+  controllers: [AppController, HealthController, PublicConfigController],
   providers: [
     AppService,
     MetricsService,

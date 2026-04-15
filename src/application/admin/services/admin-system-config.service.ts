@@ -19,6 +19,7 @@ interface SystemConfigEntity {
   lateCancellationHours: number;
   jobBoardEnabled: boolean;
   academyEnabled: boolean;
+  logoUrl: string | null;
   updatedAt: Date;
 }
 
@@ -86,6 +87,7 @@ export class AdminSystemConfigService {
         }),
         ...(dto.jobBoardEnabled !== undefined && { jobBoardEnabled: dto.jobBoardEnabled }),
         ...(dto.academyEnabled !== undefined && { academyEnabled: dto.academyEnabled }),
+        ...(dto.logoUrl !== undefined && { logoUrl: dto.logoUrl }),
       },
     });
 
@@ -123,7 +125,34 @@ export class AdminSystemConfigService {
       lateCancellationHours: config.lateCancellationHours,
       jobBoardEnabled: config.jobBoardEnabled,
       academyEnabled: config.academyEnabled,
+      logoUrl: config.logoUrl ?? null,
       updatedAt: config.updatedAt.toISOString(),
     };
+  }
+
+  /**
+   * Persiste la URL del logo en la configuración global.
+   */
+  async setLogoUrl(
+    logoUrl: string,
+    adminInfo: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+  ): Promise<SystemConfigDto> {
+    await this.getConfig();
+    const config = await this.prisma.systemConfig.update({
+      where: { id: 'default' },
+      data: { logoUrl },
+    });
+    await this.auditService.createLog({
+      adminId: adminInfo.adminId,
+      adminEmail: adminInfo.adminEmail,
+      adminName: adminInfo.adminName,
+      action: 'SYSTEM_CONFIG_UPDATED',
+      targetType: 'SYSTEM_CONFIG',
+      targetId: 'default',
+      targetName: 'System Logo',
+      details: { logoUrl },
+      ipAddress: adminInfo.ip,
+    });
+    return this.mapConfigToDto(config);
   }
 }

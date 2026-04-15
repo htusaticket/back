@@ -532,7 +532,10 @@ model SystemConfig {
   // Configuración de visibilidad de features
   jobBoardEnabled Boolean @default(true) @map("job_board_enabled")
   academyEnabled  Boolean @default(true) @map("academy_enabled")
-  
+
+  // Branding — URL del logo usado en front alumno, admin y emails
+  logoUrl String? @map("logo_url")
+
   // Auditoría
   updatedAt DateTime @updatedAt @map("updated_at")
 

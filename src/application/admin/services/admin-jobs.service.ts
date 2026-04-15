@@ -35,6 +35,7 @@ export class AdminJobsService {
       where.OR = [
         { title: { contains: query.search, mode: 'insensitive' } },
         { company: { contains: query.search, mode: 'insensitive' } },
+        { code: { contains: query.search, mode: 'insensitive' } },
       ];
     }
 

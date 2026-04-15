@@ -111,6 +111,13 @@ export class CreateChallengeDto {
   @IsBoolean()
   @Transform(({ value }: { value: unknown }) => value === 'true' || value === true)
   visibleForSkillBuilderLive?: boolean;
+
+  @ApiPropertyOptional({
+    description: "User's local date (YYYY-MM-DD) used as reference for past-date checks",
+  })
+  @IsOptional()
+  @IsDateString()
+  userToday?: string;
 }
 
 export class UpdateChallengeDto {
@@ -183,6 +190,13 @@ export class UpdateChallengeDto {
   @IsBoolean()
   @Transform(({ value }: { value: unknown }) => value === 'true' || value === true)
   visibleForSkillBuilderLive?: boolean;
+
+  @ApiPropertyOptional({
+    description: "User's local date (YYYY-MM-DD) used as reference for past-date checks",
+  })
+  @IsOptional()
+  @IsDateString()
+  userToday?: string;
 }
 
 export class ChallengeResponseDto {
@@ -302,6 +316,13 @@ export class BulkCreateChallengeDto {
   @ValidateNested({ each: true })
   @Type(() => CreateChallengeDto)
   challenges!: CreateChallengeDto[];
+
+  @ApiPropertyOptional({
+    description: "User's local date (YYYY-MM-DD) used as reference for past-date checks",
+  })
+  @IsOptional()
+  @IsDateString()
+  userToday?: string;
 }
 
 export class BulkCreateChallengesResponseDto {

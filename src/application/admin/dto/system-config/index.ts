@@ -1,5 +1,5 @@
 // src/application/admin/dto/system-config/index.ts
-import { IsInt, IsBoolean, IsOptional, Min, Max } from 'class-validator';
+import { IsInt, IsBoolean, IsOptional, IsString, IsUrl, Min, Max } from 'class-validator';
 
 export class UpdateSystemConfigDto {
   @IsOptional()
@@ -31,6 +31,11 @@ export class UpdateSystemConfigDto {
   @IsOptional()
   @IsBoolean()
   academyEnabled?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @IsUrl()
+  logoUrl?: string | null;
 }
 
 export interface SystemConfigDto {
@@ -41,6 +46,7 @@ export interface SystemConfigDto {
   lateCancellationHours: number;
   jobBoardEnabled: boolean;
   academyEnabled: boolean;
+  logoUrl: string | null;
   updatedAt: string;
 }
 
