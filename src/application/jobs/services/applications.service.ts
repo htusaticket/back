@@ -100,6 +100,30 @@ export class ApplicationsService {
   }
 
   /**
+   * Reordenar aplicaciones del usuario dentro de una columna del kanban
+   */
+  async reorder(
+    userId: string,
+    status: ApplicationStatusEnum,
+    orderedIds: string[],
+  ): Promise<{ success: boolean; message: string }> {
+    await this.applicationRepository.reorder(
+      userId,
+      status as unknown as ApplicationStatus,
+      orderedIds,
+    );
+
+    this.logger.log(
+      `Usuario ${userId} reordenó ${orderedIds.length} aplicaciones en columna ${status}`,
+    );
+
+    return {
+      success: true,
+      message: 'Orden actualizado correctamente',
+    };
+  }
+
+  /**
    * Actualizar las notas de una aplicación
    */
   async updateNotes(

@@ -17,6 +17,7 @@ import { CurrentUser } from '@/application/auth/decorators/current-user.decorato
 import { JwtPayload } from '@/application/auth/services/auth.service';
 import {
   MyApplicationsResponseDto,
+  ReorderApplicationsDto,
   UpdateApplicationStatusDto,
   UpdateApplicationNotesDto,
   UpdateStatusResponseDto,
@@ -79,6 +80,25 @@ export class ApplicationsController {
     @CurrentUser() user: JwtPayload,
   ): Promise<UpdateStatusResponseDto> {
     return this.applicationsService.updateStatus(user.userId, applicationId, dto.status);
+  }
+
+  /**
+   * PATCH /api/applications/reorder
+   * Reordenar aplicaciones dentro de una columna (Kanban)
+   */
+  @Patch('reorder')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Reordenar aplicaciones dentro de una columna',
+    description:
+      'Persiste el orden de las tarjetas dentro de una misma columna del tablero kanban.',
+  })
+  @ApiResponse({ status: 200, description: 'Orden actualizado' })
+  async reorder(
+    @Body() dto: ReorderApplicationsDto,
+    @CurrentUser() user: JwtPayload,
+  ): Promise<{ success: boolean; message: string }> {
+    return this.applicationsService.reorder(user.userId, dto.status, dto.orderedIds);
   }
 
   /**

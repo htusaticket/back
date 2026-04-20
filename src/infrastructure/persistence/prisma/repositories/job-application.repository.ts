@@ -13,11 +13,18 @@ export class PrismaJobApplicationRepository implements IJobApplicationRepository
   constructor(private readonly prisma: PrismaService) {}
 
   async create(userId: string, jobOfferId: number): Promise<JobApplication> {
+    const lowest = await this.prisma.jobApplication.aggregate({
+      where: { userId, status: ApplicationStatus.APPLIED },
+      _min: { sortOrder: true },
+    });
+    const nextOrder = (lowest._min.sortOrder ?? 0) - 1;
+
     return this.prisma.jobApplication.create({
       data: {
         userId,
         jobOfferId,
         status: ApplicationStatus.APPLIED,
+        sortOrder: nextOrder,
       },
     });
   }
@@ -41,7 +48,7 @@ export class PrismaJobApplicationRepository implements IJobApplicationRepository
       include: {
         jobOffer: true,
       },
-      orderBy: { appliedAt: 'desc' },
+      orderBy: [{ sortOrder: 'asc' }, { appliedAt: 'desc' }],
     });
 
     const result: ApplicationsByStatus = {
@@ -82,10 +89,46 @@ export class PrismaJobApplicationRepository implements IJobApplicationRepository
   }
 
   async updateStatus(id: string, status: ApplicationStatus): Promise<JobApplication> {
+    const current = await this.prisma.jobApplication.findUnique({
+      where: { id },
+      select: { userId: true, status: true },
+    });
+    if (!current || current.status === status) {
+      return this.prisma.jobApplication.update({
+        where: { id },
+        data: { status },
+      });
+    }
+
+    const highest = await this.prisma.jobApplication.aggregate({
+      where: { userId: current.userId, status },
+      _max: { sortOrder: true },
+    });
+    const nextOrder = (highest._max.sortOrder ?? -1) + 1;
+
     return this.prisma.jobApplication.update({
       where: { id },
-      data: { status },
+      data: { status, sortOrder: nextOrder },
     });
+  }
+
+  async reorder(userId: string, status: ApplicationStatus, orderedIds: string[]): Promise<void> {
+    const applications = await this.prisma.jobApplication.findMany({
+      where: { userId, status, id: { in: orderedIds } },
+      select: { id: true },
+    });
+    const ownedIds = new Set(applications.map(a => a.id));
+
+    const updates = orderedIds
+      .filter(id => ownedIds.has(id))
+      .map((id, index) =>
+        this.prisma.jobApplication.update({
+          where: { id },
+          data: { sortOrder: index },
+        }),
+      );
+
+    await this.prisma.$transaction(updates);
   }
 
   async updateNotes(id: string, notes: string): Promise<JobApplication> {

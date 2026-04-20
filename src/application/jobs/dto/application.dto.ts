@@ -1,6 +1,6 @@
 // src/application/jobs/dto/application.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsString, MaxLength } from 'class-validator';
+import { ArrayMaxSize, ArrayNotEmpty, IsArray, IsEnum, IsString, MaxLength } from 'class-validator';
 
 // Enum para validación
 export enum ApplicationStatusEnum {
@@ -20,6 +20,27 @@ export class UpdateApplicationStatusDto {
   })
   @IsEnum(ApplicationStatusEnum)
   status!: ApplicationStatusEnum;
+}
+
+export class ReorderApplicationsDto {
+  @ApiProperty({
+    enum: ApplicationStatusEnum,
+    description: 'Columna (estado) cuyas tarjetas se están reordenando',
+    example: 'APPLIED',
+  })
+  @IsEnum(ApplicationStatusEnum)
+  status!: ApplicationStatusEnum;
+
+  @ApiProperty({
+    description: 'IDs de las aplicaciones en el nuevo orden (top → bottom)',
+    type: [String],
+    example: ['clxxxx1', 'clxxxx2', 'clxxxx3'],
+  })
+  @IsArray()
+  @ArrayNotEmpty()
+  @ArrayMaxSize(500)
+  @IsString({ each: true })
+  orderedIds!: string[];
 }
 
 export class UpdateApplicationNotesDto {

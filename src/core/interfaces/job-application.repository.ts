@@ -39,6 +39,11 @@ export interface IJobApplicationRepository {
   updateStatus(id: string, status: ApplicationStatus): Promise<JobApplication>;
 
   /**
+   * Reordenar aplicaciones de un usuario dentro de una misma columna (estado)
+   */
+  reorder(userId: string, status: ApplicationStatus, orderedIds: string[]): Promise<void>;
+
+  /**
    * Actualizar las notas de una aplicación
    */
   updateNotes(id: string, notes: string): Promise<JobApplication>;

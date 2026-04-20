@@ -507,6 +507,7 @@ model JobApplication {
   status     ApplicationStatus @default(APPLIED)
   notes      String?           @db.Text // Notas personales del usuario
   appliedAt  DateTime          @default(now()) @map("applied_at")
+  sortOrder  Int               @default(0) @map("sort_order")
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   jobOffer JobOffer @relation(fields: [jobOfferId], references: [id], onDelete: Cascade)
