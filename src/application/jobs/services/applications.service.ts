@@ -41,6 +41,7 @@ export class ApplicationsService {
           id: app.jobOffer.id,
           title: app.jobOffer.title,
           company: app.jobOffer.company,
+          code: app.jobOffer.code,
         },
         appliedDate: formatDate(app.appliedAt),
         notes: app.notes,

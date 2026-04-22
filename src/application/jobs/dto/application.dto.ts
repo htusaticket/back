@@ -64,6 +64,9 @@ export class ApplicationJobDto {
 
   @ApiProperty({ example: 'SaaS Solutions' })
   company!: string;
+
+  @ApiPropertyOptional({ example: '02306' })
+  code?: string | null;
 }
 
 export class ApplicationDto {

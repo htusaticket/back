@@ -367,7 +367,7 @@ export class EmailService {
               </table>
               
               <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
-                Si tienes alguna pregunta no dudes en contactarnos en <a href="mailto:info@highticketusa.com" style="color: #4f46e5;">info@highticketusa.com</a>
+                Si tienes alguna pregunta no dudes en contactarnos en <a href="mailto:info@highticketenglish.com" style="color: #4f46e5;">info@highticketenglish.com</a>
               </p>
             </td>
           </tr>
@@ -607,7 +607,7 @@ export class EmailService {
               </p>
               
               <p style="margin: 30px 0 0; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
-                Si tienes alguna pregunta no dudes en contactarnos en <a href="mailto:info@highticketusa.com" style="color: #4f46e5;">info@highticketusa.com</a>
+                Si tienes alguna pregunta no dudes en contactarnos en <a href="mailto:info@highticketenglish.com" style="color: #4f46e5;">info@highticketenglish.com</a>
               </p>
             </td>
           </tr>
@@ -689,7 +689,7 @@ export class EmailService {
               </table>
               
               <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
-                Si tienes alguna pregunta no dudes en contactarnos en <a href="mailto:info@highticketusa.com" style="color: #4f46e5;">info@highticketusa.com</a>
+                Si tienes alguna pregunta no dudes en contactarnos en <a href="mailto:info@highticketenglish.com" style="color: #4f46e5;">info@highticketenglish.com</a>
               </p>
               
               <p style="margin: 30px 0 0; color: #888888; font-size: 14px; line-height: 1.6;">
@@ -788,7 +788,7 @@ export class EmailService {
               </table>
               
               <p style="margin: 30px 0 0; color: #4a4a4a; font-size: 16px; line-height: 1.6;">
-                Si tienes alguna pregunta no dudes en contactarnos en <a href="mailto:info@highticketusa.com" style="color: #4f46e5;">info@highticketusa.com</a>
+                Si tienes alguna pregunta no dudes en contactarnos en <a href="mailto:info@highticketenglish.com" style="color: #4f46e5;">info@highticketenglish.com</a>
               </p>
             </td>
           </tr>
