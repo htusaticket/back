@@ -369,6 +369,15 @@ export class JobOffersListResponseDto {
 
   @ApiProperty()
   totalPages!: number;
+
+  @ApiProperty({ description: 'Total active job posts (across all pages)' })
+  activeJobs!: number;
+
+  @ApiProperty({ description: 'Total applications across all jobs' })
+  totalApplicants!: number;
+
+  @ApiProperty({ description: 'Job offers created in the last 7 days' })
+  newThisWeek!: number;
 }
 
 // ==================== Bulk Upload DTOs ====================
