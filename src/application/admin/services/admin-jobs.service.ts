@@ -47,8 +47,10 @@ export class AdminJobsService {
       where.type = query.type;
     }
 
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const startOfWeek = new Date();
+    const daysSinceMonday = (startOfWeek.getDay() + 6) % 7;
+    startOfWeek.setDate(startOfWeek.getDate() - daysSinceMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
 
     const [jobs, total, activeJobs, applicationsAgg, newThisWeek] = await Promise.all([
       this.prisma.jobOffer.findMany({
@@ -65,7 +67,7 @@ export class AdminJobsService {
       this.prisma.jobOffer.count({ where }),
       this.prisma.jobOffer.count({ where: { isActive: true } }),
       this.prisma.jobApplication.count(),
-      this.prisma.jobOffer.count({ where: { createdAt: { gte: oneWeekAgo } } }),
+      this.prisma.jobOffer.count({ where: { createdAt: { gte: startOfWeek } } }),
     ]);
 
     return {
