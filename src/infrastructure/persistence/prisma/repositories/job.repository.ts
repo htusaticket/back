@@ -117,13 +117,15 @@ export class PrismaJobRepository implements IJobRepository {
   }
 
   async countNewThisWeek(): Promise<number> {
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const startOfWeek = new Date();
+    const daysSinceMonday = (startOfWeek.getDay() + 6) % 7;
+    startOfWeek.setDate(startOfWeek.getDate() - daysSinceMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
 
     return this.prisma.jobOffer.count({
       where: {
         isActive: true,
-        createdAt: { gte: oneWeekAgo },
+        createdAt: { gte: startOfWeek },
       },
     });
   }
