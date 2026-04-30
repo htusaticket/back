@@ -248,7 +248,7 @@ export class EmailService {
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 24px 20px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
+            <td style="padding: 12px 20px 8px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
               <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; width: 100%; height: auto; display: inline-block;" />
             </td>
           </tr>
@@ -332,7 +332,7 @@ export class EmailService {
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 24px 20px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
+            <td style="padding: 12px 20px 8px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
               <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; width: 100%; height: auto; display: inline-block;" />
             </td>
           </tr>
@@ -412,7 +412,7 @@ export class EmailService {
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 24px 20px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
+            <td style="padding: 12px 20px 8px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
               <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; width: 100%; height: auto; display: inline-block;" />
             </td>
           </tr>
@@ -554,7 +554,7 @@ export class EmailService {
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 24px 20px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
+            <td style="padding: 12px 20px 8px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
               <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; width: 100%; height: auto; display: inline-block;" />
             </td>
           </tr>
@@ -655,7 +655,7 @@ export class EmailService {
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 24px 20px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
+            <td style="padding: 12px 20px 8px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
               <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; width: 100%; height: auto; display: inline-block;" />
             </td>
           </tr>
@@ -739,7 +739,7 @@ export class EmailService {
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 24px 20px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
+            <td style="padding: 12px 20px 8px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
               <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; width: 100%; height: auto; display: inline-block;" />
             </td>
           </tr>
@@ -882,7 +882,7 @@ export class EmailService {
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 24px 20px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
+            <td style="padding: 12px 20px 8px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
               <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; width: 100%; height: auto; display: inline-block;" />
             </td>
           </tr>
