@@ -2,9 +2,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Resend } from 'resend';
 import { getEnvConfig } from '@/config/env.config';
-import { PrismaService } from '@/infrastructure/persistence/prisma/prisma.service';
-
-const DEFAULT_LOGO_URL = 'https://pub-edad5806cdff45b08f50aa762e6fce6c.r2.dev/HT_USA_Logo-lau.png';
 
 interface NewUserData {
   firstName: string;
@@ -20,28 +17,9 @@ export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   private readonly resend: Resend;
   private readonly env = getEnvConfig();
-  private cachedLogoUrl: string | null = null;
-  private logoFetchedAt = 0;
-  private static readonly LOGO_TTL_MS = 60_000;
 
-  constructor(private readonly prisma?: PrismaService) {
+  constructor() {
     this.resend = new Resend(this.env.RESEND_API_KEY);
-  }
-
-  private async getLogoUrl(): Promise<string> {
-    const now = Date.now();
-    if (this.cachedLogoUrl && now - this.logoFetchedAt < EmailService.LOGO_TTL_MS) {
-      return this.cachedLogoUrl;
-    }
-    try {
-      const cfg = await this.prisma?.systemConfig.findUnique({ where: { id: 'default' } });
-      const url = cfg?.logoUrl?.trim() || DEFAULT_LOGO_URL;
-      this.cachedLogoUrl = url;
-      this.logoFetchedAt = now;
-      return url;
-    } catch {
-      return DEFAULT_LOGO_URL;
-    }
   }
 
   /**
@@ -232,7 +210,6 @@ export class EmailService {
    * Template HTML para email de recuperación de contraseña
    */
   private async getPasswordResetTemplate(firstName: string, resetLink: string): Promise<string> {
-    const logoUrl = await this.getLogoUrl();
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -246,13 +223,6 @@ export class EmailService {
     <tr>
       <td align="center" style="padding: 20px 0;">
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-          <!-- Header -->
-          <tr>
-            <td style="padding: 12px 20px 8px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
-              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 120px; width: 100%; height: auto; display: inline-block;" />
-            </td>
-          </tr>
-          
           <!-- Content -->
           <tr>
             <td style="padding: 40px;">
@@ -316,7 +286,6 @@ export class EmailService {
    * Template HTML para email de registro pendiente (al usuario)
    */
   private async getRegistrationPendingTemplate(firstName: string): Promise<string> {
-    const logoUrl = await this.getLogoUrl();
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -330,13 +299,6 @@ export class EmailService {
     <tr>
       <td align="center" style="padding: 20px 0;">
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-          <!-- Header -->
-          <tr>
-            <td style="padding: 12px 20px 8px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
-              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 120px; width: 100%; height: auto; display: inline-block;" />
-            </td>
-          </tr>
-          
           <!-- Content -->
           <tr>
             <td style="padding: 40px;">
@@ -396,7 +358,6 @@ export class EmailService {
     userData: NewUserData,
     reviewLink: string,
   ): Promise<string> {
-    const logoUrl = await this.getLogoUrl();
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -410,13 +371,6 @@ export class EmailService {
     <tr>
       <td align="center" style="padding: 20px 0;">
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-          <!-- Header -->
-          <tr>
-            <td style="padding: 12px 20px 8px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
-              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 120px; width: 100%; height: auto; display: inline-block;" />
-            </td>
-          </tr>
-          
           <!-- Content -->
           <tr>
             <td style="padding: 40px;">
@@ -538,7 +492,6 @@ export class EmailService {
     firstName: string,
     loginLink: string,
   ): Promise<string> {
-    const logoUrl = await this.getLogoUrl();
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -552,13 +505,6 @@ export class EmailService {
     <tr>
       <td align="center" style="padding: 20px 0;">
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-          <!-- Header -->
-          <tr>
-            <td style="padding: 12px 20px 8px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
-              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 120px; width: 100%; height: auto; display: inline-block;" />
-            </td>
-          </tr>
-          
           <!-- Content -->
           <tr>
             <td style="padding: 40px;">
@@ -639,7 +585,6 @@ export class EmailService {
     firstName: string,
     reason?: string,
   ): Promise<string> {
-    const logoUrl = await this.getLogoUrl();
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -653,13 +598,6 @@ export class EmailService {
     <tr>
       <td align="center" style="padding: 20px 0;">
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-          <!-- Header -->
-          <tr>
-            <td style="padding: 12px 20px 8px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
-              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 120px; width: 100%; height: auto; display: inline-block;" />
-            </td>
-          </tr>
-          
           <!-- Content -->
           <tr>
             <td style="padding: 40px;">
@@ -723,7 +661,6 @@ export class EmailService {
     planName: string,
     loginLink: string,
   ): Promise<string> {
-    const logoUrl = await this.getLogoUrl();
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -737,13 +674,6 @@ export class EmailService {
     <tr>
       <td align="center" style="padding: 20px 0;">
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-          <!-- Header -->
-          <tr>
-            <td style="padding: 12px 20px 8px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
-              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 120px; width: 100%; height: auto; display: inline-block;" />
-            </td>
-          </tr>
-          
           <!-- Content -->
           <tr>
             <td style="padding: 40px;">
@@ -866,7 +796,6 @@ export class EmailService {
     },
     reviewLink: string,
   ): Promise<string> {
-    const logoUrl = await this.getLogoUrl();
     return `
 <!DOCTYPE html>
 <html lang="es">
@@ -880,13 +809,6 @@ export class EmailService {
     <tr>
       <td align="center" style="padding: 20px 0;">
         <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-          <!-- Header -->
-          <tr>
-            <td style="padding: 12px 20px 8px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
-              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 120px; width: 100%; height: auto; display: inline-block;" />
-            </td>
-          </tr>
-          
           <!-- Content -->
           <tr>
             <td style="padding: 40px;">
