@@ -29,7 +29,7 @@ const EnvSchema = z.object({
   // Resend para emails
   RESEND_API_KEY: z.string().min(1, 'RESEND_API_KEY es requerida'),
   RESEND_FROM_EMAIL: z.string().email().default('noreply@jfalcon.com'),
-  RESEND_FROM_NAME: z.string().default('JFalcon'),
+  RESEND_FROM_NAME: z.string().default('High Ticket USA'),
 
   // Emails de Superadmins para notificaciones (separados por comas)
   SUPERADMIN_EMAILS: z

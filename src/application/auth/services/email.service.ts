@@ -249,7 +249,7 @@ export class EmailService {
           <!-- Header -->
           <tr>
             <td style="padding: 12px 20px 8px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
-              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; width: 100%; height: auto; display: inline-block;" />
+              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 120px; width: 100%; height: auto; display: inline-block;" />
             </td>
           </tr>
           
@@ -333,7 +333,7 @@ export class EmailService {
           <!-- Header -->
           <tr>
             <td style="padding: 12px 20px 8px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
-              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; width: 100%; height: auto; display: inline-block;" />
+              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 120px; width: 100%; height: auto; display: inline-block;" />
             </td>
           </tr>
           
@@ -413,7 +413,7 @@ export class EmailService {
           <!-- Header -->
           <tr>
             <td style="padding: 12px 20px 8px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
-              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; width: 100%; height: auto; display: inline-block;" />
+              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 120px; width: 100%; height: auto; display: inline-block;" />
             </td>
           </tr>
           
@@ -555,7 +555,7 @@ export class EmailService {
           <!-- Header -->
           <tr>
             <td style="padding: 12px 20px 8px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
-              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; width: 100%; height: auto; display: inline-block;" />
+              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 120px; width: 100%; height: auto; display: inline-block;" />
             </td>
           </tr>
           
@@ -656,7 +656,7 @@ export class EmailService {
           <!-- Header -->
           <tr>
             <td style="padding: 12px 20px 8px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
-              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; width: 100%; height: auto; display: inline-block;" />
+              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 120px; width: 100%; height: auto; display: inline-block;" />
             </td>
           </tr>
           
@@ -740,7 +740,7 @@ export class EmailService {
           <!-- Header -->
           <tr>
             <td style="padding: 12px 20px 8px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
-              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; width: 100%; height: auto; display: inline-block;" />
+              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 120px; width: 100%; height: auto; display: inline-block;" />
             </td>
           </tr>
           
@@ -883,7 +883,7 @@ export class EmailService {
           <!-- Header -->
           <tr>
             <td style="padding: 12px 20px 8px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
-              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 180px; width: 100%; height: auto; display: inline-block;" />
+              <img src="${logoUrl}" alt="High Ticket USA" style="max-width: 120px; width: 100%; height: auto; display: inline-block;" />
             </td>
           </tr>
           
