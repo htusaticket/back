@@ -241,6 +241,7 @@ model Module {
   visibleForSkillBuilder Boolean @default(false) @map("visible_for_skill_builder") // Si es visible para plan SKILL_BUILDER
   visibleForSkillBuilderLive Boolean @default(false) @map("visible_for_skill_builder_live") // Si es visible para plan SKILL_BUILDER_LIVE
 
+  sections     ModuleSection[]
   lessons      Lesson[]
   userProgress UserModuleProgress[]
 
@@ -249,6 +250,23 @@ model Module {
 
   @@index([order])
   @@map("modules")
+}
+
+model ModuleSection {
+  id       Int    @id @default(autoincrement())
+  moduleId Int    @map("module_id")
+  title    String
+  order    Int    @default(0)
+
+  module  Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([moduleId])
+  @@index([moduleId, order])
+  @@map("module_sections")
 }
 
 model Lesson {
@@ -263,10 +281,14 @@ model Lesson {
   moduleId Int    @map("module_id")
   module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
 
+  sectionId Int?           @map("section_id")
+  section   ModuleSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+
   userProgress UserLessonProgress[]
   resources    LessonResource[]
 
   @@index([moduleId])
+  @@index([sectionId])
   @@index([order])
   @@map("lessons")
 }
@@ -584,6 +606,10 @@ enum AuditAction {
   LESSON_UPDATED
   LESSON_DELETED
   LESSONS_REORDERED
+  SECTION_CREATED
+  SECTION_UPDATED
+  SECTION_DELETED
+  SECTIONS_REORDERED
   
   // Challenge actions
   CHALLENGE_CREATED

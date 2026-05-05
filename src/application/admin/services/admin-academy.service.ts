@@ -3,7 +3,7 @@ import { Injectable, Logger, NotFoundException, BadRequestException } from '@nes
 import { PrismaService } from '@/infrastructure/persistence/prisma/prisma.service';
 import { CloudflareStorageService } from '@/infrastructure/storage/cloudflare/cloudflare-storage.service';
 import { AuditLogService } from './audit-log.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, ModuleStatus, ResourceType } from '@prisma/client';
 import {
   CreateModuleDto,
   UpdateModuleDto,
@@ -16,7 +16,54 @@ import {
   LessonResponseDto,
   CreateLessonResourceDto,
   LessonResourceDto,
+  CreateSectionDto,
+  UpdateSectionDto,
+  SectionResponseDto,
+  SectionWithLessonsDto,
 } from '../dto/academy';
+
+interface AdminInfo {
+  adminId: string;
+  adminEmail: string;
+  adminName: string;
+  ip?: string;
+}
+
+const mapLesson = (lesson: {
+  id: number;
+  title: string;
+  description: string | null;
+  duration: string;
+  contentUrl: string | null;
+  order: number;
+  status: ModuleStatus;
+  moduleId: number;
+  sectionId: number | null;
+  resources: {
+    id: number;
+    title: string;
+    fileUrl: string;
+    type: ResourceType;
+    size: string | null;
+  }[];
+}): LessonResponseDto => ({
+  id: lesson.id,
+  title: lesson.title,
+  description: lesson.description ?? undefined,
+  duration: lesson.duration,
+  contentUrl: lesson.contentUrl ?? undefined,
+  order: lesson.order,
+  status: lesson.status,
+  moduleId: lesson.moduleId,
+  sectionId: lesson.sectionId,
+  resources: lesson.resources.map(r => ({
+    id: r.id,
+    title: r.title,
+    fileUrl: r.fileUrl,
+    type: r.type,
+    size: r.size ?? undefined,
+  })),
+});
 
 @Injectable()
 export class AdminAcademyService {
@@ -81,6 +128,9 @@ export class AdminAcademyService {
     const module = await this.prisma.module.findUnique({
       where: { id },
       include: {
+        sections: {
+          orderBy: { order: 'asc' },
+        },
         lessons: {
           orderBy: { order: 'asc' },
           include: {
@@ -97,6 +147,27 @@ export class AdminAcademyService {
       throw new NotFoundException(`Módulo con ID ${id} no encontrado`);
     }
 
+    const allLessons = module.lessons.map(mapLesson);
+    const unsectionedLessons = allLessons.filter(
+      l => l.sectionId === null || l.sectionId === undefined,
+    );
+
+    const sections: SectionWithLessonsDto[] = module.sections.map(section => {
+      const sectionLessons = allLessons
+        .filter(l => l.sectionId === section.id)
+        .sort((a, b) => a.order - b.order);
+      return {
+        id: section.id,
+        moduleId: section.moduleId,
+        title: section.title,
+        order: section.order,
+        lessonsCount: sectionLessons.length,
+        createdAt: section.createdAt,
+        updatedAt: section.updatedAt,
+        lessons: sectionLessons,
+      };
+    });
+
     return {
       id: module.id,
       title: module.title,
@@ -109,23 +180,9 @@ export class AdminAcademyService {
       lessonsCount: module._count.lessons,
       createdAt: module.createdAt,
       updatedAt: module.updatedAt,
-      lessons: module.lessons.map(lesson => ({
-        id: lesson.id,
-        title: lesson.title,
-        description: lesson.description ?? undefined,
-        duration: lesson.duration,
-        contentUrl: lesson.contentUrl ?? undefined,
-        order: lesson.order,
-        status: lesson.status,
-        moduleId: lesson.moduleId,
-        resources: lesson.resources.map(r => ({
-          id: r.id,
-          title: r.title,
-          fileUrl: r.fileUrl,
-          type: r.type,
-          size: r.size ?? undefined,
-        })),
-      })),
+      lessons: allLessons,
+      sections,
+      unsectionedLessons,
     };
   }
 
@@ -277,28 +334,37 @@ export class AdminAcademyService {
   async createLesson(
     moduleId: number,
     data: CreateLessonDto,
-    adminInfo: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+    adminInfo: AdminInfo,
   ): Promise<LessonResponseDto> {
     const module = await this.prisma.module.findUnique({ where: { id: moduleId } });
     if (!module) {
       throw new NotFoundException(`Módulo con ID ${moduleId} no encontrado`);
     }
 
-    // Get max order in module
+    const sectionId = data.sectionId ?? null;
+    if (sectionId !== null) {
+      const section = await this.prisma.moduleSection.findUnique({ where: { id: sectionId } });
+      if (!section || section.moduleId !== moduleId) {
+        throw new BadRequestException(`Sección ${sectionId} no pertenece al módulo ${moduleId}`);
+      }
+    }
+
+    // Order is scoped by (moduleId, sectionId) so lessons in different
+    // sections can share order values without colliding.
     const maxOrder = await this.prisma.lesson.aggregate({
-      where: { moduleId },
+      where: { moduleId, sectionId },
       _max: { order: true },
     });
 
     const targetOrder = data.order ?? (maxOrder._max.order ?? 0) + 1;
 
-    // If a lesson already exists with this order, shift subsequent lessons up
+    // If a lesson already exists with this order in the same bucket, shift subsequent lessons up
     const existingWithOrder = await this.prisma.lesson.findFirst({
-      where: { moduleId, order: targetOrder },
+      where: { moduleId, sectionId, order: targetOrder },
     });
     if (existingWithOrder) {
       await this.prisma.lesson.updateMany({
-        where: { moduleId, order: { gte: targetOrder } },
+        where: { moduleId, sectionId, order: { gte: targetOrder } },
         data: { order: { increment: 1 } },
       });
     }
@@ -312,13 +378,13 @@ export class AdminAcademyService {
         order: targetOrder,
         status: data.status ?? 'PUBLISHED',
         moduleId,
+        sectionId,
       },
       include: {
         resources: true,
       },
     });
 
-    // Log audit
     await this.auditService.createLog({
       adminId: adminInfo.adminId,
       adminEmail: adminInfo.adminEmail,
@@ -327,33 +393,17 @@ export class AdminAcademyService {
       targetType: 'LESSON',
       targetId: lesson.id.toString(),
       targetName: lesson.title,
-      details: { moduleId, title: lesson.title },
+      details: { moduleId, sectionId, title: lesson.title },
       ipAddress: adminInfo.ip,
     });
 
-    return {
-      id: lesson.id,
-      title: lesson.title,
-      description: lesson.description ?? undefined,
-      duration: lesson.duration,
-      contentUrl: lesson.contentUrl ?? undefined,
-      order: lesson.order,
-      status: lesson.status,
-      moduleId: lesson.moduleId,
-      resources: lesson.resources.map(r => ({
-        id: r.id,
-        title: r.title,
-        fileUrl: r.fileUrl,
-        type: r.type,
-        size: r.size ?? undefined,
-      })),
-    };
+    return mapLesson(lesson);
   }
 
   async updateLesson(
     lessonId: number,
     data: UpdateLessonDto,
-    adminInfo: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+    adminInfo: AdminInfo,
   ): Promise<LessonResponseDto> {
     const existing = await this.prisma.lesson.findUnique({ where: { id: lessonId } });
     if (!existing) {
@@ -368,6 +418,22 @@ export class AdminAcademyService {
     if (data.order !== undefined) updateData.order = data.order;
     if (data.status !== undefined) updateData.status = data.status;
 
+    if (data.sectionId !== undefined) {
+      if (data.sectionId === null) {
+        updateData.section = { disconnect: true };
+      } else {
+        const section = await this.prisma.moduleSection.findUnique({
+          where: { id: data.sectionId },
+        });
+        if (!section || section.moduleId !== existing.moduleId) {
+          throw new BadRequestException(
+            `Sección ${data.sectionId} no pertenece al módulo ${existing.moduleId}`,
+          );
+        }
+        updateData.section = { connect: { id: data.sectionId } };
+      }
+    }
+
     const lesson = await this.prisma.lesson.update({
       where: { id: lessonId },
       data: updateData,
@@ -376,7 +442,6 @@ export class AdminAcademyService {
       },
     });
 
-    // Log audit
     await this.auditService.createLog({
       adminId: adminInfo.adminId,
       adminEmail: adminInfo.adminEmail,
@@ -389,23 +454,7 @@ export class AdminAcademyService {
       ipAddress: adminInfo.ip,
     });
 
-    return {
-      id: lesson.id,
-      title: lesson.title,
-      description: lesson.description ?? undefined,
-      duration: lesson.duration,
-      contentUrl: lesson.contentUrl ?? undefined,
-      order: lesson.order,
-      status: lesson.status,
-      moduleId: lesson.moduleId,
-      resources: lesson.resources.map(r => ({
-        id: r.id,
-        title: r.title,
-        fileUrl: r.fileUrl,
-        type: r.type,
-        size: r.size ?? undefined,
-      })),
-    };
+    return mapLesson(lesson);
   }
 
   async deleteLesson(
@@ -572,7 +621,7 @@ export class AdminAcademyService {
   async reorderLessons(
     moduleId: number,
     orderedIds: number[],
-    adminInfo: { adminId: string; adminEmail: string; adminName: string; ip?: string },
+    adminInfo: AdminInfo,
   ): Promise<{ success: boolean }> {
     const module = await this.prisma.module.findUnique({ where: { id: moduleId } });
     if (!module) {
@@ -596,6 +645,196 @@ export class AdminAcademyService {
       targetType: 'LESSON',
       targetId: moduleId.toString(),
       targetName: `Reorder lessons in module ${moduleId}`,
+      details: { moduleId, orderedIds },
+      ipAddress: adminInfo.ip,
+    });
+
+    return { success: true };
+  }
+
+  // ==================== SECTIONS ====================
+
+  async getSectionsByModule(moduleId: number): Promise<SectionResponseDto[]> {
+    const module = await this.prisma.module.findUnique({ where: { id: moduleId } });
+    if (!module) {
+      throw new NotFoundException(`Módulo con ID ${moduleId} no encontrado`);
+    }
+
+    const sections = await this.prisma.moduleSection.findMany({
+      where: { moduleId },
+      orderBy: { order: 'asc' },
+      include: {
+        _count: { select: { lessons: true } },
+      },
+    });
+
+    return sections.map(s => ({
+      id: s.id,
+      moduleId: s.moduleId,
+      title: s.title,
+      order: s.order,
+      lessonsCount: s._count.lessons,
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
+    }));
+  }
+
+  async createSection(
+    moduleId: number,
+    data: CreateSectionDto,
+    adminInfo: AdminInfo,
+  ): Promise<SectionResponseDto> {
+    const module = await this.prisma.module.findUnique({ where: { id: moduleId } });
+    if (!module) {
+      throw new NotFoundException(`Módulo con ID ${moduleId} no encontrado`);
+    }
+
+    const maxOrder = await this.prisma.moduleSection.aggregate({
+      where: { moduleId },
+      _max: { order: true },
+    });
+    const targetOrder = data.order ?? (maxOrder._max.order ?? 0) + 1;
+
+    const existingWithOrder = await this.prisma.moduleSection.findFirst({
+      where: { moduleId, order: targetOrder },
+    });
+    if (existingWithOrder) {
+      await this.prisma.moduleSection.updateMany({
+        where: { moduleId, order: { gte: targetOrder } },
+        data: { order: { increment: 1 } },
+      });
+    }
+
+    const section = await this.prisma.moduleSection.create({
+      data: {
+        moduleId,
+        title: data.title,
+        order: targetOrder,
+      },
+    });
+
+    await this.auditService.createLog({
+      adminId: adminInfo.adminId,
+      adminEmail: adminInfo.adminEmail,
+      adminName: adminInfo.adminName,
+      action: 'SECTION_CREATED',
+      targetType: 'SECTION',
+      targetId: section.id.toString(),
+      targetName: section.title,
+      details: { moduleId, title: section.title },
+      ipAddress: adminInfo.ip,
+    });
+
+    return {
+      id: section.id,
+      moduleId: section.moduleId,
+      title: section.title,
+      order: section.order,
+      lessonsCount: 0,
+      createdAt: section.createdAt,
+      updatedAt: section.updatedAt,
+    };
+  }
+
+  async updateSection(
+    sectionId: number,
+    data: UpdateSectionDto,
+    adminInfo: AdminInfo,
+  ): Promise<SectionResponseDto> {
+    const existing = await this.prisma.moduleSection.findUnique({ where: { id: sectionId } });
+    if (!existing) {
+      throw new NotFoundException(`Sección con ID ${sectionId} no encontrada`);
+    }
+
+    const updateData: Prisma.ModuleSectionUpdateInput = {};
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.order !== undefined) updateData.order = data.order;
+
+    const section = await this.prisma.moduleSection.update({
+      where: { id: sectionId },
+      data: updateData,
+      include: {
+        _count: { select: { lessons: true } },
+      },
+    });
+
+    await this.auditService.createLog({
+      adminId: adminInfo.adminId,
+      adminEmail: adminInfo.adminEmail,
+      adminName: adminInfo.adminName,
+      action: 'SECTION_UPDATED',
+      targetType: 'SECTION',
+      targetId: section.id.toString(),
+      targetName: section.title,
+      details: { changes: data },
+      ipAddress: adminInfo.ip,
+    });
+
+    return {
+      id: section.id,
+      moduleId: section.moduleId,
+      title: section.title,
+      order: section.order,
+      lessonsCount: section._count.lessons,
+      createdAt: section.createdAt,
+      updatedAt: section.updatedAt,
+    };
+  }
+
+  async deleteSection(
+    sectionId: number,
+    adminInfo: AdminInfo,
+  ): Promise<{ success: boolean; message: string }> {
+    const section = await this.prisma.moduleSection.findUnique({ where: { id: sectionId } });
+    if (!section) {
+      throw new NotFoundException(`Sección con ID ${sectionId} no encontrada`);
+    }
+
+    // Lessons under this section keep existing thanks to ON DELETE SET NULL —
+    // they become unsectioned and the admin can reassign them.
+    await this.prisma.moduleSection.delete({ where: { id: sectionId } });
+
+    await this.auditService.createLog({
+      adminId: adminInfo.adminId,
+      adminEmail: adminInfo.adminEmail,
+      adminName: adminInfo.adminName,
+      action: 'SECTION_DELETED',
+      targetType: 'SECTION',
+      targetId: sectionId.toString(),
+      targetName: section.title,
+      ipAddress: adminInfo.ip,
+    });
+
+    return { success: true, message: 'Sección eliminada correctamente' };
+  }
+
+  async reorderSections(
+    moduleId: number,
+    orderedIds: number[],
+    adminInfo: AdminInfo,
+  ): Promise<{ success: boolean }> {
+    const module = await this.prisma.module.findUnique({ where: { id: moduleId } });
+    if (!module) {
+      throw new NotFoundException(`Módulo con ID ${moduleId} no encontrado`);
+    }
+
+    await this.prisma.$transaction(
+      orderedIds.map((id, index) =>
+        this.prisma.moduleSection.update({
+          where: { id },
+          data: { order: index + 1 },
+        }),
+      ),
+    );
+
+    await this.auditService.createLog({
+      adminId: adminInfo.adminId,
+      adminEmail: adminInfo.adminEmail,
+      adminName: adminInfo.adminName,
+      action: 'SECTIONS_REORDERED',
+      targetType: 'SECTION',
+      targetId: moduleId.toString(),
+      targetName: `Reorder sections in module ${moduleId}`,
       details: { moduleId, orderedIds },
       ipAddress: adminInfo.ip,
     });

@@ -9,6 +9,7 @@ import type {
   UserLessonProgress,
   ModuleWithProgress,
   LessonWithProgress,
+  SectionWithLessons,
 } from '@/core/interfaces';
 
 @Injectable()
@@ -32,6 +33,9 @@ export class AcademyRepository implements IAcademyRepository {
       where: { status: 'PUBLISHED' },
       orderBy: { order: 'asc' },
       include: {
+        sections: {
+          orderBy: { order: 'asc' },
+        },
         lessons: {
           where: { status: 'PUBLISHED' },
           orderBy: { order: 'asc' },
@@ -51,6 +55,39 @@ export class AcademyRepository implements IAcademyRepository {
       ).length;
       const progress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
 
+      const flatLessons: LessonWithProgress[] = module.lessons.map(lesson => ({
+        id: lesson.id,
+        title: lesson.title,
+        description: lesson.description,
+        duration: lesson.duration,
+        contentUrl: lesson.contentUrl,
+        order: lesson.order,
+        moduleId: lesson.moduleId,
+        sectionId: lesson.sectionId,
+        completed: lesson.userProgress[0]?.completed || false,
+      }));
+
+      // Group lessons by section and append a virtual section for unsectioned ones.
+      const sections: SectionWithLessons[] = module.sections.map(section => ({
+        id: section.id,
+        title: section.title,
+        order: section.order,
+        lessons: flatLessons
+          .filter(l => l.sectionId === section.id)
+          .sort((a, b) => a.order - b.order),
+      }));
+
+      const orphans = flatLessons.filter(l => l.sectionId === null);
+      if (orphans.length > 0) {
+        const maxOrder = sections.reduce((max, s) => Math.max(max, s.order), 0);
+        sections.push({
+          id: null,
+          title: null,
+          order: maxOrder + 1,
+          lessons: orphans.sort((a, b) => a.order - b.order),
+        });
+      }
+
       return {
         id: module.id,
         title: module.title,
@@ -64,16 +101,8 @@ export class AcademyRepository implements IAcademyRepository {
         totalLessons,
         completedLessons,
         progress,
-        lessons: module.lessons.map(lesson => ({
-          id: lesson.id,
-          title: lesson.title,
-          description: lesson.description,
-          duration: lesson.duration,
-          contentUrl: lesson.contentUrl,
-          order: lesson.order,
-          moduleId: lesson.moduleId,
-          completed: lesson.userProgress[0]?.completed || false,
-        })),
+        lessons: flatLessons,
+        sections,
       };
     });
   }
@@ -101,6 +130,7 @@ export class AcademyRepository implements IAcademyRepository {
       contentUrl: lesson.contentUrl,
       order: lesson.order,
       moduleId: lesson.moduleId,
+      sectionId: lesson.sectionId,
       resources: lesson.resources.map(r => ({
         id: r.id,
         title: r.title,
@@ -141,6 +171,7 @@ export class AcademyRepository implements IAcademyRepository {
       contentUrl: lesson.contentUrl,
       order: lesson.order,
       moduleId: lesson.moduleId,
+      sectionId: lesson.sectionId,
       completed: lesson.userProgress[0]?.completed || false,
     }));
   }

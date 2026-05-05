@@ -146,6 +146,60 @@ export class ModuleResponseDto {
   updatedAt!: Date;
 }
 
+// ==================== Section DTOs ====================
+
+export class CreateSectionDto {
+  @ApiProperty({ description: 'Section title', example: 'Introduction' })
+  @IsString()
+  @MaxLength(200)
+  title!: string;
+
+  @ApiPropertyOptional({ description: 'Display order within module' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Type(() => Number)
+  order?: number;
+}
+
+export class UpdateSectionDto {
+  @ApiPropertyOptional({ description: 'Section title' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  title?: string;
+
+  @ApiPropertyOptional({ description: 'Display order within module' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Type(() => Number)
+  order?: number;
+}
+
+export class SectionResponseDto {
+  @ApiProperty()
+  id!: number;
+
+  @ApiProperty()
+  moduleId!: number;
+
+  @ApiProperty()
+  title!: string;
+
+  @ApiProperty()
+  order!: number;
+
+  @ApiProperty()
+  lessonsCount!: number;
+
+  @ApiProperty()
+  createdAt!: Date;
+
+  @ApiProperty()
+  updatedAt!: Date;
+}
+
 // ==================== Lesson DTOs ====================
 
 export class CreateLessonDto {
@@ -176,6 +230,14 @@ export class CreateLessonDto {
   @Min(0)
   @Type(() => Number)
   order?: number;
+
+  @ApiPropertyOptional({
+    description: 'Section ID this lesson belongs to. Null/omitted = no section.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  sectionId?: number | null;
 
   @ApiPropertyOptional({
     description: 'Lesson status',
@@ -217,6 +279,14 @@ export class UpdateLessonDto {
   @Min(0)
   @Type(() => Number)
   order?: number;
+
+  @ApiPropertyOptional({
+    description: 'Section ID. Pass null to detach the lesson from any section.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  sectionId?: number | null;
 
   @ApiPropertyOptional({ description: 'Lesson status', enum: ModuleStatus })
   @IsOptional()
@@ -287,15 +357,41 @@ export class LessonResponseDto {
   @ApiProperty()
   moduleId!: number;
 
+  @ApiPropertyOptional({ nullable: true })
+  sectionId?: number | null;
+
   @ApiPropertyOptional({ type: [LessonResourceDto] })
   resources?: LessonResourceDto[];
+}
+
+// ==================== Section with Lessons ====================
+
+export class SectionWithLessonsDto extends SectionResponseDto {
+  @ApiProperty({ type: [LessonResponseDto] })
+  lessons!: LessonResponseDto[];
 }
 
 // ==================== Module with Lessons ====================
 
 export class ModuleWithLessonsDto extends ModuleResponseDto {
-  @ApiProperty({ type: [LessonResponseDto] })
+  @ApiProperty({
+    type: [LessonResponseDto],
+    description:
+      'Flat list of all lessons in the module, regardless of section. Kept for backwards compatibility.',
+  })
   lessons!: LessonResponseDto[];
+
+  @ApiProperty({
+    type: [SectionWithLessonsDto],
+    description: 'Sections with their lessons, ordered by section order.',
+  })
+  sections!: SectionWithLessonsDto[];
+
+  @ApiProperty({
+    type: [LessonResponseDto],
+    description: 'Lessons not assigned to any section.',
+  })
+  unsectionedLessons!: LessonResponseDto[];
 }
 
 // ==================== Query DTOs ====================

@@ -1,5 +1,5 @@
 // src/application/academy/dto/academy-overview.dto.ts
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class LessonDto {
   @ApiProperty({ example: 1, description: 'ID de la lección' })
@@ -13,6 +13,29 @@ export class LessonDto {
 
   @ApiProperty({ example: true, description: 'Si el usuario completó la lección' })
   completed!: boolean;
+
+  @ApiPropertyOptional({ nullable: true, description: 'ID de la sección a la que pertenece' })
+  sectionId?: number | null;
+}
+
+export class SectionDto {
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'ID de la sección. Null = bucket virtual de lecciones sin sección',
+  })
+  id!: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Título de la sección. Null para el bucket virtual',
+  })
+  title!: string | null;
+
+  @ApiProperty({ description: 'Orden de la sección dentro del módulo' })
+  order!: number;
+
+  @ApiProperty({ type: [LessonDto], description: 'Lecciones de la sección' })
+  lessons!: LessonDto[];
 }
 
 export class ModuleDto {
@@ -40,8 +63,19 @@ export class ModuleDto {
   @ApiProperty({ example: 66, description: 'Porcentaje de progreso (0-100)' })
   progress!: number;
 
-  @ApiProperty({ type: [LessonDto], description: 'Lista de lecciones del módulo' })
+  @ApiProperty({
+    type: [LessonDto],
+    description:
+      'Lista plana de todas las lecciones del módulo. Mantenido por compatibilidad — los clientes nuevos pueden usar `sections`.',
+  })
   lessons!: LessonDto[];
+
+  @ApiProperty({
+    type: [SectionDto],
+    description:
+      'Lecciones agrupadas por sección. Las lecciones sin sección aparecen al final con id/title null.',
+  })
+  sections!: SectionDto[];
 }
 
 export class AcademyStatsDto {

@@ -45,6 +45,9 @@ import {
   LessonResponseDto,
   CreateLessonResourceDto,
   LessonResourceDto,
+  CreateSectionDto,
+  UpdateSectionDto,
+  SectionResponseDto,
 } from '@/application/admin/dto/academy';
 
 @ApiTags('Admin Academy')
@@ -178,6 +181,104 @@ export class AdminAcademyController {
       ip: req.ip ?? 'unknown',
     };
     return this.academyService.deleteModule(id, adminInfo);
+  }
+
+  // ==================== SECTIONS ====================
+
+  @Get('modules/:moduleId/sections')
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Get all sections for a module' })
+  @ApiParam({ name: 'moduleId', type: Number })
+  @ApiResponse({ status: 200, type: [SectionResponseDto] })
+  async getSections(
+    @Param('moduleId', ParseIntPipe) moduleId: number,
+  ): Promise<SectionResponseDto[]> {
+    return this.academyService.getSectionsByModule(moduleId);
+  }
+
+  @Post('modules/:moduleId/sections')
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Create a new section in a module' })
+  @ApiParam({ name: 'moduleId', type: Number })
+  @ApiResponse({ status: 201, type: SectionResponseDto })
+  async createSection(
+    @Param('moduleId', ParseIntPipe) moduleId: number,
+    @Body() data: CreateSectionDto,
+    @CurrentUser() user: JwtPayload,
+    @Req() req: Request,
+  ): Promise<SectionResponseDto> {
+    const adminInfo = {
+      adminId: user.userId,
+      adminEmail: user.email,
+      adminName: user.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.academyService.createSection(moduleId, data, adminInfo);
+  }
+
+  @Put('modules/:moduleId/sections/reorder')
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Reorder sections within a module' })
+  @ApiParam({ name: 'moduleId', type: Number })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { orderedIds: { type: 'array', items: { type: 'number' } } },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Sections reordered successfully' })
+  async reorderSections(
+    @Param('moduleId', ParseIntPipe) moduleId: number,
+    @Body() body: { orderedIds: number[] },
+    @CurrentUser() user: JwtPayload,
+    @Req() req: Request,
+  ) {
+    const adminInfo = {
+      adminId: user.userId,
+      adminEmail: user.email,
+      adminName: user.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.academyService.reorderSections(moduleId, body.orderedIds, adminInfo);
+  }
+
+  @Put('sections/:id')
+  @Roles(UserRole.ADMIN, UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Update a section' })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiResponse({ status: 200, type: SectionResponseDto })
+  async updateSection(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: UpdateSectionDto,
+    @CurrentUser() user: JwtPayload,
+    @Req() req: Request,
+  ): Promise<SectionResponseDto> {
+    const adminInfo = {
+      adminId: user.userId,
+      adminEmail: user.email,
+      adminName: user.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.academyService.updateSection(id, data, adminInfo);
+  }
+
+  @Delete('sections/:id')
+  @Roles(UserRole.SUPERADMIN)
+  @ApiOperation({ summary: 'Delete a section (SUPERADMIN only)' })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiResponse({ status: 200 })
+  async deleteSection(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: JwtPayload,
+    @Req() req: Request,
+  ): Promise<{ success: boolean; message: string }> {
+    const adminInfo = {
+      adminId: user.userId,
+      adminEmail: user.email,
+      adminName: user.email,
+      ip: req.ip ?? 'unknown',
+    };
+    return this.academyService.deleteSection(id, adminInfo);
   }
 
   // ==================== LESSONS ====================

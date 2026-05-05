@@ -83,6 +83,19 @@ export class AcademyService {
           title: lesson.title,
           duration: lesson.duration,
           completed: lesson.completed,
+          sectionId: lesson.sectionId,
+        })),
+        sections: module.sections.map(section => ({
+          id: section.id,
+          title: section.title,
+          order: section.order,
+          lessons: section.lessons.map(lesson => ({
+            id: lesson.id,
+            title: lesson.title,
+            duration: lesson.duration,
+            completed: lesson.completed,
+            sectionId: lesson.sectionId,
+          })),
         })),
       })),
     };

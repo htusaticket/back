@@ -11,6 +11,15 @@ export interface Module {
   updatedAt: Date;
 }
 
+export interface ModuleSection {
+  id: number;
+  moduleId: number;
+  title: string;
+  order: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Lesson {
   id: number;
   title: string;
@@ -19,6 +28,7 @@ export interface Lesson {
   contentUrl: string | null;
   order: number;
   moduleId: number;
+  sectionId: number | null;
 }
 
 export interface LessonResource {
@@ -51,6 +61,7 @@ export interface UserModuleProgress {
 // DTOs for Academy
 export interface ModuleWithProgress extends Module {
   lessons: LessonWithProgress[];
+  sections: SectionWithLessons[];
   totalLessons: number;
   completedLessons: number;
   progress: number;
@@ -58,6 +69,15 @@ export interface ModuleWithProgress extends Module {
 
 export interface LessonWithProgress extends Lesson {
   completed: boolean;
+}
+
+// A "virtual" section with id=null represents lessons that are not assigned
+// to any real section (backwards-compatible bucket for pre-sections lessons).
+export interface SectionWithLessons {
+  id: number | null;
+  title: string | null;
+  order: number;
+  lessons: LessonWithProgress[];
 }
 
 export interface AcademyOverviewStats {
