@@ -36,6 +36,7 @@ export class AdminJobsService {
         { title: { contains: query.search, mode: 'insensitive' } },
         { company: { contains: query.search, mode: 'insensitive' } },
         { code: { contains: query.search, mode: 'insensitive' } },
+        { description: { contains: query.search, mode: 'insensitive' } },
       ];
     }
 

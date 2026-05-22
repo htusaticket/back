@@ -28,7 +28,7 @@ export class PrismaJobRepository implements IJobRepository {
       ],
     };
 
-    // Filtro de búsqueda por título, empresa o código
+    // Filtro de búsqueda por título, empresa, código o descripción
     if (filters?.search) {
       where.AND = [
         {
@@ -36,6 +36,7 @@ export class PrismaJobRepository implements IJobRepository {
             { title: { contains: filters.search, mode: 'insensitive' } },
             { company: { contains: filters.search, mode: 'insensitive' } },
             { code: { contains: filters.search, mode: 'insensitive' } },
+            { description: { contains: filters.search, mode: 'insensitive' } },
           ],
         },
       ];
