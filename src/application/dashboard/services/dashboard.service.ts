@@ -66,6 +66,8 @@ export class DashboardService {
       day: formatDayString(nextClass.startTime),
       date: formatDateString(nextClass.startTime),
       time: formatTimeRange(nextClass.startTime, nextClass.endTime),
+      startTime: nextClass.startTime.toISOString(),
+      endTime: nextClass.endTime.toISOString(),
       meetLink: nextClass.meetLink,
       materialsLink: nextClass.materialsLink,
     };

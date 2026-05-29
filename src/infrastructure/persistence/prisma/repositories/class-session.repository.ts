@@ -67,6 +67,8 @@ export class PrismaClassSessionRepository implements IClassSessionRepository {
         day: formatDayString(classSession.startTime),
         date: formatDateString(classSession.startTime),
         time: formatTimeRange(classSession.startTime, classSession.endTime),
+        startTime: classSession.startTime.toISOString(),
+        endTime: classSession.endTime.toISOString(),
         capacity: {
           current: classSession._count.enrollments,
           max: classSession.capacityMax,
@@ -120,6 +122,8 @@ export class PrismaClassSessionRepository implements IClassSessionRepository {
       day: formatDayString(enrollment.classSession.startTime),
       date: formatDateString(enrollment.classSession.startTime),
       time: formatTimeRange(enrollment.classSession.startTime, enrollment.classSession.endTime),
+      startTime: enrollment.classSession.startTime.toISOString(),
+      endTime: enrollment.classSession.endTime.toISOString(),
       capacity: {
         current: enrollment.classSession._count.enrollments,
         max: enrollment.classSession.capacityMax,

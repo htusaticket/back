@@ -21,6 +21,12 @@ export class NextClassDto {
   @ApiProperty({ description: 'Time range (e.g., "18:00 - 19:00")' })
   time!: string;
 
+  @ApiProperty({ description: 'Start time as ISO 8601 (UTC) for client-side timezone conversion' })
+  startTime!: string;
+
+  @ApiProperty({ description: 'End time as ISO 8601 (UTC) for client-side timezone conversion' })
+  endTime!: string;
+
   @ApiProperty({ nullable: true })
   meetLink!: string | null;
 
