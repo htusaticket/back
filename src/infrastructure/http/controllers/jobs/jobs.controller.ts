@@ -21,13 +21,14 @@ import {
 
 import { JobsService } from '@/application/jobs/services/jobs.service';
 import { JwtAuthGuard } from '@/application/auth/guards/jwt-auth.guard';
+import { ActiveSubscriptionGuard } from '@/application/auth/guards/active-subscription.guard';
 import { CurrentUser } from '@/application/auth/decorators/current-user.decorator';
 import { JwtPayload } from '@/application/auth/services/auth.service';
 import { JobFiltersDto, JobListResponseDto, ApplyResponseDto } from '@/application/jobs/dto';
 
 @ApiTags('Jobs')
 @Controller('api/jobs')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ActiveSubscriptionGuard)
 @ApiBearerAuth()
 export class JobsController {
   constructor(private readonly jobsService: JobsService) {}

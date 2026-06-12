@@ -13,13 +13,14 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@ne
 
 import { ClassesService } from '@/application/classes/services/classes.service';
 import { JwtAuthGuard } from '@/application/auth/guards/jwt-auth.guard';
+import { ActiveSubscriptionGuard } from '@/application/auth/guards/active-subscription.guard';
 import { CurrentUser } from '@/application/auth/decorators/current-user.decorator';
 import { JwtPayload } from '@/application/auth/services/auth.service';
 import { ClassResponseDto, EnrollResponseDto, CancelResponseDto } from '@/application/classes/dto';
 
 @ApiTags('Classes')
 @Controller('api/classes')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ActiveSubscriptionGuard)
 @ApiBearerAuth()
 export class ClassesController {
   constructor(private readonly classesService: ClassesService) {}

@@ -26,6 +26,7 @@ import {
 
 import { ChallengesService } from '@/application/challenges/services/challenges.service';
 import { JwtAuthGuard } from '@/application/auth/guards/jwt-auth.guard';
+import { ActiveSubscriptionGuard } from '@/application/auth/guards/active-subscription.guard';
 import { CurrentUser } from '@/application/auth/decorators/current-user.decorator';
 import { JwtPayload } from '@/application/auth/services/auth.service';
 import {
@@ -40,7 +41,7 @@ import {
 
 @ApiTags('Challenges')
 @Controller('api/challenges')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ActiveSubscriptionGuard)
 @ApiBearerAuth()
 export class ChallengesController {
   constructor(private readonly challengesService: ChallengesService) {}

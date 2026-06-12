@@ -13,6 +13,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@ne
 
 import { ApplicationsService } from '@/application/jobs/services/applications.service';
 import { JwtAuthGuard } from '@/application/auth/guards/jwt-auth.guard';
+import { ActiveSubscriptionGuard } from '@/application/auth/guards/active-subscription.guard';
 import { CurrentUser } from '@/application/auth/decorators/current-user.decorator';
 import { JwtPayload } from '@/application/auth/services/auth.service';
 import {
@@ -25,7 +26,7 @@ import {
 
 @ApiTags('Applications')
 @Controller('api/applications')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ActiveSubscriptionGuard)
 @ApiBearerAuth()
 export class ApplicationsController {
   constructor(private readonly applicationsService: ApplicationsService) {}
