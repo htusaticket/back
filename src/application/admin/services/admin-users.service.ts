@@ -901,10 +901,12 @@ export class AdminUsersService {
         : 0;
 
     const moduleProgress = await this.prisma.userModuleProgress.findMany({
-      where: { userId },
+      where: { userId, module: { status: 'PUBLISHED' } },
     });
 
-    const totalModules = await this.prisma.module.count();
+    const totalModules = await this.prisma.module.count({
+      where: { status: 'PUBLISHED' },
+    });
     const modulesCompleted = moduleProgress.filter(m => m.progress === 100).length;
 
     const challengesCompleted = await this.prisma.userDailyChallengeProgress.count({
@@ -934,6 +936,7 @@ export class AdminUsersService {
    */
   private async getModuleProgress(userId: string): Promise<ModuleProgressDto[]> {
     const modules = await this.prisma.module.findMany({
+      where: { status: 'PUBLISHED' },
       orderBy: { order: 'asc' },
       include: {
         userProgress: {
